@@ -1,0 +1,64 @@
+# =============================================================================
+# Production overrides.
+# Apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# - No host port published by default; consumers reach Redis via the shared
+#   `codelens-redis-net` docker network. Uncomment `ports` only if you need
+#   host access (and bind to loopback / private interface).
+# - Read-only root filesystem with explicit tmpfs for required writable paths.
+# - CPU / memory limits enforced.
+# - Larger log retention.
+# =============================================================================
+
+x-prod-logging: &prod-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "10"
+    compress: "true"
+
+services:
+  redis:
+    # Pin a digest in real deployments, e.g.:
+    #   image: redis@sha256:<digest>
+    image: redis:${REDIS_IMAGE_TAG:?REDIS_IMAGE_TAG is required}
+
+    # No `ports:` in prod. The dev port mapping lives only in
+    # `docker-compose.override.yml`, which is NOT loaded when running with
+    # `-f docker-compose.yml -f docker-compose.prod.yml`. Other services reach
+    # Redis via the `codelens-redis-net` network and the `redis` hostname.
+
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run:size=16m,mode=1777
+
+    volumes:
+      - redis-data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU_LIMIT:-1.0}"
+          memory: ${REDIS_MEM_LIMIT:-768m}
+        reservations:
+          cpus: "${REDIS_CPU_RESERVATION:-0.25}"
+          memory: ${REDIS_MEM_RESERVATION:-256m}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+
+    logging: *prod-logging
+
+    labels:
+      com.codelens.env: "production"
+
+    sysctls:
+      net.core.somaxconn: "511"

@@ -1,2 +1,9 @@
 .cursor
 node_modules
+dist
+
+# Local secrets & runtime data
+.env
+.env.*
+!.env.example
+.data/

@@ -1,0 +1,19 @@
+# =============================================================================
+# Development overrides (auto-loaded by `docker compose up`).
+# - Publishes Redis on the host (loopback by default) for local tooling.
+# - Bind-mounts a host directory for data so devs can inspect / nuke it easily.
+# - Looser resource limits, no read-only root FS.
+# =============================================================================
+
+services:
+  redis:
+    ports:
+      - "${REDIS_BIND_HOST:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+
+    volumes:
+      - ${REDIS_DATA_PATH:-./.data/redis}:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+
+    # Tag dev container so it doesn't collide with a prod stack on the same host.
+    labels:
+      com.codelens.env: "development"

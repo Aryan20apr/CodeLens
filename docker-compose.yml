@@ -1,0 +1,85 @@
+# =============================================================================
+# Base compose file - environment-agnostic Redis service.
+# Dev overrides:  docker-compose.override.yml (auto-loaded)
+# Prod overrides: docker-compose.prod.yml     (explicit -f)
+#
+# Usage:
+#   dev:  docker compose up -d
+#   prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# =============================================================================
+
+x-redis-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  redis:
+    image: redis:${REDIS_IMAGE_TAG:?REDIS_IMAGE_TAG is required}
+    container_name: ${REDIS_CONTAINER_NAME:-codelens-redis}
+    restart: unless-stopped
+    user: "redis:redis"
+    stop_grace_period: 30s
+
+    # Password is injected via env, never baked into the image or compose file.
+    # `redis-server` reads --requirepass from the CLI; the conf file holds the
+    # rest of the (non-secret) tuning.
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-512mb}
+      - --maxmemory-policy
+      - ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+
+    environment:
+      # Used by the healthcheck only; not read by redis-server itself.
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+
+    volumes:
+      - redis-data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+
+    networks:
+      - redis-net
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    logging: *default-logging
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+    # somaxconn tuning lives in docker-compose.prod.yml — Docker Desktop macOS
+    # often rejects host sysctls in containers and it is unrelated to Redis crashes.
+
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+networks:
+  redis-net:
+    driver: bridge
+    name: codelens-redis-net
+
+volumes:
+  redis-data:
+    name: codelens-redis-data
