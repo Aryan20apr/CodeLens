@@ -17,3 +17,13 @@ services:
     # Tag dev container so it doesn't collide with a prod stack on the same host.
     labels:
       com.codelens.env: "development"
+
+  postgres:
+    ports:
+      - "${POSTGRES_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      - ${POSTGRES_DATA_PATH:-./.data/postgres}:/var/lib/postgresql
+
+    labels:
+      com.codelens.env: "development"
