@@ -11,4 +11,7 @@ export interface AppConfig {
     password: string;
     db: number;
   };
+  db: {
+    url: string;
+  };
 }

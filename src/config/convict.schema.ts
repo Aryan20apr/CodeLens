@@ -55,4 +55,12 @@ export const convictSchema = convict<AppConfig>({
       env: 'REDIS_DB',
     },
   },
+  db: {
+    url: {
+      doc: 'Database URL',
+      format: String,
+      default: '',
+      env: 'DATABASE_URL',
+    },
+  }
 });
