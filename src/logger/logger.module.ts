@@ -6,6 +6,7 @@ import { utilities as nestWinstonUtilities } from 'nest-winston';
 import { APP_CONFIG } from '../config/config.constants';
 import type { AppConfig } from '../config/app-config.types';
 import { AppConfigModule } from '../config/config.module';
+import { correlationIdFormat } from './correlation-id.format';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AppConfigModule } from '../config/config.module';
       useFactory: (appConfig: AppConfig) => {
         const consoleFormat = appConfig.log.pretty
           ? winston.format.combine(
+              correlationIdFormat(),
               winston.format.timestamp(),
               winston.format.ms(),
               nestWinstonUtilities.format.nestLike('CodeLens', {
@@ -23,6 +25,7 @@ import { AppConfigModule } from '../config/config.module';
               }),
             )
           : winston.format.combine(
+              correlationIdFormat(),
               winston.format.timestamp(),
               winston.format.ms(),
               winston.format.json(),

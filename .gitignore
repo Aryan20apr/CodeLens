@@ -1,6 +1,7 @@
 .cursor
 node_modules
 dist
+docs
 
 # Local secrets & runtime data
 .env
