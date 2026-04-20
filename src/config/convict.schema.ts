@@ -54,6 +54,12 @@ export const convictSchema = convict<AppConfig>({
       default: 0,
       env: 'REDIS_DB',
     },
+    queueDb: {
+      doc: 'Redis logical database index for BullMQ queues',
+      format: 'nat',
+      default: 1,
+      env: 'REDIS_QUEUE_DB',
+    },
   },
   db: {
     url: {
