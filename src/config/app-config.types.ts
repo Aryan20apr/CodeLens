@@ -10,6 +10,7 @@ export interface AppConfig {
     port: number;
     password: string;
     db: number;
+    queueDb: number;
   };
   db: {
     url: string;

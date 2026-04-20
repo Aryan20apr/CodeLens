@@ -24,7 +24,10 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
   app.enableCors();
+  app.enableShutdownHooks();
 
   await app.listen(config.port, '0.0.0.0');
+
+
 }
 bootstrap();

@@ -6,6 +6,8 @@ import { AppConfigModule } from './config/config.module';
 import { PrismaModule } from './db/prisma.module';
 import { LoggerModule } from './logger/logger.module';
 import { RedisModule } from './redis/redis.module';
+import { BullmqModule } from './bullmq/bullmq.module';
+import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { RedisModule } from './redis/redis.module';
     LoggerModule,
     RedisModule,
     PrismaModule,
+    BullmqModule,
+    ExampleJobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

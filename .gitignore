@@ -8,5 +8,6 @@ docs
 .env.*
 !.env.example
 .data/
+.pnpm-store/
 
 /generated/prisma
