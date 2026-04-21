@@ -10,6 +10,7 @@ import { PrismaModule } from './db/prisma.module';
 import { LoggerModule } from './logger/logger.module';
 import { RedisModule } from './redis/redis.module';
 import { BullmqModule } from './bullmq/bullmq.module';
+import { HealthModule } from './health/health.module';
 import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.m
     LoggerModule,
     RedisModule,
     PrismaModule,
+    HealthModule,
     BullmqModule,
     ExampleJobsModule,
   ],
