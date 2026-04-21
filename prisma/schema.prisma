@@ -13,17 +13,141 @@ datasource db {
 }
 
 
-model User { 
-  id    Int     @id @default(autoincrement()) 
-  email String  @unique
-  name  String?
-  posts Post[]
-} 
-model Post { 
-  id        Int     @id @default(autoincrement()) 
-  title     String
-  content   String?
-  published Boolean @default(false) 
-  author    User    @relation(fields: [authorId], references: [id]) 
-  authorId  Int
-} 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OAuthProvider {
+  GITHUB
+  GOOGLE
+}
+// ---------------------------------------------------------------------------
+// User
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid(7))
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+
+  // Email/password login — null for pure-OAuth users
+  hashedPassword String?
+
+  // API key — generated on registration, regenerable
+  apiKey     String  @unique @default(uuid())
+  apiKeyHash String  // bcrypt hash of apiKey for comparison
+
+  role Role @default(USER)
+
+  oauthAccounts OAuthAccount[]
+
+  
+  evaluations   Evaluation[]
+  presets       Preset[]
+  developerMemory DeveloperMemory?
+
+  refreshTokens RefreshToken[]
+
+  preferences UserPreferences?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([apiKeyHash])
+}
+// ---------------------------------------------------------------------------
+// OAuth accounts linked to a user
+// ---------------------------------------------------------------------------
+model OAuthAccount {
+  id           String        @id @default(uuid(7))
+  provider     OAuthProvider
+  providerUid  String       
+
+  
+  accessToken  String?
+  
+  refreshToken String?
+  tokenExpiry  DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerUid])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Hashed refresh tokens
+// ---------------------------------------------------------------------------
+
+model RefreshToken {
+  id        String   @id @default(uuid(7))
+  tokenHash String   @unique
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// User preferences (1-to-1)
+// ---------------------------------------------------------------------------
+
+model UserPreferences {
+  id                     String  @id @default(uuid(7))
+  defaultLanguage        String?
+  notificationsEnabled   Boolean @default(true)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+}
+
+// ---------------------------------------------------------------------------
+// Stub models referenced by User — filled out in later phases
+// ---------------------------------------------------------------------------
+
+model Evaluation {
+  id     String @id @default(uuid(7))
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  createdAt DateTime @default(now())
+}
+
+model Preset {
+  id     String @id @default(uuid(7))
+  user   User?  @relation(fields: [userId], references: [id])
+  userId String?
+  name   String
+
+  createdAt DateTime @default(now())
+}
+
+model DeveloperMemory {
+  id               String   @id @default(uuid(7))
+  acceptedRuleIds  String[]
+  dismissedRuleIds String[]
+  styleSignals     Json     @default("{}")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  updatedAt DateTime @updatedAt
+}
