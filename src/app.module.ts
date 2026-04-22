@@ -12,6 +12,8 @@ import { RedisModule } from './redis/redis.module';
 import { BullmqModule } from './bullmq/bullmq.module';
 import { HealthModule } from './health/health.module';
 import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.module';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.m
     HealthModule,
     BullmqModule,
     ExampleJobsModule,
+    AuthModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [
