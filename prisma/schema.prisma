@@ -39,9 +39,9 @@ model User {
   // Email/password login — null for pure-OAuth users
   hashedPassword String?
 
-  // API key — generated on registration, regenerable
-  apiKey     String  @unique @default(uuid())
-  apiKeyHash String  // bcrypt hash of apiKey for comparison
+  // API key: SHA-256 hex of raw key only (indexed unique lookup). Raw key is
+  // returned once at registration / regeneration and is never persisted.
+  apiKeyHash String @unique
 
   role Role @default(USER)
 
@@ -60,7 +60,6 @@ model User {
   updatedAt DateTime @updatedAt
 
   @@index([email])
-  @@index([apiKeyHash])
 }
 // ---------------------------------------------------------------------------
 // OAuth accounts linked to a user
