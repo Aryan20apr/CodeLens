@@ -1,3 +1,5 @@
+import type { StringValue } from 'ms';
+
 export interface AppConfig {
   env: 'production' | 'development' | 'test';
   port: number;
@@ -17,9 +19,9 @@ export interface AppConfig {
   };
   auth: {
     jwtAccessSecret: string;
-    jwtAccessExpiresIn: string;
+    jwtAccessExpiresIn: StringValue;
     jwtRefreshSecret: string;
-    jwtRefreshExpiresIn: string;
+    jwtRefreshExpiresIn: StringValue;
     encryptionKey: string; // 32-byte hex for AES-256 OAuth token encryption
   };
   oauth: {
