@@ -3,7 +3,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-custom';
 import { UserService } from '../../user/user.service';
 import type { FastifyRequest } from 'fastify';
-import * as bcrypt from 'bcrypt';
 
 /**
  * Accepts `Authorization: Bearer <apiKey>` on routes that opt in

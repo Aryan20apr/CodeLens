@@ -1,20 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile, VerifyCallback } from 'passport-google-oauth20';
-import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
+import { APP_CONFIG } from '../../config/config.constants';
 import type { AppConfig } from '../../config/app-config.types';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
-    config: ConfigService<AppConfig, true>,
+    @Inject(APP_CONFIG) config: AppConfig,
     private authService: AuthService,
   ) {
     super({
-      clientID: config.get('oauth.google.clientId', { infer: true }),
-      clientSecret: config.get('oauth.google.clientSecret', { infer: true }),
-      callbackURL: config.get('oauth.google.callbackUrl', { infer: true }),
+      clientID: config.oauth.google.clientId,
+      clientSecret: config.oauth.google.clientSecret,
+      callbackURL: config.oauth.google.callbackUrl,
       scope: ['email', 'profile'],
     });
   }
