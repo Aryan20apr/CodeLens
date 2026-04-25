@@ -1,12 +1,12 @@
 import {
     Injectable,
     UnauthorizedException,
-    ConflictException,
     Inject,
   } from '@nestjs/common';
   import { JwtService } from '@nestjs/jwt';
   import * as bcrypt from 'bcrypt';
   import { uuidv7 } from 'uuidv7';
+  import ms from 'ms';
   import { PrismaService } from '../db/prisma.service';
   import { UserService } from '../user/user.service';
   import { encrypt } from '../common/utils/crypto.util';
@@ -147,8 +147,7 @@ import {
       ]);
   
       // Persist a hashed record so we can revoke individual tokens
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // mirrors JWT_REFRESH_EXPIRES_IN
+      const expiresAt = new Date(Date.now() + ms(refreshExpiresIn));
   
       await this.prisma.refreshToken.create({
         data: {

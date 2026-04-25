@@ -1,47 +1,52 @@
 import {
-    Controller,
-    Post,
-    Get,
-    Body,
-    Req,
-    Res,
-    UseGuards,
-    UsePipes,
-    HttpCode,
-    HttpStatus,
-  } from '@nestjs/common';
-  import { AuthGuard } from '@nestjs/passport';
-  import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Req,
+  Res,
+  UseGuards,
+  UsePipes,
+  HttpCode,
+  HttpStatus,
+  Inject,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
+  ApiCookieAuth,
   ApiBody,
   ApiResponse,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
-  import type { FastifyReply } from 'fastify';
-  import { AuthService } from './auth.service';
-  import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-  import { CurrentUser } from '../common/decorators/current-user.decorator';
-  import { Public } from '../common/decorators/public.decorator';
-  import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-  import { RegisterSchema, type RegisterDto } from './dto/register.dto';
-  import { LoginSchema, type LoginDto } from './dto/login.dto';
-  import { ConfigService } from '@nestjs/config';
-  import type { AppConfig } from '../config/app-config.types';
-  
-  @ApiTags('Auth')
-  @Controller('auth')
-  export class AuthController {
-    constructor(
-      private authService: AuthService,
-      private config: ConfigService<AppConfig, true>,
-    ) {}
-  
-    // ---------------------------------------------------------------------------
-    // Email / password
-    // ---------------------------------------------------------------------------
-  
+import type { FastifyReply } from 'fastify';
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { RegisterSchema, type RegisterDto } from './dto/register.dto';
+import { APP_CONFIG } from '../config/config.constants';
+import type { AppConfig } from '../config/app-config.types';
+import {
+  clearRefreshTokenCookie,
+  setRefreshTokenCookie,
+} from './refresh-cookie';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private authService: AuthService,
+    @Inject(APP_CONFIG) private appConfig: AppConfig,
+  ) {}
+
+  // ---------------------------------------------------------------------------
+  // Email / password
+  // ---------------------------------------------------------------------------
+
   @Public()
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
@@ -64,11 +69,12 @@ import {
   })
   @ApiResponse({
     status: 201,
-    description: 'User created — returns access + refresh token pair',
+    description:
+      'User created — returns access token + user; refresh token is set as httpOnly cookie',
     schema: {
       properties: {
         accessToken: { type: 'string' },
-        refreshToken: { type: 'string' },
+        apiKey: { type: 'string' },
         user: {
           type: 'object',
           properties: {
@@ -84,15 +90,24 @@ import {
   })
   @ApiResponse({ status: 409, description: 'Email already in use' })
   @ApiResponse({ status: 422, description: 'Validation failed' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const { refreshToken, ...body } = await this.authService.register(dto);
+    setRefreshTokenCookie(res, refreshToken, this.appConfig);
+    return body;
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('local'))
-  @ApiOperation({ summary: 'Login with email + password — returns JWT pair' })
+  @ApiOperation({
+    summary: 'Login with email + password',
+    description:
+      'Returns access token + user in JSON; refresh token is set as an httpOnly cookie.',
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -105,11 +120,10 @@ import {
   })
   @ApiResponse({
     status: 200,
-    description: 'Login successful — returns access + refresh token pair',
+    description: 'Login successful',
     schema: {
       properties: {
         accessToken: { type: 'string' },
-        refreshToken: { type: 'string' },
         user: {
           type: 'object',
           properties: {
@@ -124,8 +138,13 @@ import {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
-  async login(@Req() req: any) {
-    return this.authService.login(req.user);
+  async login(
+    @Req() req: { user: any },
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const { refreshToken, ...body } = await this.authService.login(req.user);
+    setRefreshTokenCookie(res, refreshToken, this.appConfig);
+    return body;
   }
 
   // ---------------------------------------------------------------------------
@@ -136,40 +155,50 @@ import {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt-refresh'))
-  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
   @ApiOperation({
-    summary: 'Exchange refresh token for a new token pair',
+    summary: 'Rotate refresh token and issue a new access token',
     description:
-      'Pass the refresh token as a Bearer token in the Authorization header.',
+      'Sends the refresh token httpOnly cookie set at login/register/OAuth; returns a new access token and rotates the refresh cookie.',
   })
   @ApiResponse({
     status: 200,
-    description: 'New access + refresh token pair issued',
+    description: 'New access token; new refresh token in httpOnly cookie',
     schema: {
       properties: {
         accessToken: { type: 'string' },
-        refreshToken: { type: 'string' },
       },
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  async refresh(@Req() req: any) {
-    return this.authService.refreshTokens(req.user.id, req.user.tokenId);
+  async refresh(
+    @Req() req: { user: { id: string; tokenId: string } },
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    const { refreshToken, ...body } = await this.authService.refreshTokens(
+      req.user.id,
+      req.user.tokenId,
+    );
+    setRefreshTokenCookie(res, refreshToken, this.appConfig);
+    return body;
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(AuthGuard('jwt-refresh'))
-  @ApiBearerAuth()
+  @ApiCookieAuth('refresh_token')
   @ApiOperation({
-    summary: 'Revoke the supplied refresh token',
-    description:
-      'Pass the refresh token as a Bearer token in the Authorization header.',
+    summary: 'Revoke the current refresh token',
+    description: 'Uses the refresh httpOnly cookie; clears the cookie on success.',
   })
   @ApiResponse({ status: 204, description: 'Refresh token revoked' })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  async logout(@Req() req: any) {
+  async logout(
+    @Req() req: { user: { tokenId: string } },
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
     await this.authService.logout(req.user.tokenId);
+    clearRefreshTokenCookie(res, this.appConfig);
   }
 
   // ---------------------------------------------------------------------------
@@ -190,12 +219,10 @@ import {
   @ApiExcludeEndpoint()
   async githubCallback(@Req() req: any, @Res() res: FastifyReply) {
     const tokens = await this.authService.oauthLogin(req.user);
-    const frontendUrl = this.config.get('frontend.url', { infer: true });
-    const params = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-    res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
+    const frontendUrl = this.appConfig.frontend.url;
+    setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
+    const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
+    res.redirect(`${frontendUrl}/auth/callback#${hash}`);
   }
 
   // ---------------------------------------------------------------------------
@@ -214,12 +241,10 @@ import {
   @ApiExcludeEndpoint()
   async googleCallback(@Req() req: any, @Res() res: FastifyReply) {
     const tokens = await this.authService.oauthLogin(req.user);
-    const frontendUrl = this.config.get('frontend.url', { infer: true });
-    const params = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-    res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
+    const frontendUrl = this.appConfig.frontend.url;
+    setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
+    const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
+    res.redirect(`${frontendUrl}/auth/callback#${hash}`);
   }
 
   // ---------------------------------------------------------------------------
@@ -249,4 +274,4 @@ import {
     const { hashedPassword, apiKeyHash, ...safe } = user;
     return safe;
   }
-  }
+}
