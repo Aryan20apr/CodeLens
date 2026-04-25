@@ -7,6 +7,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/refresh.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
+import { GoogleOauthStartGuard } from './guards/google-oauth-start.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { UserModule } from '../user/user.module';
@@ -25,6 +26,7 @@ import { ConfigModule } from '@nestjs/config';
   ],
   controllers: [AuthController],
   providers: [
+    GoogleOauthStartGuard,
     AuthService,
     LocalStrategy,
     JwtStrategy,

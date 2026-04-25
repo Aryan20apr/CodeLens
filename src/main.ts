@@ -13,6 +13,7 @@ import { REFRESH_TOKEN_COOKIE_NAME } from './auth/refresh-cookie';
 import { APP_CONFIG } from './config/config.constants';
 import type { AppConfig } from './config/app-config.types';
 import { resolveCorsOrigins } from './config/cors.util';
+import { applyPassportReplyShim } from './config/fastify-passport-reply.shim';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -21,6 +22,8 @@ async function bootstrap() {
     new FastifyAdapter(),
     { bufferLogs: true },
   );
+
+  applyPassportReplyShim(app.getHttpAdapter().getInstance());
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
@@ -55,7 +58,5 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(config.port, '0.0.0.0');
-
-
 }
 bootstrap();

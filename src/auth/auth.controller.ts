@@ -12,6 +12,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { GoogleOauthStartGuard } from './guards/google-oauth-start.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -222,7 +223,12 @@ export class AuthController {
     const frontendUrl = this.appConfig.frontend.url;
     setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
     const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
-    res.redirect(`${frontendUrl}/auth/callback#${hash}`);
+    // Return the reply so Fastify (and @Res()) end the request cleanly; omitting
+    // return can leave a blank page or a stuck document load.
+    return res.redirect(
+      `${frontendUrl}/auth/callback#${hash}`,
+      302,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -231,7 +237,8 @@ export class AuthController {
 
   @Public()
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  /** `prompt=select_account` is only for the Google authorize URL; callback uses `AuthGuard('google')` only. */
+  @UseGuards(GoogleOauthStartGuard)
   @ApiExcludeEndpoint()
   googleAuth() {}
 
@@ -244,7 +251,12 @@ export class AuthController {
     const frontendUrl = this.appConfig.frontend.url;
     setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
     const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
-    res.redirect(`${frontendUrl}/auth/callback#${hash}`);
+    // Return the reply so Fastify (and @Res()) end the request cleanly; omitting
+    // return can leave a blank page or a stuck document load.
+    return res.redirect(
+      `${frontendUrl}/auth/callback#${hash}`,
+      302,
+    );
   }
 
   // ---------------------------------------------------------------------------
