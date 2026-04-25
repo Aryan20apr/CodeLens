@@ -39,4 +39,9 @@ export interface AppConfig {
   frontend: {
     url: string;
   };
+  /** Browser CORS — required for httpOnly cookies + credentials from the SPA. */
+  cors: {
+    /** Comma-separated origins; always merged with `frontend.url`. */
+    allowedOrigins: string;
+  };
 }

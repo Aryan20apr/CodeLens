@@ -156,4 +156,13 @@ export const convictSchema = convict<AppConfig>({
       env: 'FRONTEND_URL',
     },
   },
+  cors: {
+    allowedOrigins: {
+      doc:
+        'Comma-separated extra browser origins allowed for CORS (merged with FRONTEND_URL). Never use * with credentials.',
+      format: String,
+      default: '',
+      env: 'CORS_ALLOWED_ORIGINS',
+    },
+  },
 });
