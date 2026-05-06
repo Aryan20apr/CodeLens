@@ -15,6 +15,8 @@ import { ExampleJobsModule } from './src/jobs/example/example-job/example-jobs.m
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { LlmModule } from './llm/llm.module';
+import { GraphModule } from './graph/graph.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     ExampleJobsModule,
     AuthModule,
     UserModule,
+    LlmModule,
+    GraphModule,
   ],
   controllers: [AppController],
   providers: [
