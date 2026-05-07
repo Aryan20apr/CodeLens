@@ -44,4 +44,9 @@ export interface AppConfig {
     /** Comma-separated origins; always merged with `frontend.url`. */
     allowedOrigins: string;
   };
+  llm: {
+    googleGenerativeAiApiKey: string;
+    googleApiKeyFallback: string;
+    geminiModel: string;
+  };
 }
