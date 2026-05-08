@@ -165,4 +165,24 @@ export const convictSchema = convict<AppConfig>({
       env: 'CORS_ALLOWED_ORIGINS',
     },
   },
+  llm: {
+    googleGenerativeAiApiKey: {
+      doc: 'Google Generative AI API key',
+      format: String,
+      default: '',
+      env: 'GOOGLE_GENERATIVE_AI_API_KEY',
+    },
+    googleApiKeyFallback: {
+      doc: 'Google API key fallback',
+      format: String,
+      default: '',
+      env: 'GOOGLE_API_KEY_FALLBACK',
+    },
+    geminiModel: {
+      doc: 'Gemini model',
+      format: String,
+      default: '',
+      env: 'GEMINI_MODEL',
+    },
+  }
 });
