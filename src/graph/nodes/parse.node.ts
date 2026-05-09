@@ -3,9 +3,9 @@ import { AstExtractService } from "../lib/ast-extract.service";
 
 import type { SnippetGraphStateType } from "../state.annotation";
 
-type ParseUpdate = Pick<SnippetGraphStateType, 'source' | 'language' | 'metadata' | 'status' | 'error'>;
+type ParseUpdate = Partial<Pick<SnippetGraphStateType, 'source' | 'language' | 'metadata' | 'status' | 'error'>>;
 
-export function createParseNode(language: LanguageDetectService, astExtract: AstExtractService): (state: SnippetGraphStateType) => Promise<Partial<ParseUpdate>> {
+export function createParseNode(language: LanguageDetectService, astExtract: AstExtractService): (state: SnippetGraphStateType) => Promise<ParseUpdate> {
     return async (state) => {
       if (!state.source) {
         return { status: 'failed', error: 'Missing state.source' };

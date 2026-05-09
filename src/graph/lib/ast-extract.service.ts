@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, } from '@nestjs/common';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import path from 'path';
+import type { Logger } from 'winston';
 import type { Node, Tree } from 'web-tree-sitter';
 import { CodeMetadata } from '../state.types';
 import { TreeSitterService } from './tree-sitter/tree-sitter.service';
@@ -12,12 +15,15 @@ export type CodeSymbol = {
 
 @Injectable()
 export class AstExtractService {
-  private readonly logger = new Logger(AstExtractService.name);
+  private readonly logger: Logger;
 
   constructor(
+    @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly treeSitter: TreeSitterService,
     private readonly queries: QueryLoaderService,
-  ) {}
+  ) {
+    this.logger = logger.child({ context: AstExtractService.name });
+  }
 
   async buildMetadata(code: string, languageId: string): Promise<CodeMetadata> {
     const linesOfCode = this.countLoc(code);
