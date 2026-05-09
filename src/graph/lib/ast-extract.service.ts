@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Node, Tree } from 'web-tree-sitter';
-
+import { CodeMetadata } from '../state.types';
 import { TreeSitterService } from './tree-sitter/tree-sitter.service';
 import { QueryLoaderService } from './queries/query-loader.service';
 
@@ -8,18 +8,6 @@ export type CodeSymbol = {
   name: string;
   startLine: number;
   endLine: number;
-};
-
-export type CodeMetadata = {
-  linesOfCode: number;
-  functions: CodeSymbol[];
-  classes: CodeSymbol[];
-  imports: string[];
-  entryPoints: string[];
-
-  functionCount: number;
-  classCount: number;
-  importCount: number;
 };
 
 @Injectable()
@@ -78,6 +66,9 @@ export class AstExtractService {
       functionCount: functions.length,
       classCount: classes.length,
       importCount: uniq(imports).length,
+
+      maxCyclomaticComplexity: 0, // TODO: Determine this
+      averageCyclomaticComplexity: 0 // TODO: DETERMINE THIS
     };
   }
 
@@ -93,6 +84,8 @@ export class AstExtractService {
       functionCount: 0,
       classCount: 0,
       importCount: 0,
+      maxCyclomaticComplexity: 0,
+      averageCyclomaticComplexity: 0
     };
   }
 
