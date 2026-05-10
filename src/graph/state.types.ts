@@ -33,8 +33,8 @@ export type SnippetSource = {
      * Complexity is optional in Tree-sitter mode.
      * Set to 0 (or null) until you implement a language-specific / generic approximation.
      */
-    maxCyclomaticComplexity: number;
-    averageCyclomaticComplexity: number;
+    maxCyclomaticComplexity: number | null;
+    averageCyclomaticComplexity: number | null;
   };
   
   export type ParseStatus = 'pending' | 'parsing' | 'complete' | 'failed';

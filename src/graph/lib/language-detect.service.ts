@@ -34,7 +34,7 @@ export class LanguageDetectService {
   /**
    * Returns normalized language id. `hint` is non-empty when user/IDE sets language explicitly.
    */
-  detectLangauge(code: string, filename?: string, hint?: string): string {
+  detectLanguage(code: string, filename?: string, hint?: string): string {
     const trimmedHint = (hint ?? '').trim();
     if (trimmedHint) {
       return this.normalizeHint(trimmedHint);

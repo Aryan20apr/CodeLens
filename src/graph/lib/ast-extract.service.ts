@@ -73,8 +73,8 @@ export class AstExtractService {
       classCount: classes.length,
       importCount: uniq(imports).length,
 
-      maxCyclomaticComplexity: 0, // TODO: Determine this
-      averageCyclomaticComplexity: 0 // TODO: DETERMINE THIS
+      maxCyclomaticComplexity: null, // TODO: Determine this
+      averageCyclomaticComplexity: null // TODO: DETERMINE THIS
     };
   }
 

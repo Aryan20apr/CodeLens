@@ -1,9 +1,27 @@
 import { Annotation, MemorySaver } from "@langchain/langgraph";
 import type { CodeMetadata, ParseStatus, SnippetSource } from './state.types';
+import { fi } from "zod/v4/locales";
+
+
+export type GraphEvent = {
+  node: string,
+  status: "started" | "completed" | "failed",
+  message: string,
+  at: string; // ISO timestamp
+}
 
 
 function lastWins<T>(left: T, right: T | undefined): T{
     return right === undefined ? left : right;
+}
+
+function firstWriteWins<T>(left: T, right: T | undefined): T {
+    return left !== null && left !== undefined ? left: (right ?? left);
+}
+
+function appendEvents(left: GraphEvent[], right: GraphEvent[] | undefined): GraphEvent[] {
+  if (!right || right.length === 0) return left;
+  return left.concat(right);
 }
 
 
@@ -31,9 +49,15 @@ export const SnippetGraphState = Annotation.Root({
       default: () => 'pending',
     }),
     error: Annotation<string | null>({
-      reducer: (left, right) => (right === undefined ? left : right),
+      reducer: (left, right) => firstWriteWins(left, right),
       default: () => null,
     }),
+
+    // Append only event stream ( progress + non fatal diagnostics)
+    events: Annotation<GraphEvent[]>({
+      reducer: (left, right ) => appendEvents(left, right),
+      default: () => [],
+    })
   });
 
 export const snippetMemoryCheckpointer = new MemorySaver();
