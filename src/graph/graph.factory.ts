@@ -33,7 +33,7 @@ export class GraphFactory implements OnModuleInit {
     this.compiled = this.build();
 
     this.logger.info(
-      "LangGraph (snippet) compiled: START -> parse -> END",
+      "LangGraph (snippet) compiled: START -> parse -> llm-analysis -> score-report -> END",
     );
   }
 
@@ -55,6 +55,9 @@ export class GraphFactory implements OnModuleInit {
       source,
       language: null,
       metadata: null,
+      llmAnalysis: null,
+      score: null,
+      report: null,
       status: "pending",
       error: null,
       events: [],
