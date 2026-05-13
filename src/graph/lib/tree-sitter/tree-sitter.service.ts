@@ -3,9 +3,12 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 
 import { Language, Parser, Tree } from 'web-tree-sitter';
+import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
+
 // tree-sitter-wasms ships many prebuilt grammars.
 // The exact export shape can vary by version, so we keep this dynamic.
-import * as WasmPackager from 'tree-sitter-wasms';
+const requireFn = createRequire(__filename);
 
 export type SupportedLangId =
   | 'typescript'
@@ -126,8 +129,7 @@ export class TreeSitterService {
    * This loader tries common shapes and returns a Uint8Array/ArrayBuffer.
    */
   private async loadWasmBytesForLanguage(lang: string): Promise<Uint8Array | ArrayBuffer | null> {
-    // Common: getLanguage(lang)
-    const anyPack = WasmPackager as any;
+    const anyPack = this.tryLoadWasmPackagerRoot();
 
     try {
       if (typeof anyPack.getLanguage === 'function') {
@@ -162,7 +164,7 @@ export class TreeSitterService {
       if (out instanceof Uint8Array || out instanceof ArrayBuffer) return out;
     }
 
-    // Common: direct exports e.g. anyPack.typescript()
+
     const direct = anyPack[lang];
     if (direct) {
       const out = typeof direct === 'function' ? await direct() : await direct;
@@ -170,6 +172,45 @@ export class TreeSitterService {
       if (out instanceof Uint8Array || out instanceof ArrayBuffer) return out;
     }
 
-    return null;
+    // Fallback: stable contract is the wasm artifacts under `tree-sitter-wasms/out`.
+    return (await this.loadWasmBytesFromOut(lang)) ?? null;
+  }
+
+  private tryLoadWasmPackagerRoot(): any {
+    try {
+      // Some published versions have a broken `main` entry (missing `bindings/node`),
+      // so we load it dynamically and ignore failures.
+      return requireFn('tree-sitter-wasms') as any;
+    } catch {
+      return {} as any;
+    }
+  }
+
+  private async loadWasmBytesFromOut(lang: string): Promise<Uint8Array | ArrayBuffer | null> {
+    const wasmBaseByLang: Record<string, string> = {
+      // Matches files under `node_modules/tree-sitter-wasms/out/`
+      typescript: 'tree-sitter-typescript',
+      javascript: 'tree-sitter-javascript',
+      python: 'tree-sitter-python',
+      go: 'tree-sitter-go',
+      rust: 'tree-sitter-rust',
+      java: 'tree-sitter-java',
+      kotlin: 'tree-sitter-kotlin',
+      csharp: 'tree-sitter-c_sharp',
+      php: 'tree-sitter-php',
+      ruby: 'tree-sitter-ruby',
+      swift: 'tree-sitter-swift',
+    };
+
+    const base = wasmBaseByLang[lang];
+    if (!base) return null;
+
+    try {
+      const wasmPath = requireFn.resolve(`tree-sitter-wasms/out/${base}.wasm`);
+      const buf = await fs.readFile(wasmPath);
+      return buf;
+    } catch {
+      return null;
+    }
   }
 }
