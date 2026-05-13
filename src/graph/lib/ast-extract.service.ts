@@ -1,4 +1,4 @@
-import { Inject, Injectable, } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import path from 'path';
 import type { Logger } from 'winston';
@@ -26,34 +26,52 @@ export class AstExtractService {
   }
 
   async buildMetadata(code: string, languageId: string): Promise<CodeMetadata> {
+    const className = AstExtractService.name;
+    const methodName = "buildMetadata";
+    this.logger.debug(`[${className}.${methodName}] Called`, {
+      languageId,
+      codeLength: code.length
+    });
+
     const linesOfCode = this.countLoc(code);
 
     // If no grammar, return shallow metadata
+    this.logger.debug(`[${className}.${methodName}] Parsing code using TreeSitterService.parse`);
     const tree = await this.treeSitter.parse(languageId, code);
     if (!tree) {
+      this.logger.warn(`[${className}.${methodName}] No parse tree found, returning empty metadata`);
       return this.emptyMetadata(linesOfCode);
     }
 
     let bundle: ReturnType<QueryLoaderService['getQueries']>;
     try {
+      this.logger.debug(`[${className}.${methodName}] Loading queries for languageId=${languageId}`);
       bundle = this.queries.getQueries(languageId);
     } catch (e) {
       this.logger.warn(
-        `Missing/invalid query file for ${languageId}: ${e instanceof Error ? e.message : String(e)}`,
+        `[${className}.${methodName}] Missing/invalid query file for ${languageId}: ${e instanceof Error ? e.message : String(e)}`
       );
       return this.emptyMetadata(linesOfCode);
     }
 
+    this.logger.debug(`[${className}.${methodName}] Retrieving language from TreeSitterService`);
     const lang = await this.treeSitter.getLanguage(languageId);
-    if (!lang) return this.emptyMetadata(linesOfCode);
+    if (!lang) {
+      this.logger.warn(`[${className}.${methodName}] Language not found for languageId=${languageId}, returning empty metadata`);
+      return this.emptyMetadata(linesOfCode);
+    }
 
+    this.logger.debug(`[${className}.${methodName}] Extracting function symbols`);
     const functions = this.extractSymbols(lang, tree, bundle.functions, 'function.name');
+    this.logger.debug(`[${className}.${methodName}] Extracting class symbols`);
     const classes = this.extractSymbols(lang, tree, bundle.classes, 'class.name');
 
+    this.logger.debug(`[${className}.${methodName}] Extracting imports`);
     const imports = this.extractStrings(lang, tree, bundle.imports, 'import.source')
       .map(this.stripQuotes)
       .filter(Boolean);
 
+    this.logger.debug(`[${className}.${methodName}] Extracting entry points`);
     const entryPoints = bundle.entryPoints
       ? this.extractStrings(lang, tree, bundle.entryPoints, 'entry')
           .map((s) => s.trim())
@@ -61,6 +79,14 @@ export class AstExtractService {
       : [];
 
     const uniq = <T>(arr: T[]) => Array.from(new Set(arr));
+
+    this.logger.info(`[${className}.${methodName}] Metadata extraction complete`, {
+      functionsCount: functions.length,
+      classesCount: classes.length,
+      importCount: uniq(imports).length,
+      entryPointCount: uniq(entryPoints).length,
+      linesOfCode,
+    });
 
     return {
       linesOfCode,
@@ -81,6 +107,9 @@ export class AstExtractService {
   // ---------------- helpers ----------------
 
   private emptyMetadata(linesOfCode: number): CodeMetadata {
+    const className = AstExtractService.name;
+    const methodName = "emptyMetadata";
+    this.logger.debug(`[${className}.${methodName}] Creating empty metadata object (linesOfCode=${linesOfCode})`);
     return {
       linesOfCode,
       functions: [],
@@ -101,6 +130,13 @@ export class AstExtractService {
     queryText: string,
     captureName: string,
   ): CodeSymbol[] {
+    const className = AstExtractService.name;
+    const methodName = "extractSymbols";
+    this.logger.debug(`[${className}.${methodName}] Running symbols extraction`, {
+      captureName,
+      queryTextShort: queryText?.slice(0, 30)
+    });
+
     const q = language.query(queryText);
     const matches = q.matches(tree.rootNode);
 
@@ -118,6 +154,7 @@ export class AstExtractService {
         });
       }
     }
+    this.logger.debug(`[${className}.${methodName}] Extracted ${out.length} symbols for ${captureName}`);
     return out;
   }
 
@@ -127,6 +164,13 @@ export class AstExtractService {
     queryText: string,
     captureName: string,
   ): string[] {
+    const className = AstExtractService.name;
+    const methodName = "extractStrings";
+    this.logger.debug(`[${className}.${methodName}] Extracting strings`, {
+      captureName,
+      queryTextShort: queryText?.slice(0, 30)
+    });
+
     const q = language.query(queryText);
     const matches = q.matches(tree.rootNode);
 
@@ -139,25 +183,36 @@ export class AstExtractService {
         if (text) out.push(text);
       }
     }
+    this.logger.debug(`[${className}.${methodName}] Extracted ${out.length} strings for ${captureName}`);
     return out;
   }
 
   private stripQuotes(s: string): string {
+    const className = AstExtractService.name;
+    const methodName = "stripQuotes";
     const t = s.trim();
+    let result: string;
     if (
       (t.startsWith('"') && t.endsWith('"')) ||
       (t.startsWith("'") && t.endsWith("'")) ||
       (t.startsWith('`') && t.endsWith('`'))
     ) {
-      return t.slice(1, -1);
+      result = t.slice(1, -1);
+    } else {
+      result = t;
     }
-    return t;
+    this.logger.debug(`[${className}.${methodName}] Stripping quotes`, { from: s, to: result });
+    return result;
   }
 
   private countLoc(code: string): number {
-    return code
+    const className = AstExtractService.name;
+    const methodName = "countLoc";
+    const count = code
       .split(/\r?\n/)
       .filter((l) => l.trim().length > 0)
       .length;
+    this.logger.debug(`[${className}.${methodName}] Counted LOC`, { count });
+    return count;
   }
 }

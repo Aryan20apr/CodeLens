@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type QueryBundle = {
@@ -36,12 +36,21 @@ export class QueryLoaderService {
     const cached = this.cache.get(key);
     if (cached) return cached;
 
-    const filePath = join(process.cwd(), 'src', 'modules', 'graph', 'lib', 'queries', `${key}.scm`);
+    const filePath = this.resolveQueryFilePath(key);
     const text = readFileSync(filePath, 'utf8');
 
     const bundle = this.parseBlocks(text);
     this.cache.set(key, bundle);
     return bundle;
+  }
+
+  private resolveQueryFilePath(key: string): string {
+    const fileName = `${key}.scm`;
+    const besideLoader = join(__dirname, fileName);
+    if (existsSync(besideLoader)) return besideLoader;
+    const underSrc = join(process.cwd(), 'src', 'graph', 'lib', 'queries', fileName);
+    if (existsSync(underSrc)) return underSrc;
+    return besideLoader;
   }
 
   private normalize(languageId: string): string {
