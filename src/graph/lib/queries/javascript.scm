@@ -11,4 +11,3 @@
 
 ;--- entry_points
 (export_statement) @entry
-(export_default_declaration) @entry
