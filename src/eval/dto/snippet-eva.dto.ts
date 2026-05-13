@@ -1,5 +1,3 @@
-import { Language } from "web-tree-sitter";
-import { threadId } from "worker_threads";
 import { z } from "zod";
 
 export const SnippetEvaluateDtoSchema = z.object({
