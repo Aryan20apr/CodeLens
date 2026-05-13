@@ -17,6 +17,7 @@ import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { LlmModule } from './llm/llm.module';
 import { GraphModule } from './graph/graph.module';
+import { EvalModule } from './eval/eval.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { GraphModule } from './graph/graph.module';
     UserModule,
     LlmModule,
     GraphModule,
+    EvalModule,
   ],
   controllers: [AppController],
   providers: [
