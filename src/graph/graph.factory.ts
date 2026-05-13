@@ -12,6 +12,9 @@ import { createParseNode } from "./nodes/parse.node";
 import { SnippetGraphState, snippetMemoryCheckpointer } from "./state.annotation";
 
 import type { SnippetSource } from "./state.types";
+import { createLlmAnalysisNode } from "./nodes/llm-analysis.node";
+import { createScoreReportNode } from "./nodes/score-report.node";
+import { LlmService } from "src/llm/llm.service";
 
 @Injectable()
 export class GraphFactory implements OnModuleInit {
@@ -23,6 +26,7 @@ export class GraphFactory implements OnModuleInit {
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly language: LanguageDetectService,
     private readonly ast: AstExtractService,
+    private readonly llm: LlmService,
   ) {
     this.logger = logger.child({
       context: GraphFactory.name,
@@ -49,6 +53,19 @@ export class GraphFactory implements OnModuleInit {
     source: SnippetSource,
     threadId: string,
   ) {
+    const className = GraphFactory.name;
+    const methodName = "invokeSnippet";
+
+    this.logger.info(`[${className}.${methodName}] Invoking snippet graph`, {
+      threadId,
+      source: {
+        type: source.type,
+        language: source.language,
+        filename: source.filename,
+        codeLength: source.code?.length ?? 0,
+      },
+    });
+
     const graph = this.getCompiledGraph();
 
     const initialState = {
@@ -63,26 +80,55 @@ export class GraphFactory implements OnModuleInit {
       events: [],
     } satisfies typeof SnippetGraphState.State;
 
-    return graph.invoke(
-      initialState,
-      {
-        configurable: {
-          thread_id: threadId,
+    let result;
+    try {
+      result = await graph.invoke(
+        initialState,
+        {
+          configurable: {
+            thread_id: threadId,
+          },
         },
-      },
-    );
+      );
+      this.logger.info(
+        `[${className}.${methodName}] Execution completed`, 
+        {
+          threadId,
+          status: result.status,
+          error: result.error,
+          language: result.language,
+        }
+      );
+    } catch (error) {
+      this.logger.error(
+        `[${className}.${methodName}] Execution failed`,
+        {
+          threadId,
+          error: error instanceof Error ? error.message : error,
+        }
+      );
+      throw error;
+    }
+
+    return result;
   }
 
   private build() {
-    const parse = createParseNode(
-      this.language,
-      this.ast,
-    );
+    const className = GraphFactory.name;
+    const methodName = "build";
+    this.logger.debug(`[${className}.${methodName}] Building snippet graph pipeline`);
+    const parse = createParseNode(this.language, this.ast);
+    const llmAnalysis = createLlmAnalysisNode(this.llm);
+    const scoreReport = createScoreReportNode();
 
     return new StateGraph(SnippetGraphState)
       .addNode("parse", parse)
+      .addNode("llm-analysis", llmAnalysis)
+      .addNode("score-report", scoreReport)
       .addEdge(START, "parse")
-      .addEdge("parse", END)
+      .addEdge("parse", "llm-analysis")
+      .addEdge("llm-analysis", "score-report")
+      .addEdge("score-report", END)
       .compile({
         checkpointer: snippetMemoryCheckpointer,
       });
