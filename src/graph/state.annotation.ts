@@ -71,7 +71,20 @@ export const SnippetGraphState = Annotation.Root({
     reducer: (left, right) => (right === undefined ? left : right),
     default: () => null,
   }),
-
+  iteration: Annotation<number>({
+    reducer: (_, right) => right ?? 0,
+    default: () => 0,
+  }),
+  
+  maxIterations: Annotation<number>({
+    reducer: (_, right) => right ?? 1,
+    default: () => 1,
+  }),
+  
+  qualityGatePassed: Annotation<boolean | null>({
+    reducer: (_, right) => right ?? null,
+    default: () => null,
+  }),
   // Append only event stream ( progress + non fatal diagnostics)
   events: Annotation<GraphEvent[]>({
     reducer: (left, right) => appendEvents(left, right),

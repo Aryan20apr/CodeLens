@@ -85,3 +85,8 @@ export type StructuredReport = {
   metadata: CodeMetadata | null;
   language: string | null;
 };
+
+export type QualityGateResult = {
+  passed: boolean;
+  reason: string;
+};
