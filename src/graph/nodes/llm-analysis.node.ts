@@ -5,6 +5,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { LlmService } from 'src/llm/llm.service';
 import type { GraphEvent, SnippetGraphStateType } from '../state.annotation';
 import type { LlmAnalysis } from '../state.types';
+import { parseLlmAnalysis } from "../utils/parse-llm-analysis.util";
 
 const FindingSchema = z.object({
   category: z.enum([
@@ -120,25 +121,9 @@ export function createLlmAnalysisNode(llm: LlmService) {
               typeof res.content === "string"
                 ? res.content
                 : JSON.stringify(res.content);
-      
+            console.log("Raw response: "+raw);
             // Strict JSON parse + validate
-            let parsed: unknown;
-            try {
-              parsed = JSON.parse(raw);
-            } catch {
-              throw new Error("LLM did not return valid JSON");
-            }
-      
-            const validated: LlmAnalysisOut = LlmAnalysisSchema.parse(parsed);
-      
-            // attach ids (deterministic, since LLM doesn't generate stable ids)
-            const llmAnalysis: LlmAnalysis = {
-              summary: validated.summary,
-              findings: validated.findings.map((f) => ({
-                id: randomUUID(),
-                ...f,
-              })),
-            };
+            const llmAnalysis = parseLlmAnalysis(raw);
       
             return {
               llmAnalysis,

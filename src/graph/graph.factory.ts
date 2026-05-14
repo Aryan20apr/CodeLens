@@ -14,10 +14,12 @@ import {
   snippetMemoryCheckpointer,
 } from './state.annotation';
 
-import type { SnippetSource } from './state.types';
-import { createLlmAnalysisNode } from './nodes/llm-analysis.node';
-import { createScoreReportNode } from './nodes/score-report.node';
-import { LlmService } from 'src/llm/llm.service';
+import type { SnippetSource } from "./state.types";
+import { createLlmAnalysisNode } from "./nodes/llm-analysis.node";
+import { createScoreReportNode } from "./nodes/score-report.node";
+import { LlmService } from "src/llm/llm.service";
+import { createQualityGateNode } from './nodes/quality-gate.node';
+import { createRefineAnalysisNode } from './nodes/refine-analysis.node';
 
 @Injectable()
 export class GraphFactory implements OnModuleInit {
@@ -78,6 +80,9 @@ export class GraphFactory implements OnModuleInit {
       status: 'pending',
       error: null,
       events: [],
+      iteration: 0,
+      maxIterations: 1,
+      qualityGatePassed: null,
     } satisfies typeof SnippetGraphState.State;
 
     let result;
@@ -121,15 +126,39 @@ export class GraphFactory implements OnModuleInit {
     const parse = createParseNode(this.language, this.ast);
     const llmAnalysis = createLlmAnalysisNode(this.llm);
     const scoreReport = createScoreReportNode();
+    const qualityGate = createQualityGateNode();
+    const refineAnalysis = createRefineAnalysisNode(this.llm);
 
     return new StateGraph(SnippetGraphState)
       .addNode('parse', parse)
       .addNode('llm-analysis', llmAnalysis)
+      .addNode('quality-gate', qualityGate)
+      .addNode('refine-analysis', refineAnalysis)
       .addNode('score-report', scoreReport)
+
       .addEdge(START, 'parse')
       .addEdge('parse', 'llm-analysis')
-      .addEdge('llm-analysis', 'score-report')
+      .addEdge('llm-analysis', 'quality-gate')
+
+      .addConditionalEdges(
+        'quality-gate',
+        (state) => {
+          const shouldRefine =
+            state.qualityGatePassed === false &&
+            state.iteration < state.maxIterations;
+
+          return shouldRefine ? 'refine-analysis' : 'score-report';
+        },
+        {
+          'refine-analysis': 'refine-analysis',
+          'score-report': 'score-report',
+        },
+      )
+
+      .addEdge('refine-analysis', 'score-report')
+
       .addEdge('score-report', END)
+
       .compile({
         checkpointer: snippetMemoryCheckpointer,
       });
