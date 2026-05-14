@@ -184,5 +184,32 @@ export const convictSchema = convict<AppConfig>({
       default: '',
       env: 'GEMINI_MODEL',
     },
-  }
+  },
+  langsmith: {
+    tracing: {
+      doc: 'Enable LangSmith tracing',
+      format: Boolean,
+      default: false,
+      env: 'LANGCHAIN_TRACING_V2',
+    },
+    apiKey: {
+      doc: 'LangSmith API key',
+      format: String,
+      default: '',
+      env: 'LANGCHAIN_API_KEY',
+      sensitive: true,
+    },
+    project: {
+      doc: 'LangSmith project name',
+      format: String,
+      default: 'codelens-dev',
+      env: 'LANGCHAIN_PROJECT',
+    },
+    endpoint: {
+      doc: 'LangSmith endpoint',
+      format: String,
+      default: 'https://api.smith.langchain.com',
+      env: 'LANGCHAIN_ENDPOINT',
+    },
+  },
 });

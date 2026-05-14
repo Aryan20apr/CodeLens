@@ -7,6 +7,12 @@ export interface AppConfig {
     level: string;
     pretty: boolean;
   };
+  langsmith: {
+    tracing: boolean;
+    apiKey: string;
+    project: string;
+    endpoint: string;
+  };
   redis: {
     host: string;
     port: number;
