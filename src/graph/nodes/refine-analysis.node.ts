@@ -71,7 +71,7 @@ Return ONLY valid JSON.
             "[LLM RAW OUTPUT]",
             raw,
           );
-      const refined = JSON.parse(raw);
+         const refined = parseLlmAnalysis(raw);
 
       return {
         llmAnalysis: refined,
