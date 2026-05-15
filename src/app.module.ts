@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { LlmModule } from './llm/llm.module';
 import { GraphModule } from './graph/graph.module';
 import { EvalModule } from './eval/eval.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EvalModule } from './eval/eval.module';
     LlmModule,
     GraphModule,
     EvalModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -45,7 +47,7 @@ import { EvalModule } from './eval/eval.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard
-    }
+    },
   ],
 })
 export class AppModule {}
