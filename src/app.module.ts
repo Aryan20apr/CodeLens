@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
-
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -19,6 +18,7 @@ import { LlmModule } from './llm/llm.module';
 import { GraphModule } from './graph/graph.module';
 import { EvalModule } from './eval/eval.module';
 import { JobsModule } from './jobs/jobs.module';
+import { StreamingModule } from './streaming/streaming.module';
 
 @Module({
   imports: [
@@ -36,6 +36,7 @@ import { JobsModule } from './jobs/jobs.module';
     GraphModule,
     EvalModule,
     JobsModule,
+    StreamingModule,
   ],
   controllers: [AppController],
   providers: [
