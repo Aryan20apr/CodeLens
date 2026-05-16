@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
@@ -7,9 +7,13 @@ import { CODE_REVIEW_QUEUE } from './constants';
 import { ProducerService } from './producer.service';
 import type { SnippetSource } from 'src/graph/state.types';
 import { Public } from '@common/decorators/public.decorator';
+import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
+import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 
 @Controller('codereview')
-@Public()
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 export class CodeReviewController {
   constructor(
     private readonly producer: ProducerService,
@@ -17,8 +21,39 @@ export class CodeReviewController {
   ) {}
 
   @Post("/job")
-  async enqueue(@Body() body: EnqueueCodeReviewDto) {
-    const dto = EnqueCodeReviewDtoSchema.parse(body);
+  @UsePipes(new ZodValidationPipe(EnqueCodeReviewDtoSchema))
+  @ApiOperation({ summary: 'Enqueue a Snippet code review job' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+        required: ['code', 'language', 'filename', 'threadId'],
+        properties: {
+          code: { type: 'string', example: 'console.log("Hello, world!");' },
+          language: { type: 'string', example: 'javascript' },
+          filename: { type: 'string', example: 'index.js' },
+          threadId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174000' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Enqueued a Snippet code review job',
+    schema: {
+      properties: {
+        threadId: { type: 'string', format: 'uuid' },
+        status: { type: 'string', example: 'pending' },
+        error: { type: 'string', nullable: true },
+        language: { type: 'string', example: 'javascript' },
+        metadata: { type: 'object', nullable: true },
+        llmAnalysis: { type: 'object', nullable: true },
+        score: { type: 'object', nullable: true },
+        report: { type: 'object', nullable: true },
+        events: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  })
+  async enqueue(@Body() dto: EnqueueCodeReviewDto) {
 
     const source: SnippetSource = {
       type: 'snippet',
