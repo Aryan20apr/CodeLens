@@ -66,7 +66,9 @@ export class PrReviewProcessorService extends WorkerHost {
         githubReviewId: String(run.githubReviewId),
         deliveryId,
       });
-      await this.deliveries.markProcessed(deliveryId);
+      if (deliveryId) {
+        await this.deliveries.markProcessed(deliveryId);
+      }
       return { skipped: true, githubReviewId: String(run.githubReviewId) };
     }
 
@@ -87,7 +89,9 @@ export class PrReviewProcessorService extends WorkerHost {
         deliveryId,
       });
       await this.runs.markFailed(reviewRunId, 'GitHub App installation is suspended');
-      await this.deliveries.markFailed(deliveryId, 'installation suspended');
+      if (deliveryId) {
+        await this.deliveries.markFailed(deliveryId, 'installation suspended');
+      }
       throw new Error('GitHub App installation is suspended');
     }
 
@@ -121,7 +125,9 @@ export class PrReviewProcessorService extends WorkerHost {
       );
 
       await this.runs.markCompleted(reviewRunId, summaryText, githubReviewId);
-      await this.deliveries.markProcessed(deliveryId);
+      if (deliveryId) {
+        await this.deliveries.markProcessed(deliveryId);
+      }
 
       this.logger.info(`[${className}] [${methodName}] :: PR review job completed`, {
         jobId: String(job.id),
@@ -140,7 +146,9 @@ export class PrReviewProcessorService extends WorkerHost {
         error: err,
       });
       await this.runs.markFailed(reviewRunId, message);
-      await this.deliveries.markFailed(deliveryId, message);
+      if (deliveryId) {
+        await this.deliveries.markFailed(deliveryId, message);
+      }
       throw err;
     }
   }
