@@ -6,4 +6,4 @@ import { GraphModule } from 'src/graph/graph.module';
   imports: [GraphModule],
   controllers: [EvaluationController],
 })
-export class EvalModule {}
+export class TestModule {}

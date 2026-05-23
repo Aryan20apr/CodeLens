@@ -5,11 +5,11 @@ import { GraphModule } from 'src/graph/graph.module';
 import { GithubModule } from '../github/github.module';
 import { ReviewModule } from '../review/review.module';
 import { CodeReviewProcessor } from './code-review-processor.service';
-import { CodeReviewController } from './code-review-controller.controller';
+import { CodeReviewController } from './code-review.controller';
 import { CODE_REVIEW_QUEUE, PR_REVIEW_QUEUE } from './constants';
 import { PrReviewProcessorService } from './pr-review-processor.service';
 import { PrReviewProducerService } from './pr-review-producer.service';
-import { ProducerService } from './producer.service';
+import { CodeReviewProducer } from './code-review-producer.service';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { ProducerService } from './producer.service';
     BullModule.registerQueue({ name: PR_REVIEW_QUEUE }),
   ],
   providers: [
-    ProducerService,
+    CodeReviewProducer,
     CodeReviewProcessor,
     PrReviewProducerService,
     PrReviewProcessorService,

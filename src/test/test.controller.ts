@@ -2,7 +2,7 @@ import { Body, Controller, Post, UseGuards, UsePipes, } from "@nestjs/common";
 import { uuidv7 } from "uuidv7";
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { GraphFactory } from "src/graph/graph.factory";
-import { SnippetEvaluateDtoSchema, type SnippetEvaluateDto } from "./dto/snippet-eva.dto";
+import { SnippetEvaluateDtoSchema, type SnippetReviewDto } from "./dto/snippet-review.dto";
 import { Public } from "@common/decorators/public.decorator";
 import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "@common/guards/jwt-auth.guard";
@@ -47,7 +47,7 @@ export class EvaluationController {
       },
     },
   })
-  async evaluate(@Body() dto: SnippetEvaluateDto) {
+  async evaluate(@Body() dto: SnippetReviewDto) {
     const threadId = dto.threadId?.trim() || uuidv7();
 
     const out = await this.graphFactory.invokeSnippet(
