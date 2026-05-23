@@ -150,3 +150,80 @@ model DeveloperMemory {
 
   updatedAt DateTime @updatedAt
 }
+
+// ---------------------------------------------------------------------------
+// Models for Githb PR review runs
+// ---------------------------------------------------------------------------
+
+
+enum WebhookDeliveryStatus {
+  RECEIVED
+  ENQUEUED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum PrReviewRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model GitHubInstallation {
+  installationId BigInt    @id
+  accountLogin   String
+  accountType    String
+  suspendedAt    DateTime?
+  installedAt    DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  webhookDeliveries WebhookDelivery[]
+
+  @@index([accountLogin])
+}
+
+model WebhookDelivery {
+  deliveryId     String                @id
+  event          String
+  action         String?
+  installationId BigInt?
+  installation   GitHubInstallation?   @relation(fields: [installationId], references: [installationId])
+  repoFullName   String?
+  prNumber       Int?
+  headSha        String?
+  baseSha        String?
+  status         WebhookDeliveryStatus @default(RECEIVED)
+  jobId          String?
+  error          String?
+  receivedAt     DateTime              @default(now())
+  processedAt    DateTime?
+
+  reviewRun PrReviewRun?
+
+  @@index([status])
+  @@index([repoFullName, prNumber])
+}
+
+model PrReviewRun {
+  id              String            @id @default(uuid(7))
+  deliveryId      String            @unique
+  delivery        WebhookDelivery   @relation(fields: [deliveryId], references: [deliveryId])
+  installationId  BigInt
+  repoFullName    String
+  prNumber        Int
+  headSha         String
+  baseSha         String
+  status          PrReviewRunStatus @default(PENDING)
+  summaryText     String?
+  githubReviewId  BigInt?
+  bullmqJobId     String?
+  error           String?
+  createdAt       DateTime          @default(now())
+  completedAt     DateTime?
+
+  @@index([repoFullName, prNumber])
+  @@index([repoFullName, prNumber, headSha])
+}
