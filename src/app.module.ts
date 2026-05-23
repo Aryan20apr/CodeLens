@@ -19,6 +19,7 @@ import { LlmModule } from './llm/llm.module';
 import { GraphModule } from './graph/graph.module';
 import { EvalModule } from './eval/eval.module';
 import { JobsModule } from './jobs/jobs.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { JobsModule } from './jobs/jobs.module';
     GraphModule,
     EvalModule,
     JobsModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [
