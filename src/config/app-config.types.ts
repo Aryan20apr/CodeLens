@@ -55,4 +55,9 @@ export interface AppConfig {
     googleApiKeyFallback: string;
     geminiModel: string;
   };
+  githubApp: {
+    appId: string;
+    privateKey: string;
+    webhookSecret: string;
+  };
 }
