@@ -35,12 +35,14 @@ import {
   clearRefreshTokenCookie,
   setRefreshTokenCookie,
 } from './refresh-cookie';
+import { GithubOnboardingService } from '../github/github-onboarding.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
+    private readonly onboarding: GithubOnboardingService,
     @Inject(APP_CONFIG) private appConfig: AppConfig,
   ) {}
 
@@ -215,11 +217,39 @@ export class AuthController {
   }
 
   @Public()
+  @Get('github/install-url')
+  @ApiOperation({ summary: 'GitHub App installation URL for connecting repositories' })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      properties: {
+        installUrl: { type: 'string' },
+      },
+    },
+  })
+  githubInstallUrl() {
+    return { installUrl: this.appConfig.githubApp.appInstallUrl };
+  }
+
+  @Public()
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
   @ApiExcludeEndpoint()
-  async githubCallback(@Req() req: any, @Res() res: FastifyReply) {
+  async githubCallback(
+    @Req() req: { user: { id: string }; query?: Record<string, string> },
+    @Res() res: FastifyReply,
+  ) {
     const tokens = await this.authService.oauthLogin(req.user);
+    const installationIdRaw = req.query?.installation_id;
+    if (installationIdRaw) {
+      const installationId = Number(installationIdRaw);
+      if (Number.isFinite(installationId) && installationId > 0) {
+        await this.onboarding.onboardInstallation(
+          installationId,
+          req.user.id,
+        );
+      }
+    }
     const frontendUrl = this.appConfig.frontend.url;
     setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
     const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;

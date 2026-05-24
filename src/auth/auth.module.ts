@@ -13,6 +13,7 @@ import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { UserModule } from '../user/user.module';
 import { PrismaModule } from '../db/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+import { GithubModule } from '../github/github.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { ConfigModule } from '@nestjs/config';
     JwtModule.register({}),
     UserModule,
     PrismaModule,
-    ConfigModule
+    ConfigModule,
+    GithubModule,
   ],
   controllers: [AuthController],
   providers: [
