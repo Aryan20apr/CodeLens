@@ -1,18 +1,33 @@
 import { z } from 'zod';
 
+const installationObjectSchema = z.object({
+  id: z.number(),
+  account: z
+    .object({
+      login: z.string().optional(),
+      type: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  suspended_at: z.string().nullable().optional(),
+});
+
+const webhookRepoSchema = z.object({
+  id: z.number(),
+  full_name: z.string(),
+  private: z.boolean().optional(),
+});
+
 export const InstallationPayloadSchema = z.object({
   action: z.string(),
-  installation: z.object({
-    id: z.number(),
-    account: z
-      .object({
-        login: z.string().optional(),
-        type: z.string().optional(),
-      })
-      .nullable()
-      .optional(),
-    suspended_at: z.string().nullable().optional(),
-  }),
+  installation: installationObjectSchema,
+});
+
+export const InstallationRepositoriesPayloadSchema = z.object({
+  action: z.string(),
+  installation: installationObjectSchema,
+  repositories_added: z.array(webhookRepoSchema).optional(),
+  repositories_removed: z.array(webhookRepoSchema).optional(),
 });
 
 export const PullRequestPayloadSchema = z.object({

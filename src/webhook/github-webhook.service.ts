@@ -3,12 +3,13 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import { uuidv7 } from 'uuidv7';
 
-import { PrReviewRunRepository } from '../db/github/pr-review.repository';
+import { PrReviewRepository } from '../db/github/pr-review.repository';
 import { WebhookDeliveryRepository } from '../db/github/webhook.repository';
 import { GithubInstallationService } from '../github/github-installation.service';
 import { PrReviewProducerService } from '../jobs/pr-review-producer.service';
 import {
   InstallationPayloadSchema,
+  InstallationRepositoriesPayloadSchema,
   PR_REVIEW_ACTIONS,
   PullRequestPayloadSchema,
 } from './github-webhook.types';
@@ -20,7 +21,7 @@ export class GithubWebhookService {
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly deliveries: WebhookDeliveryRepository,
-    private readonly runs: PrReviewRunRepository,
+    private readonly runs: PrReviewRepository,
     private readonly installations: GithubInstallationService,
     private readonly producer: PrReviewProducerService,
   ) {
@@ -61,7 +62,7 @@ export class GithubWebhookService {
     }
 
     if (event === 'installation_repositories') {
-      const parsed = InstallationPayloadSchema.safeParse(payload);
+      const parsed = InstallationRepositoriesPayloadSchema.safeParse(payload);
       if (!parsed.success) {
         this.logger.warn(
           `[${className}] [${methodName}] :: Invalid installation_repositories payload`,
@@ -80,6 +81,8 @@ export class GithubWebhookService {
       await this.installations.handleInstallationRepositoriesEvent(
         parsed.data.action,
         parsed.data.installation,
+        parsed.data.repositories_added ?? [],
+        parsed.data.repositories_removed ?? [],
       );
       return;
     }
