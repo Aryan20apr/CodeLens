@@ -123,4 +123,40 @@ export class GitHubInstallationRepository {
       throw err;
     }
   }
+
+  async linkUser(installationId: bigint, userId: string) {
+    const className = GitHubInstallationRepository.name;
+    const methodName = 'linkUser';
+
+    this.logger.info(`[${className}] [${methodName}] :: Linking installation to user`, {
+      installationId: String(installationId),
+      userId,
+    });
+
+    return this.prisma.gitHubInstallation.update({
+      where: { installationId },
+      data: { userId },
+    });
+  }
+
+  async findActiveByUserId(userId: string) {
+    return this.prisma.gitHubInstallation.findMany({
+      where: { userId, deletedAt: null },
+      orderBy: { installedAt: 'desc' },
+    });
+  }
+
+  async findByUserAndRepo(userId: string, repoFullName: string) {
+    return this.prisma.connection.findFirst({
+      where: {
+        repoFullName,
+        disconnectedAt: null,
+        installation: {
+          userId,
+          deletedAt: null,
+        },
+      },
+      include: { installation: true },
+    });
+  }
 }

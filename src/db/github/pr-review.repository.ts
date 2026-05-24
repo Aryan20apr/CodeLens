@@ -1,18 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
-import { PrReviewRunStatus } from '../../../generated/prisma/client';
+import {
+  PrReviewStatus,
+  PrReviewTrigger,
+} from '../../../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
-export class PrReviewRunRepository {
+export class PrReviewRepository {
   private readonly logger: Logger;
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly prisma: PrismaService,
   ) {
-    this.logger = logger.child({ context: PrReviewRunRepository.name });
+    this.logger = logger.child({ context: PrReviewRepository.name });
   }
 
   async createPending(data: {
@@ -25,11 +28,11 @@ export class PrReviewRunRepository {
     baseSha: string;
     bullmqJobId?: string;
   }) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'createPending';
 
-    this.logger.info(`[${className}] [${methodName}] :: Creating pending PR review run`, {
-      reviewRunId: data.id,
+    this.logger.info(`[${className}] [${methodName}] :: Creating pending PR review`, {
+      reviewId: data.id,
       deliveryId: data.deliveryId,
       installationId: String(data.installationId),
       repoFullName: data.repoFullName,
@@ -37,19 +40,23 @@ export class PrReviewRunRepository {
     });
 
     try {
-      const record = await this.prisma.prReviewRun.create({
-        data: { ...data, status: PrReviewRunStatus.PENDING },
+      const record = await this.prisma.prReview.create({
+        data: {
+          ...data,
+          status: PrReviewStatus.PENDING,
+          triggeredBy: PrReviewTrigger.WEBHOOK,
+        },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review run created`, {
-        reviewRunId: data.id,
-        status: PrReviewRunStatus.PENDING,
+      this.logger.info(`[${className}] [${methodName}] :: PR review created`, {
+        reviewId: data.id,
+        status: PrReviewStatus.PENDING,
       });
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to create PR review run`, {
-        reviewRunId: data.id,
+      this.logger.error(`[${className}] [${methodName}] :: Failed to create PR review`, {
+        reviewId: data.id,
         deliveryId: data.deliveryId,
         error: err,
       });
@@ -57,26 +64,59 @@ export class PrReviewRunRepository {
     }
   }
 
+  async createPendingManual(data: {
+    id: string;
+    userId: string;
+    installationId: bigint;
+    repoFullName: string;
+    prNumber: number;
+    headSha: string;
+    baseSha: string;
+    bullmqJobId?: string;
+  }) {
+    const className = PrReviewRepository.name;
+    const methodName = 'createPendingManual';
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Creating manual PR review`,
+      {
+        reviewId: data.id,
+        userId: data.userId,
+        installationId: String(data.installationId),
+        repoFullName: data.repoFullName,
+        prNumber: data.prNumber,
+      },
+    );
+
+    return this.prisma.prReview.create({
+      data: {
+        ...data,
+        status: PrReviewStatus.PENDING,
+        triggeredBy: PrReviewTrigger.MANUAL,
+      },
+    });
+  }
+
   async findById(id: string) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'findById';
 
-    this.logger.debug(`[${className}] [${methodName}] :: Looking up PR review run`, {
-      reviewRunId: id,
+    this.logger.debug(`[${className}] [${methodName}] :: Looking up PR review`, {
+      reviewId: id,
     });
 
     try {
-      const record = await this.prisma.prReviewRun.findUnique({ where: { id } });
+      const record = await this.prisma.prReview.findUnique({ where: { id } });
 
-      this.logger.debug(`[${className}] [${methodName}] :: PR review run lookup complete`, {
-        reviewRunId: id,
+      this.logger.debug(`[${className}] [${methodName}] :: PR review lookup complete`, {
+        reviewId: id,
         found: Boolean(record),
       });
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to look up PR review run`, {
-        reviewRunId: id,
+      this.logger.error(`[${className}] [${methodName}] :: Failed to look up PR review`, {
+        reviewId: id,
         error: err,
       });
       throw err;
@@ -84,28 +124,28 @@ export class PrReviewRunRepository {
   }
 
   async markRunning(id: string) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'markRunning';
 
-    this.logger.info(`[${className}] [${methodName}] :: Marking PR review run running`, {
-      reviewRunId: id,
+    this.logger.info(`[${className}] [${methodName}] :: Marking PR review running`, {
+      reviewId: id,
     });
 
     try {
-      const record = await this.prisma.prReviewRun.update({
+      const record = await this.prisma.prReview.update({
         where: { id },
-        data: { status: PrReviewRunStatus.RUNNING },
+        data: { status: PrReviewStatus.RUNNING },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review run running`, {
-        reviewRunId: id,
-        status: PrReviewRunStatus.RUNNING,
+      this.logger.info(`[${className}] [${methodName}] :: PR review running`, {
+        reviewId: id,
+        status: PrReviewStatus.RUNNING,
       });
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review run running`, {
-        reviewRunId: id,
+      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review running`, {
+        reviewId: id,
         error: err,
       });
       throw err;
@@ -113,20 +153,20 @@ export class PrReviewRunRepository {
   }
 
   async markCompleted(id: string, summaryText: string, githubReviewId: bigint) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'markCompleted';
 
-    this.logger.info(`[${className}] [${methodName}] :: Marking PR review run completed`, {
-      reviewRunId: id,
+    this.logger.info(`[${className}] [${methodName}] :: Marking PR review completed`, {
+      reviewId: id,
       githubReviewId: String(githubReviewId),
       summaryChars: summaryText.length,
     });
 
     try {
-      const record = await this.prisma.prReviewRun.update({
+      const record = await this.prisma.prReview.update({
         where: { id },
         data: {
-          status: PrReviewRunStatus.COMPLETED,
+          status: PrReviewStatus.COMPLETED,
           summaryText,
           githubReviewId,
           completedAt: new Date(),
@@ -134,15 +174,15 @@ export class PrReviewRunRepository {
         },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review run completed`, {
-        reviewRunId: id,
-        status: PrReviewRunStatus.COMPLETED,
+      this.logger.info(`[${className}] [${methodName}] :: PR review completed`, {
+        reviewId: id,
+        status: PrReviewStatus.COMPLETED,
       });
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review run completed`, {
-        reviewRunId: id,
+      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review completed`, {
+        reviewId: id,
         error: err,
       });
       throw err;
@@ -150,29 +190,29 @@ export class PrReviewRunRepository {
   }
 
   async markFailed(id: string, error: string) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'markFailed';
 
-    this.logger.warn(`[${className}] [${methodName}] :: Marking PR review run failed`, {
-      reviewRunId: id,
+    this.logger.warn(`[${className}] [${methodName}] :: Marking PR review failed`, {
+      reviewId: id,
       error,
     });
 
     try {
-      const record = await this.prisma.prReviewRun.update({
+      const record = await this.prisma.prReview.update({
         where: { id },
-        data: { status: PrReviewRunStatus.FAILED, error, completedAt: new Date() },
+        data: { status: PrReviewStatus.FAILED, error, completedAt: new Date() },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review run marked failed`, {
-        reviewRunId: id,
-        status: PrReviewRunStatus.FAILED,
+      this.logger.info(`[${className}] [${methodName}] :: PR review marked failed`, {
+        reviewId: id,
+        status: PrReviewStatus.FAILED,
       });
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to persist PR review run failure`, {
-        reviewRunId: id,
+      this.logger.error(`[${className}] [${methodName}] :: Failed to persist PR review failure`, {
+        reviewId: id,
         error: err,
       });
       throw err;
@@ -180,33 +220,91 @@ export class PrReviewRunRepository {
   }
 
   async setBullmqJobId(id: string, bullmqJobId: string) {
-    const className = PrReviewRunRepository.name;
+    const className = PrReviewRepository.name;
     const methodName = 'setBullmqJobId';
 
-    this.logger.info(`[${className}] [${methodName}] :: Linking BullMQ job to PR review run`, {
-      reviewRunId: id,
+    this.logger.info(`[${className}] [${methodName}] :: Linking BullMQ job to PR review`, {
+      reviewId: id,
       jobId: bullmqJobId,
     });
 
     try {
-      const record = await this.prisma.prReviewRun.update({
+      const record = await this.prisma.prReview.update({
         where: { id },
         data: { bullmqJobId },
       });
 
       this.logger.info(`[${className}] [${methodName}] :: BullMQ job linked`, {
-        reviewRunId: id,
+        reviewId: id,
         jobId: bullmqJobId,
       });
 
       return record;
     } catch (err) {
       this.logger.error(`[${className}] [${methodName}] :: Failed to link BullMQ job`, {
-        reviewRunId: id,
+        reviewId: id,
         jobId: bullmqJobId,
         error: err,
       });
       throw err;
     }
+  }
+
+  async findByIdWithDelivery(id: string) {
+    return this.prisma.prReview.findUnique({
+      where: { id },
+      include: { delivery: true },
+    });
+  }
+
+  async findByPullRequest(
+    repoFullName: string,
+    prNumber: number,
+    page: number,
+    perPage: number,
+  ) {
+    const skip = (page - 1) * perPage;
+    const [items, total] = await Promise.all([
+      this.prisma.prReview.findMany({
+        where: { repoFullName, prNumber },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: perPage,
+      }),
+      this.prisma.prReview.count({
+        where: { repoFullName, prNumber },
+      }),
+    ]);
+    return { items, total, page, perPage };
+  }
+
+  async findByPullRequestForUser(
+    userId: string,
+    installationIds: bigint[],
+    repoFullName: string,
+    prNumber: number,
+    page: number,
+    perPage: number,
+  ) {
+    const skip = (page - 1) * perPage;
+    const orConditions: Array<
+      { userId: string } | { installationId: { in: bigint[] } }
+    > = [{ userId }];
+    if (installationIds.length > 0) {
+      orConditions.push({ installationId: { in: installationIds } });
+    }
+
+    const where = { repoFullName, prNumber, OR: orConditions };
+
+    const [items, total] = await Promise.all([
+      this.prisma.prReview.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: perPage,
+      }),
+      this.prisma.prReview.count({ where }),
+    ]);
+    return { items, total, page, perPage };
   }
 }
