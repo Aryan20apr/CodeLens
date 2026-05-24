@@ -3,6 +3,7 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 
 import { GitHubInstallationRepository } from '../db/github/github-installation.repository';
+import { ConnectionRepository } from '../db/github/connection.repository';
 
 @Injectable()
 export class GithubInstallationService {
@@ -11,6 +12,7 @@ export class GithubInstallationService {
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly installations: GitHubInstallationRepository,
+    private readonly connections: ConnectionRepository,
   ) {
     this.logger = logger.child({ context: GithubInstallationService.name });
   }
@@ -53,23 +55,46 @@ export class GithubInstallationService {
       id: number;
       account?: { login?: string; type?: string } | null;
     },
+    repositoriesAdded: Array<{
+      id: number;
+      full_name: string;
+      private?: boolean;
+    }> = [],
+    repositoriesRemoved: Array<{ id: number; full_name: string }> = [],
   ) {
     const className = GithubInstallationService.name;
     const methodName = 'handleInstallationRepositoriesEvent';
+    const installationId = BigInt(installation.id);
 
     this.logger.info(
       `[${className}] [${methodName}] :: Processing installation_repositories event`,
       {
         action,
-        installationId: String(installation.id),
+        installationId: String(installationId),
         accountLogin: installation.account?.login,
+        addedCount: repositoriesAdded.length,
+        removedCount: repositoriesRemoved.length,
       },
     );
 
     await this.installations.upsertFromInstallation(installation);
 
+    if (repositoriesAdded.length > 0) {
+      await this.connections.upsertFromWebhook(
+        installationId,
+        repositoriesAdded,
+      );
+    }
+
+    if (repositoriesRemoved.length > 0) {
+      await this.connections.disconnectFromWebhook(
+        installationId,
+        repositoriesRemoved.map((r) => r.id),
+      );
+    }
+
     this.logger.info(`[${className}] [${methodName}] :: Installation repositories synced`, {
-      installationId: String(installation.id),
+      installationId: String(installationId),
       action,
     });
   }

@@ -180,4 +180,96 @@ export class GithubApiService {
 
     return BigInt(data.id);
   }
+
+  async listPullRequests(
+    installationId: bigint,
+    repoFullName: string,
+    options: {
+      state?: 'open' | 'closed' | 'all';
+      page?: number;
+      perPage?: number;
+    } = {},
+  ) {
+    const className = GithubApiService.name;
+    const methodName = 'listPullRequests';
+    const { state = 'open', page = 1, perPage = 30 } = options;
+
+    this.logger.info(`[${className}] [${methodName}] :: Listing pull requests`, {
+      installationId: String(installationId),
+      repoFullName,
+      state,
+      page,
+      perPage,
+    });
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+    const { data } = await octokit.pulls.list({
+      owner,
+      repo,
+      state,
+      page,
+      per_page: perPage,
+    });
+
+    return data;
+  }
+
+  async listInstallationRepositories(installationId: bigint) {
+    const className = GithubApiService.name;
+    const methodName = 'listInstallationRepositories';
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Listing installation repositories`,
+      { installationId: String(installationId) },
+    );
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const repos: Array<{ id: number; full_name: string; private?: boolean }> =
+      [];
+    let page = 1;
+    const perPage = 100;
+
+    for (;;) {
+      const { data } = await octokit.apps.listReposAccessibleToInstallation({
+        per_page: perPage,
+        page,
+      });
+      for (const r of data.repositories) {
+        repos.push({
+          id: r.id,
+          full_name: r.full_name,
+          private: r.private,
+        });
+      }
+      if (data.repositories.length < perPage) break;
+      page += 1;
+    }
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Installation repositories listed`,
+      {
+        installationId: String(installationId),
+        repoCount: repos.length,
+      },
+    );
+
+    return repos;
+  }
+
+  async listPullRequestFiles(
+    installationId: bigint,
+    repoFullName: string,
+    prNumber: number,
+  ) {
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+    const { data } = await octokit.pulls.listFiles({
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    });
+    return data;
+  }
 }
