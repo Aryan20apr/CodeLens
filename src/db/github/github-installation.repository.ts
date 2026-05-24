@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import { PrismaService } from '../prisma.service';
@@ -158,5 +158,24 @@ export class GitHubInstallationRepository {
       },
       include: { installation: true },
     });
+  }
+
+  async resolveInstallationId(
+    userId: string,
+    owner: string,
+    repo: string,
+  ): Promise<bigint> {
+    const repoFullName = `${owner}/${repo}`;
+    const record = await this.findByUserAndRepo(userId, repoFullName);
+
+    if (!record?.installation) {
+      throw new ForbiddenException(`No access to repository ${repoFullName}`);
+    }
+
+    if (record.installation.suspendedAt) {
+      throw new ForbiddenException('GitHub App installation is suspended');
+    }
+
+    return record.installationId;
   }
 }
