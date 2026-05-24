@@ -1,5 +1,5 @@
 export type PrReviewJobPayload = {
-  deliveryId: string;
+  deliveryId?: string;
   reviewRunId: string;
   installationId: string;
   repoFullName: string;

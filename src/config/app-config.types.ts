@@ -59,5 +59,6 @@ export interface AppConfig {
     appId: string;
     privateKey: string;
     webhookSecret: string;
+    appInstallUrl: string;
   };
 }

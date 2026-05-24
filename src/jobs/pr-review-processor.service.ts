@@ -5,7 +5,7 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 
 import { GitHubInstallationRepository } from '../db/github/github-installation.repository';
-import { PrReviewRunRepository } from '../db/github/pr-review.repository';
+import { PrReviewRepository } from '../db/github/pr-review.repository';
 import { WebhookDeliveryRepository } from '../db/github/webhook.repository';
 import { GithubApiService } from '../github/github-api.service';
 import { PrSummaryService } from '../review/pr-summary.service';
@@ -18,7 +18,7 @@ export class PrReviewProcessorService extends WorkerHost {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
-    private readonly runs: PrReviewRunRepository,
+    private readonly runs: PrReviewRepository,
     private readonly deliveries: WebhookDeliveryRepository,
     private readonly installations: GitHubInstallationRepository,
     private readonly github: GithubApiService,
@@ -57,7 +57,7 @@ export class PrReviewProcessorService extends WorkerHost {
         reviewRunId,
         jobId: String(job.id),
       });
-      throw new Error(`PrReviewRun not found: ${reviewRunId}`);
+      throw new Error(`PrReview not found: ${reviewRunId}`);
     }
 
     if (run.githubReviewId != null) {

@@ -4,7 +4,7 @@ import type { Queue } from 'bullmq';
 
 import { EnqueCodeReviewDtoSchema, type EnqueueCodeReviewDto } from './dtos/code-review.dto';
 import { CODE_REVIEW_QUEUE } from './constants';
-import { CodeReviewProduce } from './code-review-producer.service';
+import { CodeReviewProducer } from './code-review-producer.service';
 import type { SnippetSource } from 'src/graph/state.types';
 import { Public } from '@common/decorators/public.decorator';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class CodeReviewController {
   constructor(
-    private readonly producer: CodeReviewProduce,
+    private readonly producer: CodeReviewProducer,
     @InjectQueue(CODE_REVIEW_QUEUE) private readonly queue: Queue,
   ) {}
 

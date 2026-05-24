@@ -233,5 +233,11 @@ export const convictSchema = convict<AppConfig>({
       env: 'GITHUB_WEBHOOK_SECRET',
       sensitive: true,
     },
+    appInstallUrl: {
+      doc: 'GitHub App installation URL for connecting repositories',
+      format: String,
+      default: '',
+      env: 'GITHUB_APP_INSTALL_URL',
+    },
   },
 });
