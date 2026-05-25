@@ -1,4 +1,9 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import { PrismaService } from '../prisma.service';
@@ -160,22 +165,42 @@ export class GitHubInstallationRepository {
     });
   }
 
-  async resolveInstallationId(
+  async findByUserAndRepoId(userId: string, repoId: bigint) {
+    return this.prisma.connection.findFirst({
+      where: {
+        repoId,
+        disconnectedAt: null,
+        installation: {
+          userId,
+          deletedAt: null,
+        },
+      },
+      include: { installation: true },
+    });
+  }
+
+  async resolveRepoForUser(
     userId: string,
-    owner: string,
-    repo: string,
-  ): Promise<bigint> {
-    const repoFullName = `${owner}/${repo}`;
-    const record = await this.findByUserAndRepo(userId, repoFullName);
+    repoIdParam: string,
+  ): Promise<{ installationId: bigint; repoFullName: string }> {
+    if (!/^\d+$/.test(repoIdParam)) {
+      throw new BadRequestException('Invalid repoId');
+    }
+
+    const repoId = BigInt(repoIdParam);
+    const record = await this.findByUserAndRepoId(userId, repoId);
 
     if (!record?.installation) {
-      throw new ForbiddenException(`No access to repository ${repoFullName}`);
+      throw new ForbiddenException(`No access to repository ${repoIdParam}`);
     }
 
     if (record.installation.suspendedAt) {
       throw new ForbiddenException('GitHub App installation is suspended');
     }
 
-    return record.installationId;
+    return {
+      installationId: record.installationId,
+      repoFullName: record.repoFullName,
+    };
   }
 }
