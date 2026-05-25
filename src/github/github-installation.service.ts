@@ -99,22 +99,20 @@ export class GithubInstallationService {
     });
   }
 
-  async ensureFromPullRequest(installation: {
-    id: number;
-    account?: { login?: string; type?: string } | null;
-  }) {
-    const className = GithubInstallationService.name;
-    const methodName = 'ensureFromPullRequest';
-
-    this.logger.info(`[${className}] [${methodName}] :: Ensuring installation from pull_request`, {
-      installationId: String(installation.id),
-      accountLogin: installation.account?.login,
-    });
-
-    await this.installations.upsertFromInstallation(installation);
-
-    this.logger.info(`[${className}] [${methodName}] :: Installation ensured`, {
-      installationId: String(installation.id),
-    });
+  async checkPullRequestInstallation(installationId: bigint): Promise<
+    | { eligible: true }
+    | { eligible: false; reason: 'missing' | 'deleted' | 'suspended' }
+  > {
+    const record = await this.installations.findById(installationId);
+    if (!record) {
+      return { eligible: false, reason: 'missing' };
+    }
+    if (record.deletedAt) {
+      return { eligible: false, reason: 'deleted' };
+    }
+    if (record.suspendedAt) {
+      return { eligible: false, reason: 'suspended' };
+    }
+    return { eligible: true };
   }
 }

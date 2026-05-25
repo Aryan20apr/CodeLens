@@ -142,6 +142,51 @@ export class GithubWebhookService {
     const headSha = pull_request.head.sha;
     const baseSha = pull_request.base.sha;
 
+    const eligibility =
+      await this.installations.checkPullRequestInstallation(installationId);
+    if (!eligibility.eligible) {
+      const rejectLogByReason = {
+        missing: 'pull_request for unknown installation',
+        deleted: 'pull_request for deleted installation',
+        suspended: 'pull_request for suspended installation',
+      } as const;
+
+      this.logger.warn(
+        `[${className}] [${methodName}] :: ${rejectLogByReason[eligibility.reason]}`,
+        {
+          deliveryId,
+          installationId: String(installationId),
+          repoFullName,
+          prNumber: number,
+          reason: eligibility.reason,
+        },
+      );
+      try {
+        await this.deliveries.createReceived({
+          deliveryId,
+          event,
+          action,
+          installationId:
+            eligibility.reason === 'missing' ? undefined : installationId,
+          repoFullName,
+          prNumber: number,
+          headSha,
+          baseSha,
+        });
+        if (eligibility.reason === 'suspended') {
+          await this.deliveries.markFailed(
+            deliveryId,
+            'GitHub App installation is suspended',
+          );
+        } else {
+          await this.deliveries.markIgnored(deliveryId);
+        }
+      } catch (err) {
+        if (!this.deliveries.isUniqueViolation(err)) throw err;
+      }
+      return;
+    }
+
     this.logger.info(`[${className}] [${methodName}] :: Enqueueing PR review`, {
       deliveryId,
       action,
@@ -150,11 +195,6 @@ export class GithubWebhookService {
       prNumber: number,
       headSha,
       baseSha,
-    });
-
-    await this.installations.ensureFromPullRequest({
-      id: installation.id,
-      account: undefined,
     });
 
     try {
