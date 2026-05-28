@@ -56,6 +56,9 @@ model User {
 
   preferences UserPreferences?
 
+  githubInstallations GitHubInstallation[]
+  prReviews           PrReview[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -149,4 +152,109 @@ model DeveloperMemory {
   userId String @unique
 
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Models for Githb PR review runs
+// ---------------------------------------------------------------------------
+
+
+enum WebhookDeliveryStatus {
+  RECEIVED
+  ENQUEUED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum PrReviewStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum PrReviewTrigger {
+  WEBHOOK
+  MANUAL
+}
+
+model GitHubInstallation {
+  installationId BigInt    @id
+  accountLogin   String
+  accountType    String
+  suspendedAt    DateTime?
+  installedAt    DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  webhookDeliveries WebhookDelivery[]
+  connections       Connection[]
+
+  @@index([accountLogin])
+  @@index([userId])
+}
+
+model Connection {
+  id             String    @id @default(uuid(7))
+  installationId BigInt
+  installation   GitHubInstallation @relation(fields: [installationId], references: [installationId], onDelete: Cascade)
+  repoId         BigInt
+  repoFullName   String
+  private        Boolean   @default(false)
+  connectedAt    DateTime  @default(now())
+  disconnectedAt DateTime?
+
+  @@unique([installationId, repoId])
+  @@index([installationId])
+}
+
+model WebhookDelivery {
+  deliveryId     String                @id
+  event          String
+  action         String?
+  installationId BigInt?
+  installation   GitHubInstallation?   @relation(fields: [installationId], references: [installationId])
+  repoFullName   String?
+  prNumber       Int?
+  headSha        String?
+  baseSha        String?
+  status         WebhookDeliveryStatus @default(RECEIVED)
+  jobId          String?
+  error          String?
+  receivedAt     DateTime              @default(now())
+  processedAt    DateTime?
+
+  prReview PrReview?
+
+  @@index([status])
+  @@index([repoFullName, prNumber])
+}
+
+model PrReview {
+  id              String          @id @default(uuid(7))
+  deliveryId      String?         @unique
+  delivery        WebhookDelivery? @relation(fields: [deliveryId], references: [deliveryId])
+  installationId  BigInt
+  repoFullName    String
+  prNumber        Int
+  headSha         String
+  baseSha         String
+  status          PrReviewStatus  @default(PENDING)
+  triggeredBy     PrReviewTrigger @default(WEBHOOK)
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  summaryText     String?
+  githubReviewId  BigInt?
+  bullmqJobId     String?
+  error           String?
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
+
+  @@index([repoFullName, prNumber])
+  @@index([repoFullName, prNumber, headSha])
+  @@index([userId])
 }

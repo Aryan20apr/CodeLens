@@ -7,4 +7,4 @@ export const SnippetEvaluateDtoSchema = z.object({
     threadId: z.string().optional()
 });
 
-export type SnippetEvaluateDto = z.infer<typeof SnippetEvaluateDtoSchema>;
+export type SnippetReviewDto = z.infer<typeof SnippetEvaluateDtoSchema>;

@@ -35,7 +35,16 @@ export class UserController {
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   getMe(@CurrentUser() user: any) {
-    const { hashedPassword, apiKeyHash, ...safe } = user;
+    const {
+      hashedPassword,
+      apiKeyHash,
+      oauthAccounts,
+      refreshTokens,
+      githubInstallations,
+      prReviews,
+      preferences,
+      ...safe
+    } = user;
     return safe;
   }
 

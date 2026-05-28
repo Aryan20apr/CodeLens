@@ -35,12 +35,14 @@ import {
   clearRefreshTokenCookie,
   setRefreshTokenCookie,
 } from './refresh-cookie';
+import { GithubOnboardingService } from '../github/github-onboarding.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
+    private readonly onboarding: GithubOnboardingService,
     @Inject(APP_CONFIG) private appConfig: AppConfig,
   ) {}
 
@@ -215,20 +217,60 @@ export class AuthController {
   }
 
   @Public()
+  @Get('github/install')
+  @ApiOperation({ summary: 'GitHub App installation URL for connecting repositories' })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      type: 'object',
+      required: ['installUrl'],
+      properties: {
+        installUrl: { type: 'string', example: 'https://github.com/apps/codelens/installations/new' },
+      },
+    },
+  })
+  githubInstallUrl() {
+    return { installUrl: this.appConfig.githubApp.appInstallUrl };
+  }
+
+  @Public()
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
+  @ApiOperation({ summary: 'GitHub OAuth callback', description: 'Redirect after GitHub OAuth login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend with tokens, sets cookies.' })
   @ApiExcludeEndpoint()
-  async githubCallback(@Req() req: any, @Res() res: FastifyReply) {
+  async githubCallback(
+    @Req() req: { user: { id: string } },
+    @Res() res: FastifyReply,
+  ) {
     const tokens = await this.authService.oauthLogin(req.user);
     const frontendUrl = this.appConfig.frontend.url;
     setRefreshTokenCookie(res, tokens.refreshToken, this.appConfig);
     const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
-    // Return the reply so Fastify (and @Res()) end the request cleanly; omitting
-    // return can leave a blank page or a stuck document load.
-    return res.redirect(
-      `${frontendUrl}/auth/callback#${hash}`,
-      302,
-    );
+    return res.redirect(`${frontendUrl}/auth/callback#${hash}`, 302);
+  }
+
+  @Post('github/installations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Onboard a GitHub App installation for the current user' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['installationId'],
+      properties: {
+        installationId: { type: 'number', example: 135116734 },
+      },
+    },
+  })
+  @ApiResponse({ status: 204, description: 'Installation linked and repositories seeded.' })
+  @ApiResponse({ status: 401, description: 'Not authenticated.' })
+  async onboardInstallation(
+    @CurrentUser() user: { id: string },
+    @Body() body: { installationId: number },
+  ) {
+    await this.onboarding.onboardInstallation(body.installationId, user.id);
   }
 
   // ---------------------------------------------------------------------------
@@ -239,12 +281,16 @@ export class AuthController {
   @Get('google')
   /** `prompt=select_account` is only for the Google authorize URL; callback uses `AuthGuard('google')` only. */
   @UseGuards(GoogleOauthStartGuard)
+  @ApiOperation({ summary: 'Google OAuth redirect', description: 'Redirects to Google for OAuth login.' })
+  @ApiResponse({ status: 302, description: 'Redirects to Google for OAuth.' })
   @ApiExcludeEndpoint()
   googleAuth() {}
 
   @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Google OAuth callback', description: 'Redirect after Google OAuth provider login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend with tokens, sets cookies.' })
   @ApiExcludeEndpoint()
   async googleCallback(@Req() req: any, @Res() res: FastifyReply) {
     const tokens = await this.authService.oauthLogin(req.user);
@@ -259,31 +305,4 @@ export class AuthController {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Convenience: who am I?
-  // ---------------------------------------------------------------------------
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Return the currently authenticated user' })
-  @ApiResponse({
-    status: 200,
-    description: 'Authenticated user profile',
-    schema: {
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        email: { type: 'string' },
-        name: { type: 'string', nullable: true },
-        avatarUrl: { type: 'string', nullable: true },
-        role: { type: 'string', example: 'USER' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Not authenticated' })
-  me(@CurrentUser() user: any) {
-    const { hashedPassword, apiKeyHash, ...safe } = user;
-    return safe;
-  }
 }

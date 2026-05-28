@@ -212,4 +212,32 @@ export const convictSchema = convict<AppConfig>({
       env: 'LANGCHAIN_ENDPOINT',
     },
   },
+  githubApp: {
+    appId: {
+      doc: 'GitHub App ID (numeric)',
+      format: String,
+      default: '',
+      env: 'GITHUB_APP_ID',
+    },
+    privateKey: {
+      doc: 'GitHub App private key PEM (set via resolveGithubAppPrivateKey at load)',
+      format: String,
+      default: '',
+      env: 'GITHUB_APP_PRIVATE_KEY',
+      sensitive: true,
+    },
+    webhookSecret: {
+      doc: 'GitHub webhook HMAC secret',
+      format: String,
+      default: '',
+      env: 'GITHUB_WEBHOOK_SECRET',
+      sensitive: true,
+    },
+    appInstallUrl: {
+      doc: 'GitHub App installation URL for connecting repositories',
+      format: String,
+      default: '',
+      env: 'GITHUB_APP_INSTALL_URL',
+    },
+  },
 });

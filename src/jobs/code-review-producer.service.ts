@@ -9,7 +9,7 @@ import type { CodeReviewJobPayload } from './dtos/code-review.dto';
 
 
 @Injectable()
-export class ProducerService {
+export class CodeReviewProducer {
 
     constructor(
         @InjectQueue(CODE_REVIEW_QUEUE) private readonly queue: Queue<CodeReviewJobPayload>

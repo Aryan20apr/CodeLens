@@ -1,7 +1,16 @@
 /**
- * Inital Graph state types for the snippet path
- * Add`source: "pr"`, diff chunks, rules, memory — not included here.
+ * Initial Graph state types for the snippet path.
+ * PR path uses PrReviewSource internally (not LangGraph in Phase 0).
  */
+export type PrReviewSource = {
+  type: 'pr';
+  repoFullName: string;
+  prNumber: number;
+  headSha: string;
+  baseSha: string;
+  diffText: string;
+};
+
 export type SnippetSource = {
   type: 'snippet';
   language: string;

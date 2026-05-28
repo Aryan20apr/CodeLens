@@ -16,8 +16,11 @@ import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { LlmModule } from './llm/llm.module';
 import { GraphModule } from './graph/graph.module';
-import { EvalModule } from './eval/eval.module';
+import { TestModule } from './test/test.module';
 import { JobsModule } from './jobs/jobs.module';
+import { WebhookModule } from './webhook/webhook.module';
+import { RepositoriesModule } from './repositories/repositories.module';
+import { ReviewRunsModule } from './review-runs/review-runs.module';
 import { StreamingModule } from './streaming/streaming.module';
 
 @Module({
@@ -34,8 +37,11 @@ import { StreamingModule } from './streaming/streaming.module';
     UserModule,
     LlmModule,
     GraphModule,
-    EvalModule,
+    TestModule,
     JobsModule,
+    WebhookModule,
+    RepositoriesModule,
+    ReviewRunsModule,
     StreamingModule,
   ],
   controllers: [AppController],

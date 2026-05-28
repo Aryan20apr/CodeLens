@@ -1,17 +1,32 @@
 import { Module } from '@nestjs/common';
-import { ProducerService } from './producer.service';
-import { CodeReviewProcessor} from './code-review-processor.service';
-import { CodeReviewController } from './code-review-controller.controller';
-import { GraphModule } from 'src/graph/graph.module';
 import { BullModule } from '@nestjs/bullmq';
-import { CODE_REVIEW_QUEUE } from './constants';
+import { GraphModule } from 'src/graph/graph.module';
+
+import { GithubModule } from '../github/github.module';
+import { ReviewModule } from '../review/review.module';
+import { CodeReviewProcessor } from './code-review-processor.service';
+import { CodeReviewController } from './code-review.controller';
+import { CODE_REVIEW_QUEUE, PR_REVIEW_QUEUE } from './constants';
+import { PrReviewProcessorService } from './pr-review-processor.service';
+import { PrReviewProducerService } from './pr-review-producer.service';
+import { CodeReviewProducer } from './code-review-producer.service';
 
 @Module({
-
-  imports: [GraphModule, BullModule, BullModule.registerQueue({
-    name: CODE_REVIEW_QUEUE
-  })],
-  providers: [ProducerService, CodeReviewProcessor],
-  controllers: [CodeReviewController]
+  imports: [
+    GraphModule,
+    GithubModule,
+    ReviewModule,
+    BullModule,
+    BullModule.registerQueue({ name: CODE_REVIEW_QUEUE }),
+    BullModule.registerQueue({ name: PR_REVIEW_QUEUE }),
+  ],
+  providers: [
+    CodeReviewProducer,
+    CodeReviewProcessor,
+    PrReviewProducerService,
+    PrReviewProcessorService,
+  ],
+  controllers: [CodeReviewController],
+  exports: [PrReviewProducerService],
 })
 export class JobsModule {}
