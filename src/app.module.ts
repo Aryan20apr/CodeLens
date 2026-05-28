@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
-
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -22,6 +21,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { ReviewRunsModule } from './review-runs/review-runs.module';
+import { StreamingModule } from './streaming/streaming.module';
 
 @Module({
   imports: [
@@ -42,6 +42,7 @@ import { ReviewRunsModule } from './review-runs/review-runs.module';
     WebhookModule,
     RepositoriesModule,
     ReviewRunsModule,
+    StreamingModule,
   ],
   controllers: [AppController],
   providers: [
