@@ -5,10 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { uuidv7 } from 'uuidv7';
 import type { Logger } from 'winston';
 
 import { GitHubInstallationRepository } from '../db/github/github-installation.repository';
 import { PrReviewRepository } from '../db/github/pr-review.repository';
+import { GithubApiService } from '../github/github-api.service';
+import { PrReviewProducerService } from '../jobs/pr-review-producer.service';
 import type { ReviewRunDto } from './dto/review-run.dto';
 
 @Injectable()
@@ -19,8 +22,74 @@ export class ReviewRunsService {
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly runs: PrReviewRepository,
     private readonly installations: GitHubInstallationRepository,
+    private readonly github: GithubApiService,
+    private readonly producer: PrReviewProducerService,
   ) {
     this.logger = logger.child({ context: ReviewRunsService.name });
+  }
+
+  async triggerReview(
+    userId: string,
+    repoId: string,
+    prNumber: number,
+  ): Promise<{ reviewRunId: string }> {
+    const className = ReviewRunsService.name;
+    const methodName = 'triggerReview';
+
+    const { installationId, repoFullName } =
+      await this.installations.resolveRepoForUser(userId, repoId);
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Triggering manual PR review`,
+      {
+        userId,
+        repoFullName,
+        prNumber,
+        installationId: String(installationId),
+      },
+    );
+
+    const pr = await this.github.getPullRequest(
+      installationId,
+      repoFullName,
+      prNumber,
+    );
+    const headSha = pr.head.sha;
+    const baseSha = pr.base.sha;
+    const reviewRunId = uuidv7();
+
+    await this.runs.createPendingManual({
+      id: reviewRunId,
+      userId,
+      installationId,
+      repoFullName,
+      prNumber,
+      headSha,
+      baseSha,
+    });
+
+    const { jobId } = await this.producer.enqueue({
+      reviewRunId,
+      installationId: String(installationId),
+      repoFullName,
+      prNumber,
+      headSha,
+      baseSha,
+    });
+
+    await this.runs.setBullmqJobId(reviewRunId, jobId);
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Manual PR review enqueued`,
+      {
+        reviewRunId,
+        jobId,
+        repoFullName,
+        prNumber,
+      },
+    );
+
+    return { reviewRunId };
   }
 
   async findById(userId: string, runId: string): Promise<ReviewRunDto> {

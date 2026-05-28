@@ -4,6 +4,7 @@ import {
   MessageEvent,
   Param,
   ParseIntPipe,
+  Post,
   Query,
   Sse,
   UseGuards,
@@ -50,6 +51,24 @@ export class ReviewRunsController {
       page ? Number(page) : 1,
       perPage ? Number(perPage) : 20,
     );
+  }
+
+  @Post('repositories/:repoId/pull-requests/:prNumber')
+  @ApiOperation({ summary: 'Trigger a CodeLens review for a pull request' })
+  @ApiResponse({
+    status: 201,
+    schema: {
+      properties: {
+        reviewRunId: { type: 'string', format: 'uuid' },
+      },
+    },
+  })
+  triggerReview(
+    @CurrentUser() user: { id: string },
+    @Param('repoId') repoId: string,
+    @Param('prNumber', ParseIntPipe) prNumber: number,
+  ) {
+    return this.reviewRuns.triggerReview(user.id, repoId, prNumber);
   }
 
   @Get(':id')
