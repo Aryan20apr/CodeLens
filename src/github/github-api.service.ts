@@ -4,9 +4,17 @@ import type { Logger } from 'winston';
 
 import { GithubAppAuthService } from './github-app-auth.service';
 
-const MAX_DIFF_CHARS = 200_000;
+export const MAX_DIFF_CHARS = 200_000;
 
 export type RepoCoords = { owner: string; repo: string };
+
+export type PullRequestChangedFile = {
+  path: string;
+  previousPath: string | null;
+  status: 'added' | 'modified' | 'removed' | 'renamed' | 'copied';
+  additions: number;
+  deletions: number;
+};
 
 @Injectable()
 export class GithubApiService {
@@ -271,5 +279,69 @@ export class GithubApiService {
       per_page: 100,
     });
     return data;
+  }
+
+  async listPullRequestChangedFiles(
+    installationId: bigint,
+    repoFullName: string,
+    prNumber: number,
+  ): Promise<PullRequestChangedFile[]> {
+    const className = GithubApiService.name;
+    const methodName = 'listPullRequestChangedFiles';
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Listing pull request changed files`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+      },
+    );
+
+    const files = await this.listPullRequestFiles(
+      installationId,
+      repoFullName,
+      prNumber,
+    );
+
+    const mapped = files.map((f) => ({
+      path: f.filename,
+      previousPath: f.previous_filename ?? null,
+      status: this.mapGithubFileStatus(f.status),
+      additions: f.additions,
+      deletions: f.deletions,
+    }));
+
+    this.logger.info(
+      `[${className}] [${methodName}] :: Pull request changed files listed`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+        fileCount: mapped.length,
+      },
+    );
+
+    return mapped;
+  }
+
+  private mapGithubFileStatus(
+    status: string,
+  ): PullRequestChangedFile['status'] {
+    switch (status) {
+      case 'added':
+        return 'added';
+      case 'removed':
+        return 'removed';
+      case 'renamed':
+        return 'renamed';
+      case 'copied':
+        return 'copied';
+      case 'changed':
+      case 'modified':
+        return 'modified';
+      default:
+        return 'modified';
+    }
   }
 }

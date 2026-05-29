@@ -7,7 +7,13 @@ import type { Logger } from 'winston';
 import { GitHubInstallationRepository } from '../db/github/github-installation.repository';
 import { PrReviewRepository } from '../db/github/pr-review.repository';
 import { WebhookDeliveryRepository } from '../db/github/webhook.repository';
-import { GithubApiService } from '../github/github-api.service';
+import { DiffChunkerService } from '../diff/diff-chunker.service';
+import { DiffParserService } from '../diff/diff-parser.service';
+import type { FileIndexEntry } from '../diff/types/review-chunk.types';
+import {
+  GithubApiService,
+  MAX_DIFF_CHARS,
+} from '../github/github-api.service';
 import { PrSummaryService } from '../review/pr-summary.service';
 import { PR_REVIEW_QUEUE } from './constants';
 import type { PrReviewJobPayload } from './dtos/pr-review-job.dto';
@@ -22,6 +28,8 @@ export class PrReviewProcessorService extends WorkerHost {
     private readonly deliveries: WebhookDeliveryRepository,
     private readonly installations: GitHubInstallationRepository,
     private readonly github: GithubApiService,
+    private readonly diffParser: DiffParserService,
+    private readonly chunker: DiffChunkerService,
     private readonly summary: PrSummaryService,
   ) {
     super();
@@ -109,12 +117,56 @@ export class PrReviewProcessorService extends WorkerHost {
         prNumber,
       );
 
+      const diffTruncated =
+        diffText.includes(`[Diff truncated at ${MAX_DIFF_CHARS}`) ||
+        diffText.length >= MAX_DIFF_CHARS;
+
+      const parsed = this.diffParser.parse(diffText);
+      const chunks = this.chunker.buildReviewChunks(parsed);
+
+      if (chunks.length === 0) {
+        const message = 'No reviewable additions in diff';
+        this.logger.warn(`[${className}] [${methodName}] :: ${message}`, {
+          reviewRunId,
+          repoFullName,
+          prNumber,
+          fileCount: parsed.files.length,
+        });
+        await this.runs.markFailed(reviewRunId, message);
+        if (deliveryId) {
+          await this.deliveries.markFailed(deliveryId, message);
+        }
+        throw new Error(message);
+      }
+
+      let apiFileIndex: FileIndexEntry[] | undefined;
+      if (diffTruncated) {
+        const apiFiles = await this.github.listPullRequestChangedFiles(
+          installationId,
+          repoFullName,
+          prNumber,
+        );
+        apiFileIndex = apiFiles.map((f) => ({
+          path: f.path,
+          previousPath: f.previousPath,
+          status: f.status,
+          additions: f.additions,
+          deletions: f.deletions,
+        }));
+      }
+
       const summaryText = await this.summary.summarize({
         repoFullName,
         prNumber,
         title: pr.title ?? `PR #${prNumber}`,
         body: pr.body ?? null,
-        diffText,
+        parsed,
+        chunks,
+        fileIndex: this.chunker.buildFileIndex(parsed),
+        removedOnlyFileCount: this.chunker.countRemovedOnlyFiles(parsed),
+        binaryOrEmptyFileCount: this.chunker.countBinaryOrEmptyFiles(parsed),
+        diffTruncated,
+        apiFileIndex,
       });
 
       const githubReviewId = await this.github.createPullRequestReview(
@@ -134,6 +186,9 @@ export class PrReviewProcessorService extends WorkerHost {
         reviewRunId,
         deliveryId,
         githubReviewId: String(githubReviewId),
+        chunkCount: chunks.length,
+        fileCount: parsed.files.length,
+        diffTruncated,
       });
 
       return { githubReviewId: String(githubReviewId) };
