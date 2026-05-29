@@ -1,6 +1,9 @@
+import type { ParsedDiff } from '../diff/types/parsed-diff.types';
+import type { ReviewChunk } from '../diff/types/review-chunk.types';
+
 /**
  * Initial Graph state types for the snippet path.
- * PR path uses PrReviewSource internally (not LangGraph in Phase 0).
+ * PR path uses PrReviewSource internally (not LangGraph in Phase 1).
  */
 export type PrReviewSource = {
   type: 'pr';
@@ -9,6 +12,8 @@ export type PrReviewSource = {
   headSha: string;
   baseSha: string;
   diffText: string;
+  parsed?: ParsedDiff;
+  chunks?: ReviewChunk[];
 };
 
 export type SnippetSource = {
