@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { GraphModule } from 'src/graph/graph.module';
 
+import { DiffModule } from '../diff/diff.module';
 import { GithubModule } from '../github/github.module';
 import { ReviewModule } from '../review/review.module';
 import { CodeReviewProcessor } from './code-review-processor.service';
@@ -14,6 +15,7 @@ import { CodeReviewProducer } from './code-review-producer.service';
 @Module({
   imports: [
     GraphModule,
+    DiffModule,
     GithubModule,
     ReviewModule,
     BullModule,
