@@ -128,6 +128,13 @@ export class ReviewRunsService {
   }
 
   async getRunForStream(userId: string, runId: string): Promise<ReviewRunDto> {
+    return this.getSnapshotForStream(userId, runId);
+  }
+
+  async getSnapshotForStream(
+    userId: string,
+    runId: string,
+  ): Promise<ReviewRunDto> {
     return this.findById(userId, runId);
   }
 
@@ -172,6 +179,8 @@ export class ReviewRunsService {
     summaryText: string | null;
     githubReviewId: bigint | null;
     error: string | null;
+    currentStep: string | null;
+    currentStepMessage: string | null;
     createdAt: Date;
     completedAt: Date | null;
   }): ReviewRunDto {
@@ -187,6 +196,8 @@ export class ReviewRunsService {
       githubReviewId:
         run.githubReviewId != null ? String(run.githubReviewId) : null,
       error: run.error,
+      currentStep: run.currentStep,
+      currentStepMessage: run.currentStepMessage,
       createdAt: run.createdAt.toISOString(),
       completedAt: run.completedAt?.toISOString() ?? null,
     };
