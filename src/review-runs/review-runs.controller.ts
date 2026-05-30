@@ -1,12 +1,11 @@
 import {
   Controller,
   Get,
-  MessageEvent,
   Param,
   ParseIntPipe,
   Post,
   Query,
-  Sse,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,20 +15,34 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Observable, interval, map, switchMap, takeWhile } from 'rxjs';
+import type { FastifyReply } from 'fastify';
 
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RedisPubSubService } from '../streaming/redis-pub-sub.service';
+import {
+  prReviewChannel,
+  type PrReviewRedisMessage,
+} from '../streaming/types/pr-review-progress.types';
 import { ReviewRunsService } from './review-runs.service';
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED']);
+
+function isPrReviewRedisMessage(value: unknown): value is PrReviewRedisMessage {
+  if (!value || typeof value !== 'object') return false;
+  const t = (value as { type?: string }).type;
+  return t === 'step' || t === 'done';
+}
 
 @ApiTags('Review runs')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('review-runs')
 export class ReviewRunsController {
-  constructor(private readonly reviewRuns: ReviewRunsService) {}
+  constructor(
+    private readonly reviewRuns: ReviewRunsService,
+    private readonly pubsub: RedisPubSubService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List review runs for a pull request' })
@@ -81,19 +94,62 @@ export class ReviewRunsController {
     return this.reviewRuns.findById(user.id, id);
   }
 
-  @Sse(':id/stream')
-  @ApiOperation({ summary: 'Stream review run status until terminal state' })
-  streamStatus(
+  @Get(':id/stream')
+  @ApiOperation({
+    summary: 'Stream review run progress (snapshot, steps, done)',
+  })
+  async streamStatus(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
-  ): Observable<MessageEvent> {
-    return interval(1500).pipe(
-      switchMap(() => this.reviewRuns.getRunForStream(user.id, id)),
-      map((run) => ({ data: run }) as MessageEvent),
-      takeWhile((event) => {
-        const status = (event.data as { status: string }).status;
-        return !TERMINAL_STATUSES.has(status);
-      }, true),
-    );
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const run = await this.reviewRuns.getSnapshotForStream(user.id, id);
+
+    reply.raw.setHeader('Content-Type', 'text/event-stream');
+    reply.raw.setHeader('Cache-Control', 'no-cache');
+    reply.raw.setHeader('Connection', 'keep-alive');
+    reply.raw.flushHeaders?.();
+
+    const send = (event: string, data: unknown) => {
+      reply.raw.write(`event: ${event}\n`);
+      reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    send('snapshot', run);
+
+    if (TERMINAL_STATUSES.has(run.status)) {
+      send('done', {
+        reviewRunId: id,
+        status: run.status,
+        error: run.error ?? undefined,
+        at: new Date().toISOString(),
+      });
+      reply.raw.end();
+      return;
+    }
+
+    const channel = prReviewChannel(id);
+    let closed = false;
+
+    const unsubscribe = await this.pubsub.subscribe(channel, (msg) => {
+      if (closed) return;
+      if (!isPrReviewRedisMessage(msg)) return;
+
+      if (msg.type === 'step') {
+        send('step', msg);
+        return;
+      }
+
+      send('done', msg);
+      closed = true;
+      void unsubscribe().then(() => {
+        if (!reply.raw.destroyed) reply.raw.end();
+      });
+    });
+
+    reply.raw.on('close', () => {
+      closed = true;
+      void unsubscribe();
+    });
   }
 }

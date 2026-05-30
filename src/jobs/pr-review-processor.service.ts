@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -10,11 +10,10 @@ import { WebhookDeliveryRepository } from '../db/github/webhook.repository';
 import { DiffChunkerService } from '../diff/diff-chunker.service';
 import { DiffParserService } from '../diff/diff-parser.service';
 import type { FileIndexEntry } from '../diff/types/review-chunk.types';
-import {
-  GithubApiService,
-  MAX_DIFF_CHARS,
-} from '../github/github-api.service';
+import { GithubApiService, MAX_DIFF_CHARS } from '../github/github-api.service';
 import { PrSummaryService } from '../review/pr-summary.service';
+import { PrReviewProgressPublisher } from '../streaming/pr-review-progress-publisher.service';
+import type { PrReviewStep } from '../streaming/types/pr-review-progress.types';
 import { PR_REVIEW_QUEUE } from './constants';
 import type { PrReviewJobPayload } from './dtos/pr-review-job.dto';
 
@@ -31,6 +30,7 @@ export class PrReviewProcessorService extends WorkerHost {
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
     private readonly summary: PrSummaryService,
+    private readonly progress: PrReviewProgressPublisher,
   ) {
     super();
     this.logger = logger.child({ context: PrReviewProcessorService.name });
@@ -58,6 +58,7 @@ export class PrReviewProcessorService extends WorkerHost {
     });
 
     const installationId = BigInt(installationIdStr);
+    let lastStep: PrReviewStep = 'validating';
 
     const run = await this.runs.findById(reviewRunId);
     if (!run) {
@@ -69,142 +70,276 @@ export class PrReviewProcessorService extends WorkerHost {
     }
 
     if (run.githubReviewId != null) {
-      this.logger.info(`[${className}] [${methodName}] :: Review already posted, skipping`, {
-        reviewRunId,
-        githubReviewId: String(run.githubReviewId),
-        deliveryId,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Review already posted, skipping`,
+        {
+          reviewRunId,
+          githubReviewId: String(run.githubReviewId),
+          deliveryId,
+        },
+      );
       if (deliveryId) {
         await this.deliveries.markProcessed(deliveryId);
       }
+      await this.progress.done(reviewRunId, 'COMPLETED');
       return { skipped: true, githubReviewId: String(run.githubReviewId) };
     }
 
-    const installation = await this.installations.findById(installationId);
-    if (!installation || installation.deletedAt) {
-      this.logger.error(`[${className}] [${methodName}] :: Installation not found or deleted`, {
-        installationId: installationIdStr,
+    try {
+      await this.runStep(
         reviewRunId,
-      });
-      throw new Error(
-        `GitHub installation ${installationIdStr} not found or deleted`,
+        'validating',
+        (s) => {
+          lastStep = s;
+        },
+        async () => {
+          const installation =
+            await this.installations.findById(installationId);
+          if (!installation || installation.deletedAt) {
+            throw new TerminalReviewError(
+              `GitHub installation ${installationIdStr} not found or deleted`,
+              'validating',
+            );
+          }
+          if (installation.suspendedAt) {
+            const message = 'GitHub App installation is suspended';
+            throw new TerminalReviewError(message, 'validating');
+          }
+          return installation;
+        },
       );
-    }
-    if (installation.suspendedAt) {
-      this.logger.warn(`[${className}] [${methodName}] :: Installation suspended`, {
-        installationId: installationIdStr,
-        reviewRunId,
-        deliveryId,
-      });
-      await this.runs.markFailed(reviewRunId, 'GitHub App installation is suspended');
-      if (deliveryId) {
-        await this.deliveries.markFailed(deliveryId, 'installation suspended');
-      }
-      throw new Error('GitHub App installation is suspended');
-    }
 
     await this.runs.markRunning(reviewRunId);
 
-    try {
-      const pr = await this.github.getPullRequest(
-        installationId,
-        repoFullName,
-        prNumber,
-      );
-      const diffText = await this.github.getPullRequestDiff(
-        installationId,
-        repoFullName,
-        prNumber,
+      const pr = await this.runStep(
+        reviewRunId,
+        'fetching_pr',
+        (s) => {
+          lastStep = s;
+        },
+        () =>
+          this.github.getPullRequest(installationId, repoFullName, prNumber),
       );
 
-      const diffTruncated =
-        diffText.includes(`[Diff truncated at ${MAX_DIFF_CHARS}`) ||
-        diffText.length >= MAX_DIFF_CHARS;
+      const { diffText, diffTruncated, apiFileIndex } = await this.runStep(
+        reviewRunId,
+        'fetching_diff',
+        (s) => {
+          lastStep = s;
+        },
+        async () => {
+          const text = await this.github.getPullRequestDiff(
+            installationId,
+            repoFullName,
+            prNumber,
+          );
+          const truncated =
+            text.includes(`[Diff truncated at ${MAX_DIFF_CHARS}`) ||
+            text.length >= MAX_DIFF_CHARS;
 
-      const parsed = this.diffParser.parse(diffText);
-      const chunks = this.chunker.buildReviewChunks(parsed);
+          let fileIndex: FileIndexEntry[] | undefined;
+          if (truncated) {
+            const apiFiles = await this.github.listPullRequestChangedFiles(
+              installationId,
+              repoFullName,
+              prNumber,
+            );
+            fileIndex = apiFiles.map((f) => ({
+              path: f.path,
+              previousPath: f.previousPath,
+              status: f.status,
+              additions: f.additions,
+              deletions: f.deletions,
+            }));
+          }
 
-      if (chunks.length === 0) {
-        const message = 'No reviewable additions in diff';
-        this.logger.warn(`[${className}] [${methodName}] :: ${message}`, {
-          reviewRunId,
-          repoFullName,
-          prNumber,
-          fileCount: parsed.files.length,
-        });
-        await this.runs.markFailed(reviewRunId, message);
-        if (deliveryId) {
-          await this.deliveries.markFailed(deliveryId, message);
-        }
-        throw new Error(message);
-      }
+          return {
+            diffText: text,
+            diffTruncated: truncated,
+            apiFileIndex: fileIndex,
+          };
+        },
+      );
 
-      let apiFileIndex: FileIndexEntry[] | undefined;
-      if (diffTruncated) {
-        const apiFiles = await this.github.listPullRequestChangedFiles(
-          installationId,
-          repoFullName,
-          prNumber,
-        );
-        apiFileIndex = apiFiles.map((f) => ({
-          path: f.path,
-          previousPath: f.previousPath,
-          status: f.status,
-          additions: f.additions,
-          deletions: f.deletions,
-        }));
-      }
+      const parsed = await this.runStep(
+        reviewRunId,
+        'parsing_diff',
+        (s) => {
+          lastStep = s;
+        },
+        async () => this.diffParser.parse(diffText),
+      );
 
-      const summaryText = await this.summary.summarize({
-        repoFullName,
-        prNumber,
-        title: pr.title ?? `PR #${prNumber}`,
-        body: pr.body ?? null,
-        parsed,
-        chunks,
-        fileIndex: this.chunker.buildFileIndex(parsed),
-        removedOnlyFileCount: this.chunker.countRemovedOnlyFiles(parsed),
-        binaryOrEmptyFileCount: this.chunker.countBinaryOrEmptyFiles(parsed),
-        diffTruncated,
-        apiFileIndex,
-      });
+      const chunks = await this.runStep(
+        reviewRunId,
+        'chunking',
+        (s) => {
+          lastStep = s;
+        },
+        async () => {
+          const built = this.chunker.buildReviewChunks(parsed);
+          if (built.length === 0) {
+            throw new TerminalReviewError(
+              'No reviewable additions in diff',
+              'chunking',
+            );
+          }
+          return built;
+        },
+        undefined,
+        { fileCount: parsed.files.length },
+      );
 
-      const githubReviewId = await this.github.createPullRequestReview(
-        installationId,
-        repoFullName,
-        prNumber,
-        summaryText,
+      const summaryText = await this.runStep(
+        reviewRunId,
+        'summarizing',
+        (s) => {
+          lastStep = s;
+        },
+        () =>
+          this.summary.summarize({
+            repoFullName,
+            prNumber,
+            title: pr.title ?? `PR #${prNumber}`,
+            body: pr.body ?? null,
+            parsed,
+            chunks,
+            fileIndex: this.chunker.buildFileIndex(parsed),
+            removedOnlyFileCount: this.chunker.countRemovedOnlyFiles(parsed),
+            binaryOrEmptyFileCount:
+              this.chunker.countBinaryOrEmptyFiles(parsed),
+            diffTruncated,
+            apiFileIndex,
+          }),
+        undefined,
+        { chunkCount: chunks.length },
+      );
+
+      const githubReviewId = await this.runStep(
+        reviewRunId,
+        'posting_review',
+        (s) => {
+          lastStep = s;
+        },
+        () =>
+          this.github.createPullRequestReview(
+            installationId,
+            repoFullName,
+            prNumber,
+            summaryText,
+          ),
       );
 
       await this.runs.markCompleted(reviewRunId, summaryText, githubReviewId);
       if (deliveryId) {
         await this.deliveries.markProcessed(deliveryId);
       }
+      await this.progress.done(reviewRunId, 'COMPLETED');
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review job completed`, {
-        jobId: String(job.id),
-        reviewRunId,
-        deliveryId,
-        githubReviewId: String(githubReviewId),
-        chunkCount: chunks.length,
-        fileCount: parsed.files.length,
-        diffTruncated,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: PR review job completed`,
+        {
+          jobId: String(job.id),
+          reviewRunId,
+          deliveryId,
+          githubReviewId: String(githubReviewId),
+          chunkCount: chunks.length,
+          fileCount: parsed.files.length,
+          diffTruncated,
+        },
+      );
 
       return { githubReviewId: String(githubReviewId) };
     } catch (err) {
+      if (err instanceof TerminalReviewError) {
+        await this.failTerminal(reviewRunId, err.step, err.message, deliveryId);
+        throw err;
+      }
+
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[${className}] [${methodName}] :: PR review job failed`, {
-        reviewRunId,
-        deliveryId,
-        jobId: String(job.id),
-        error: err,
-      });
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isFinalAttempt = job.attemptsMade + 1 >= maxAttempts;
+
+      this.logger.error(
+        `[${className}] [${methodName}] :: PR review job failed`,
+        {
+          reviewRunId,
+          deliveryId,
+          jobId: String(job.id),
+          isFinalAttempt,
+          attemptsMade: job.attemptsMade,
+          error: err,
+        },
+      );
+
+      if (!isFinalAttempt) {
+        await this.progress.stepFailed(reviewRunId, lastStep, message, {
+          retrying: true,
+        });
+        throw err;
+      }
+
       await this.runs.markFailed(reviewRunId, message);
+      await this.progress.done(reviewRunId, 'FAILED', message);
       if (deliveryId) {
         await this.deliveries.markFailed(deliveryId, message);
       }
       throw err;
     }
+  }
+
+  private async runStep<T>(
+    reviewRunId: string,
+    step: PrReviewStep,
+    setLastStep: (step: PrReviewStep) => void,
+    fn: () => Promise<T>,
+    message?: string,
+    meta?: Record<string, unknown>,
+  ): Promise<T> {
+    setLastStep(step);
+    await this.progress.stepStarted(reviewRunId, step, message, meta);
+    try {
+      const result = await fn();
+      await this.progress.stepCompleted(reviewRunId, step, meta);
+      return result;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  private async failTerminal(
+    reviewRunId: string,
+    step: PrReviewStep,
+    message: string,
+    deliveryId?: string,
+  ): Promise<void> {
+    const className = PrReviewProcessorService.name;
+    const methodName = 'failTerminal';
+
+    this.logger.warn(
+      `[${className}] [${methodName}] :: Terminal PR review failure`,
+      {
+        reviewRunId,
+        step,
+        message,
+      },
+    );
+
+    await this.progress.stepFailed(reviewRunId, step, message);
+    await this.runs.markFailed(reviewRunId, message);
+    await this.progress.done(reviewRunId, 'FAILED', message);
+    if (deliveryId) {
+      await this.deliveries.markFailed(deliveryId, message);
+    }
+  }
+}
+
+class TerminalReviewError extends Error {
+  constructor(
+    message: string,
+    readonly step: PrReviewStep,
+  ) {
+    super(message);
+    this.name = 'TerminalReviewError';
   }
 }

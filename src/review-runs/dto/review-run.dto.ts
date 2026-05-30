@@ -9,6 +9,8 @@ export interface ReviewRunDto {
   summaryText: string | null;
   githubReviewId: string | null;
   error: string | null;
+  currentStep: string | null;
+  currentStepMessage: string | null;
   createdAt: string;
   completedAt: string | null;
 }

@@ -250,9 +250,11 @@ model PrReview {
   summaryText     String?
   githubReviewId  BigInt?
   bullmqJobId     String?
-  error           String?
-  createdAt       DateTime        @default(now())
-  completedAt     DateTime?
+  error               String?
+  currentStep         String?
+  currentStepMessage  String?
+  createdAt           DateTime        @default(now())
+  completedAt         DateTime?
 
   @@index([repoFullName, prNumber])
   @@index([repoFullName, prNumber, headSha])

@@ -123,6 +123,19 @@ export class PrReviewRepository {
     }
   }
 
+  async updateCurrentStep(
+    id: string,
+    data: { currentStep: string; currentStepMessage?: string | null },
+  ) {
+    return this.prisma.prReview.update({
+      where: { id },
+      data: {
+        currentStep: data.currentStep,
+        currentStepMessage: data.currentStepMessage ?? null,
+      },
+    });
+  }
+
   async markRunning(id: string) {
     const className = PrReviewRepository.name;
     const methodName = 'markRunning';
