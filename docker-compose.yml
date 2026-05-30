@@ -75,6 +75,30 @@ services:
         soft: 65536
         hard: 65536
 
+  # Official Redis GUI — browse keys across DB 0–15. In dev, open the published
+  # port (override) and add a connection: host `redis`, port 6379, password from
+  # REDIS_PASSWORD.
+  redis-insight:
+    image: redis/redisinsight:${REDIS_INSIGHT_IMAGE_TAG:-2.70}
+    container_name: ${REDIS_INSIGHT_CONTAINER_NAME:-codelens-redis-insight}
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+    volumes:
+      - redis-insight-data:/data
+
+    networks:
+      - redis-net
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    logging: *default-logging
+
+    security_opt:
+      - no-new-privileges:true
+
   postgres:
     image: postgres:${POSTGRES_IMAGE_TAG:-18-alpine}
     container_name: ${POSTGRES_CONTAINER_NAME:-codelens-postgres}
@@ -117,5 +141,7 @@ networks:
 volumes:
   redis-data:
     name: codelens-redis-data
+  redis-insight-data:
+    name: codelens-redis-insight-data
   postgres-data:
     name: codelens-postgres-data

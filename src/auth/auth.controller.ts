@@ -12,6 +12,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import { GoogleOauthStartGuard } from './guards/google-oauth-start.guard';
 import {
   ApiTags,
@@ -157,7 +158,7 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt-refresh'))
+  @UseGuards(JwtRefreshAuthGuard)
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
     summary: 'Rotate refresh token and issue a new access token',
@@ -188,7 +189,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(AuthGuard('jwt-refresh'))
+  @UseGuards(JwtRefreshAuthGuard)
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
     summary: 'Revoke the current refresh token',

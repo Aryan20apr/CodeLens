@@ -7,6 +7,8 @@ import {
   import * as bcrypt from 'bcrypt';
   import { uuidv7 } from 'uuidv7';
   import ms from 'ms';
+  import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+  import type { Logger } from 'winston';
   import { PrismaService } from '../db/prisma.service';
   import { UserService } from '../user/user.service';
   import { encrypt } from '../common/utils/crypto.util';
@@ -16,12 +18,17 @@ import {
   
   @Injectable()
   export class AuthService {
+    private readonly logger: Logger;
+
     constructor(
       private prisma: PrismaService,
       private userService: UserService,
       private jwtService: JwtService,
       @Inject(APP_CONFIG) private config: AppConfig,
-    ) {}
+      @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
+    ) {
+      this.logger = logger.child({ context: AuthService.name });
+    }
   
     // -------------------------------------------------------------------------
     // Email / password
@@ -50,28 +57,32 @@ import {
     // -------------------------------------------------------------------------
   
     async refreshTokens(userId: string, tokenId: string) {
+      const className = AuthService.name;
+      const methodName = 'refreshTokens';
+
+      this.logger.info(
+        `[${className}] [${methodName}] :: Rotating refresh token`,
+        { userId, tokenId },
+      );
+
       const user = await this.userService.findById(userId);
-      if (!user) throw new UnauthorizedException();
-  
+      if (!user) {
+        this.logger.warn(
+          `[${className}] [${methodName}] :: User not found during refresh`,
+          { userId, tokenId },
+        );
+        throw new UnauthorizedException();
+      }
       // Rotate: revoke the used token, issue a new pair
       await this.revokeRefreshToken(tokenId);
       return this.issueTokens(user);
     }
-  
     async validateRefreshToken(userId: string, tokenId: string) {
+      const className = AuthService.name;
+      const methodName = 'validateRefreshToken';
       const token = await this.prisma.refreshToken.findUnique({
         where: { id: tokenId },
       });
-  
-      if (
-        !token ||
-        token.userId !== userId ||
-        token.revokedAt ||
-        token.expiresAt < new Date()
-      ) {
-        return null;
-      }
-  
       return this.userService.findById(userId);
     }
   

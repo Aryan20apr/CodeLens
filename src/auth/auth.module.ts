@@ -8,6 +8,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/refresh.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { GoogleOauthStartGuard } from './guards/google-oauth-start.guard';
+import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ApiKeyStrategy } from './strategies/api-key.strategy';
 import { UserModule } from '../user/user.module';
@@ -29,6 +30,7 @@ import { GithubModule } from '../github/github.module';
   controllers: [AuthController],
   providers: [
     GoogleOauthStartGuard,
+    JwtRefreshAuthGuard,
     AuthService,
     LocalStrategy,
     JwtStrategy,

@@ -11,11 +11,13 @@ import { CODE_REVIEW_QUEUE, PR_REVIEW_QUEUE } from './constants';
 import { PrReviewProcessorService } from './pr-review-processor.service';
 import { PrReviewProducerService } from './pr-review-producer.service';
 import { CodeReviewProducer } from './code-review-producer.service';
+import { StreamingModule } from 'src/streaming/streaming.module';
 
 @Module({
   imports: [
     GraphModule,
     DiffModule,
+    StreamingModule,
     GithubModule,
     ReviewModule,
     BullModule,

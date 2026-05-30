@@ -18,6 +18,13 @@ services:
     labels:
       com.codelens.env: "development"
 
+  redis-insight:
+    ports:
+      - "${REDIS_INSIGHT_BIND_HOST:-127.0.0.1}:${REDIS_INSIGHT_PORT:-5540}:5540"
+
+    labels:
+      com.codelens.env: "development"
+
   postgres:
     ports:
       - "${POSTGRES_BIND_HOST:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
