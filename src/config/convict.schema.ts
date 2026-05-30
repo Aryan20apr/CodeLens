@@ -80,7 +80,7 @@ export const convictSchema = convict<AppConfig>({
     jwtAccessExpiresIn: {
       doc: 'JWT access token TTL (e.g. 15m)',
       format: String,
-      default: '15m',
+      default: '30m',
       env: 'JWT_ACCESS_EXPIRES_IN',
     },
     jwtRefreshSecret: {
