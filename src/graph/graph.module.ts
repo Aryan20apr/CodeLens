@@ -6,16 +6,27 @@ import { AppConfigModule } from 'src/config/config.module';
 import { LlmModule } from 'src/llm/llm.module';
 import { GraphFactory } from './graph.factory';
 import { LanguageDetectService } from './lib/language-detect.service';
+import { DiffModule } from 'src/diff/diff.module';
+import { ReviewModule } from 'src/review/review.module';
+import { StreamingModule } from 'src/streaming/streaming.module';
+import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
 
 @Module({
-  imports: [AppConfigModule, LlmModule],
+  imports: [
+    AppConfigModule,
+    LlmModule,
+    DiffModule,
+    ReviewModule,
+    StreamingModule,
+  ],
   providers: [
     GraphFactory,
+    PrReviewGraphFactory,
     TreeSitterService,
     QueryLoaderService,
     AstExtractService,
     LanguageDetectService,
   ],
-  exports: [GraphFactory],
+  exports: [GraphFactory, PrReviewGraphFactory],
 })
 export class GraphModule {}
