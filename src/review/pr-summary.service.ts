@@ -7,6 +7,8 @@ import { DiffChunkSerializerService } from '../diff/diff-chunk-serializer.servic
 import type { ParsedDiff } from '../diff/types/parsed-diff.types';
 import type { FileIndexEntry, ReviewChunk } from '../diff/types/review-chunk.types';
 import { LlmService } from '../llm/llm.service';
+import { formatFileContextsForPrompt } from './enrichment/format-file-context.util';
+import type { PrFileContext } from './enrichment/pr-file-enrichment.types';
 
 export type PrSummaryInput = {
   repoFullName: string;
@@ -20,6 +22,7 @@ export type PrSummaryInput = {
   binaryOrEmptyFileCount: number;
   diffTruncated?: boolean;
   apiFileIndex?: FileIndexEntry[];
+  fileContexts?: PrFileContext[];
 };
 
 const SYSTEM_PROMPT = `You are CodeLens, a precise pull-request review assistant.
@@ -27,6 +30,8 @@ Review ONLY the provided diff chunk blocks below. Do not invent files or line nu
 Each finding MUST cite a path and a 1-based line number from the "Added lines" sections (format: L{n}).
 Comment only on added lines shown in the chunks. Do not cite deleted-only lines.
 If uncertain about a finding, omit it rather than guess.
+Structural context (if provided) describes the full file at PR head; still cite findings only on Added lines in diff chunks (L{n}).
+Do not cite line numbers from structural context unless they appear in chunk added lines.
 
 Output markdown with these sections:
 ## Overview
@@ -125,6 +130,7 @@ export class PrSummaryService {
         ? `\n## Truncation\n${truncationParts.join('\n')}`
         : '',
       `\n## Diff chunks\n${serializedChunks}`,
+      `\n## Structural context (AST at head; do not cite lines from here unless in chunks)\n${formatFileContextsForPrompt(input.fileContexts ?? [])}`,
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -163,7 +169,7 @@ export class PrSummaryService {
 
       const summary = text.trim();
 
-      this.logger.info(`[${className}] [${methodName}] :: PR summary generated`, {
+      this.logger.info(`[${className}] [${methodName}] :: Starting file enrichment`, {
         repoFullName: input.repoFullName,
         prNumber: input.prNumber,
         summaryChars: summary.length,
