@@ -6,11 +6,13 @@ import type { Logger } from 'winston';
 import { DiffChunkerService } from '../../diff/diff-chunker.service';
 import { DiffParserService } from '../../diff/diff-parser.service';
 import { GithubApiService } from '../../github/github-api.service';
+import { PrFileEnrichmentService } from '../../review/enrichment/pr-file-enrichment.service';
 import { PrSummaryService } from '../../review/pr-summary.service';
 import { PrReviewProgressPublisher } from '../../streaming/pr-review-progress-publisher.service';
 import { createAnalyzeNode } from './nodes/analyze.node';
 import { createChunkNode } from './nodes/chunk.node';
 import { createDiffIngestionNode } from './nodes/diff-ingestion.node';
+import { createEnrichFilesNode } from './nodes/enrich-files.node';
 import { createPostReviewNode } from './nodes/post-review.node';
 import type {
   PrReviewGraphInvokeInput,
@@ -32,6 +34,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
     private readonly summary: PrSummaryService,
+    private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
@@ -40,7 +43,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> analyze -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> analyze -> postReview -> END',
     );
   }
 
@@ -81,6 +84,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       fileIndex: [],
       removedOnlyFileCount: 0,
       binaryOrEmptyFileCount: 0,
+      fileContexts: [],
       summaryMarkdown: null,
       githubReviewId: null,
       status: 'pending' as const,
@@ -123,17 +127,20 @@ export class PrReviewGraphFactory implements OnModuleInit {
   private build() {
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
+    const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
     const analyze = createAnalyzeNode(this.summary, this.progress);
     const postReview = createPostReviewNode(this.github, this.progress);
 
     return new StateGraph(PrReviewGraphState)
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
+      .addNode('enrichFiles', enrichFiles)
       .addNode('analyze', analyze)
       .addNode('postReview', postReview)
       .addEdge(START, 'ingestDiff')
       .addEdge('ingestDiff', 'chunk')
-      .addEdge('chunk', 'analyze')
+      .addEdge('chunk', 'enrichFiles')
+      .addEdge('enrichFiles', 'analyze')
       .addEdge('analyze', 'postReview')
       .addEdge('postReview', END)
       .compile({ checkpointer: prReviewMemoryCheckpointer });

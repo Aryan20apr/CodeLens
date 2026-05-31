@@ -50,6 +50,7 @@ export function createAnalyzeNode(
               binaryOrEmptyFileCount: state.binaryOrEmptyFileCount,
               diffTruncated: state.diffTruncated,
               apiFileIndex: state.apiFileIndex,
+              fileContexts: state.fileContexts ?? [],
             }),
         },
       ],

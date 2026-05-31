@@ -11,6 +11,7 @@ import {
   lastWins,
   type GraphEvent,
 } from '../state.annotation';
+import type { PrFileContext } from '../../review/enrichment/pr-file-enrichment.types';
 import type { PrReviewRunStatus } from '../state.types';
 
 export const PrReviewGraphState = Annotation.Root({
@@ -80,6 +81,11 @@ export const PrReviewGraphState = Annotation.Root({
   binaryOrEmptyFileCount: Annotation<number>({
     reducer: lastWins,
     default: () => 0,
+  }),
+
+  fileContexts: Annotation<PrFileContext[]>({
+    reducer: lastWins,
+    default: () => [],
   }),
 
   summaryMarkdown: Annotation<string | null>({
