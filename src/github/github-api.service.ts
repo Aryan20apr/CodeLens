@@ -5,6 +5,7 @@ import type { Logger } from 'winston';
 import { GithubAppAuthService } from './github-app-auth.service';
 
 export const MAX_DIFF_CHARS = 200_000;
+export const MAX_FILE_CONTENT_BYTES = 512_000;
 
 export type RepoCoords = { owner: string; repo: string };
 
@@ -323,6 +324,88 @@ export class GithubApiService {
     );
 
     return mapped;
+  }
+
+  async getFileContentAtRef(
+    installationId: bigint,
+    repoFullName: string,
+    path: string,
+    ref: string,
+  ): Promise<{ content: string; sizeBytes: number } | null> {
+    const className = GithubApiService.name;
+    const methodName = 'getFileContentAtRef';
+
+    this.logger.info(`[${className}] [${methodName}] :: Fetching file at ref`, {
+      installationId: String(installationId),
+      repoFullName,
+      path,
+      ref,
+    });
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref,
+      });
+
+      if (Array.isArray(data)) {
+        this.logger.warn(
+          `[${className}] [${methodName}] :: Path is a directory, skipping`,
+          { repoFullName, path, ref },
+        );
+        return null;
+      }
+
+      if (data.type !== 'file' || !('content' in data) || !data.content) {
+        this.logger.warn(
+          `[${className}] [${methodName}] :: Not a file or missing content`,
+          { repoFullName, path, ref, type: data.type },
+        );
+        return null;
+      }
+
+      const encoded = data.content.replace(/\n/g, '');
+      const content = Buffer.from(encoded, 'base64').toString('utf8');
+      const sizeBytes = Buffer.byteLength(content, 'utf8');
+
+      if (sizeBytes > MAX_FILE_CONTENT_BYTES) {
+        this.logger.warn(
+          `[${className}] [${methodName}] :: File exceeds size limit`,
+          {
+            repoFullName,
+            path,
+            ref,
+            sizeBytes,
+            maxBytes: MAX_FILE_CONTENT_BYTES,
+          },
+        );
+        return null;
+      }
+
+      this.logger.info(`[${className}] [${methodName}] :: File fetched`, {
+        installationId: String(installationId),
+        repoFullName,
+        path,
+        ref,
+        sizeBytes,
+      });
+
+      return { content, sizeBytes };
+    } catch (err) {
+      this.logger.warn(`[${className}] [${methodName}] :: Failed to fetch file`, {
+        installationId: String(installationId),
+        repoFullName,
+        path,
+        ref,
+        error: err,
+      });
+      return null;
+    }
   }
 
   private mapGithubFileStatus(
