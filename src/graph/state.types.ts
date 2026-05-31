@@ -1,20 +1,14 @@
-import type { ParsedDiff } from '../diff/types/parsed-diff.types';
-import type { ReviewChunk } from '../diff/types/review-chunk.types';
-
-/**
- * Initial Graph state types for the snippet path.
- * PR path uses PrReviewSource internally (not LangGraph in Phase 1).
- */
 export type PrReviewSource = {
   type: 'pr';
+  reviewRunId: string;
+  installationId: string;
   repoFullName: string;
   prNumber: number;
   headSha: string;
   baseSha: string;
-  diffText: string;
-  parsed?: ParsedDiff;
-  chunks?: ReviewChunk[];
 };
+
+export type PrReviewRunStatus = 'pending' | 'running' | 'complete' | 'failed';
 
 export type SnippetSource = {
   type: 'snippet';

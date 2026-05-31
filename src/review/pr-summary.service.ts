@@ -13,7 +13,7 @@ export type PrSummaryInput = {
   prNumber: number;
   title: string;
   body: string | null;
-  parsed: ParsedDiff;
+  parsed: ParsedDiff | null;
   chunks: ReviewChunk[];
   fileIndex: FileIndexEntry[];
   removedOnlyFileCount: number;
@@ -67,7 +67,7 @@ export class PrSummaryService {
     this.logger.info(`[${className}] [${methodName}] :: Generating PR summary`, {
       repoFullName: input.repoFullName,
       prNumber: input.prNumber,
-      fileCount: input.parsed.files.length,
+      fileCount: input.parsed?.files.length,
       chunkCount: input.chunks.length,
       addedLineCount,
       truncated,
@@ -101,7 +101,7 @@ export class PrSummaryService {
     }
 
     const statsBlock = [
-      `Files changed: ${input.parsed.files.length}`,
+      `Files changed: ${input.parsed?.files.length}`,
       `Reviewable hunks: ${input.chunks.length}`,
       `Added lines in chunks: ${addedLineCount}`,
       input.removedOnlyFileCount > 0
