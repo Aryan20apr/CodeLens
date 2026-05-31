@@ -15,15 +15,24 @@ export type GraphEvent = {
   at: string; // ISO timestamp
 };
 
-function lastWins<T>(left: T, right: T | undefined): T {
+export function lastWins<T>(left: T, right: T | undefined): T {
   return right === undefined ? left : right;
 }
 
-function firstWriteWins<T>(left: T, right: T | undefined): T {
-  return left !== null && left !== undefined ? left : (right ?? left);
+function hasFirstWriteValue<T>(value: T): boolean {
+  if (value === null || value === undefined) return false;
+  if (value === '') return false;
+  if (value === 0) return false;
+  return true;
 }
 
-function appendEvents(
+export function firstWriteWins<T>(left: T, right: T | undefined): T {
+  if (hasFirstWriteValue(left)) return left;
+  if (right !== undefined && hasFirstWriteValue(right)) return right;
+  return left;
+}
+
+export function appendEvents(
   left: GraphEvent[],
   right: GraphEvent[] | undefined,
 ): GraphEvent[] {
