@@ -66,11 +66,3 @@ export async function runPrSteps<T>(
   
     return { result: lastResult as T, events };
   }
-  
-  export function graphEvents(
-    node: string,
-    status: GraphEvent['status'],
-    message: string,
-  ): GraphEvent[] {
-    return [{ node, status, message, at: now() }];
-  }
