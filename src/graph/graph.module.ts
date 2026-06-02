@@ -10,6 +10,7 @@ import { DiffModule } from 'src/diff/diff.module';
 import { ReviewModule } from 'src/review/review.module';
 import { StreamingModule } from 'src/streaming/streaming.module';
 import { PrFileEnrichmentService } from '../review/enrichment/pr-file-enrichment.service';
+import { PrAnalyzeAgentFactory } from './pr/analyze/analyze-agent.factory';
 import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
 
 @Module({
@@ -22,6 +23,7 @@ import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
   ],
   providers: [
     GraphFactory,
+    PrAnalyzeAgentFactory,
     PrReviewGraphFactory,
     TreeSitterService,
     QueryLoaderService,
