@@ -17,6 +17,18 @@ export type PullRequestChangedFile = {
   deletions: number;
 };
 
+export type CodeSearchHit = {
+  path: string;
+  line: number | null;
+  text: string;
+}
+export type CodeSearchResult = {
+  totalCount: number;
+  items: CodeSearchHit[];
+  incomplete: boolean;
+};
+
+
 @Injectable()
 export class GithubApiService {
   private readonly logger: Logger;
@@ -280,6 +292,55 @@ export class GithubApiService {
       per_page: 100,
     });
     return data;
+  }
+
+  async searchCode(
+    installationId: bigint,
+    repoFullName: string,
+    query: string,
+    opts: {perPage?: number},
+  ): Promise<CodeSearchResult> {
+    const className = GithubApiService.name;
+    const methodName = 'searchCode';
+    const perPage = Math.min(opts?.perPage ?? 8, 30);
+
+    this.logger.info(`[${className}] [${methodName}] :: Code search`, {
+      installationId: String(installationId),
+      repoFullName,
+      queryLength: query.length,
+      perPage,
+    });
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+
+    const q = query.includes(`repo:${owner}/${repo}`)
+    ? query
+    : `${query} repo:${owner}/${repo}`;
+
+  const { data } = await octokit.search.code({
+    q,
+    per_page: perPage,
+    headers: { accept: 'application/vnd.github.text-match+json' },
+  });
+
+  const items: CodeSearchHit[] = (data.items ?? []).map((item) => {
+    const fragment =
+      item.text_matches?.[0]?.fragment ??
+      item.name ??
+      '';
+    return {
+      path: item.path,
+      line: null, // code search items rarely expose line; optional follow-up via getFileContentAtRef
+      text: fragment.slice(0, 400),
+    };
+  });
+
+  return {
+    totalCount: data.total_count ?? 0,
+    items,
+    incomplete: data.incomplete_results ?? false,
+  };
   }
 
   async listPullRequestChangedFiles(

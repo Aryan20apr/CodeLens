@@ -240,4 +240,38 @@ export const convictSchema = convict<AppConfig>({
       env: 'GITHUB_APP_INSTALL_URL',
     },
   },
+  prReview: {
+    search: {
+      enabled: {
+        doc: 'Enable GitHub search',
+        format: Boolean,
+        default: true,
+        env: 'PR_REVIEW_SEARCH_ENABLED',
+      },
+      maxToolRounds: {
+        doc: 'Maximum number of tool rounds',
+        format: 'nat',
+        default: 3,
+        env: 'PR_REVIEW_SEARCH_MAX_TOOL_ROUNDS',
+      },
+      maxQueriesPerRun: {
+        doc: 'Maximum number of queries per run',
+        format: Number,
+        default: 6,
+        env: 'PR_REVIEW_SEARCH_MAX_QUERIES_PER_RUN',
+      },
+      maxResultsPerQuery: {
+        doc: 'Maximum number of results per query',
+        format: Number,
+        default: 8,
+        env: 'PR_REVIEW_SEARCH_MAX_RESULTS_PER_QUERY',
+      },
+      maxSnippetChars: {
+        doc: 'Maximum number of snippet characters',
+        format: Number,
+        default: 400,
+        env: 'PR_REVIEW_SEARCH_MAX_SNIPPET_CHARS',
+      },
+    }
+  }
 });
