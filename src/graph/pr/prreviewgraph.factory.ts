@@ -7,7 +7,8 @@ import { DiffChunkerService } from '../../diff/diff-chunker.service';
 import { DiffParserService } from '../../diff/diff-parser.service';
 import { GithubApiService } from '../../github/github-api.service';
 import { PrFileEnrichmentService } from '../../review/enrichment/pr-file-enrichment.service';
-import { PrSummaryService } from '../../review/pr-summary.service';
+import { PrAnalyzeAgentFactory } from './analyze/analyze-agent.factory';
+import { PrReviewPromptService } from '../../review/pr-review-prompt.service';
 import { PrReviewProgressPublisher } from '../../streaming/pr-review-progress-publisher.service';
 import { createAnalyzeNode } from './nodes/analyze.node';
 import { createChunkNode } from './nodes/chunk.node';
@@ -33,7 +34,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly github: GithubApiService,
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
-    private readonly summary: PrSummaryService,
+    private readonly promptService: PrReviewPromptService,
+    private readonly analyzeAgent: PrAnalyzeAgentFactory,
     private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
   ) {
@@ -82,6 +84,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       parsed: null,
       chunks: [],
       fileIndex: [],
+      crossFileHints: [],
       removedOnlyFileCount: 0,
       binaryOrEmptyFileCount: 0,
       fileContexts: [],
@@ -128,7 +131,11 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
-    const analyze = createAnalyzeNode(this.summary, this.progress);
+    const analyze = createAnalyzeNode(
+      this.promptService,
+      this.analyzeAgent,
+      this.progress,
+    );
     const postReview = createPostReviewNode(this.github, this.progress);
 
     return new StateGraph(PrReviewGraphState)

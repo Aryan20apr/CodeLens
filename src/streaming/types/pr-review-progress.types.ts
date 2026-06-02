@@ -5,6 +5,7 @@ export const PR_REVIEW_STEPS = [
   'parsing_diff',
   'chunking',
   'enriching_files',
+  'searching_code',
   'summarizing',
   'posting_review',
 ] as const;
