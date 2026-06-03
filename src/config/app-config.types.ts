@@ -61,4 +61,13 @@ export interface AppConfig {
     webhookSecret: string;
     appInstallUrl: string;
   };
+  prReview: {
+    search: {
+      enabled: boolean;
+      maxToolRounds: number;
+      maxQueriesPerRun: number;
+      maxResultsPerQuery: number;
+      maxSnippetChars: number;
+    };
+  };
 }

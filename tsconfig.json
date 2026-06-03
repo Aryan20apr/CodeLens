@@ -18,7 +18,10 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@common/*": ["src/common/*"],
-      "@modules/*": ["src/modules/*"]
+      "@modules/*": ["src/modules/*"],
+      "@langchain/langgraph/prebuilt": [
+        "node_modules/@langchain/langgraph/dist/prebuilt/index.d.ts"
+      ]
     }
   }
 }

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import path from 'path';
 import type { Logger } from 'winston';
-import type { Node, Tree } from 'web-tree-sitter';
+import { Query, type Language, type Node, type QueryMatch, type Tree } from 'web-tree-sitter';
 import { CodeMetadata } from '../state.types';
 import { TreeSitterService } from './tree-sitter/tree-sitter.service';
 import { QueryLoaderService } from './queries/query-loader.service';
@@ -61,6 +61,31 @@ export class AstExtractService {
       return this.emptyMetadata(linesOfCode);
     }
 
+    try {
+      return this.extractMetadataFromTree(lang, tree, bundle, linesOfCode);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorStack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(`[${className}.${methodName}] Metadata extraction failed`, {
+        languageId,
+        errorMessage,
+        errorStack,
+      });
+      throw err;
+    }
+  }
+
+  // ---------------- helpers ----------------
+
+  private extractMetadataFromTree(
+    lang: Language,
+    tree: Tree,
+    bundle: ReturnType<QueryLoaderService['getQueries']>,
+    linesOfCode: number,
+  ): CodeMetadata {
+    const className = AstExtractService.name;
+    const methodName = "buildMetadata";
+
     this.logger.debug(`[${className}.${methodName}] Extracting function symbols`);
     const functions = this.extractSymbols(lang, tree, bundle.functions, 'function.name');
     this.logger.debug(`[${className}.${methodName}] Extracting class symbols`);
@@ -68,7 +93,7 @@ export class AstExtractService {
 
     this.logger.debug(`[${className}.${methodName}] Extracting imports`);
     const imports = this.extractStrings(lang, tree, bundle.imports, 'import.source')
-      .map(this.stripQuotes)
+      .map((s) => this.stripQuotes(s))
       .filter(Boolean);
 
     this.logger.debug(`[${className}.${methodName}] Extracting entry points`);
@@ -104,8 +129,6 @@ export class AstExtractService {
     };
   }
 
-  // ---------------- helpers ----------------
-
   private emptyMetadata(linesOfCode: number): CodeMetadata {
     const className = AstExtractService.name;
     const methodName = "emptyMetadata";
@@ -124,8 +147,17 @@ export class AstExtractService {
     };
   }
 
+  private runQuery(language: Language, queryText: string, tree: Tree): QueryMatch[] {
+    const q = new Query(language, queryText);
+    try {
+      return q.matches(tree.rootNode);
+    } finally {
+      q.delete();
+    }
+  }
+
   private extractSymbols(
-    language: any,
+    language: Language,
     tree: Tree,
     queryText: string,
     captureName: string,
@@ -137,8 +169,7 @@ export class AstExtractService {
       queryTextShort: queryText?.slice(0, 30)
     });
 
-    const q = language.query(queryText);
-    const matches = q.matches(tree.rootNode);
+    const matches = this.runQuery(language, queryText, tree);
 
     const out: CodeSymbol[] = [];
     for (const m of matches) {
@@ -159,7 +190,7 @@ export class AstExtractService {
   }
 
   private extractStrings(
-    language: any,
+    language: Language,
     tree: Tree,
     queryText: string,
     captureName: string,
@@ -171,8 +202,7 @@ export class AstExtractService {
       queryTextShort: queryText?.slice(0, 30)
     });
 
-    const q = language.query(queryText);
-    const matches = q.matches(tree.rootNode);
+    const matches = this.runQuery(language, queryText, tree);
 
     const out: string[] = [];
     for (const m of matches) {

@@ -1,14 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 
+import type { AppConfig } from '../config/app-config.types';
+import { APP_CONFIG } from '../config/config.constants';
 import { DiffChunkSerializerService } from '../diff/diff-chunk-serializer.service';
 import type { ParsedDiff } from '../diff/types/parsed-diff.types';
 import type { FileIndexEntry, ReviewChunk } from '../diff/types/review-chunk.types';
-import { LlmService } from '../llm/llm.service';
+import { formatFileContextsForPrompt } from './enrichment/format-file-context.util';
+import type { PrFileContext } from './enrichment/pr-file-enrichment.types';
 
-export type PrSummaryInput = {
+export type PrReviewPromptInput = {
   repoFullName: string;
   prNumber: number;
   title: string;
@@ -20,13 +22,24 @@ export type PrSummaryInput = {
   binaryOrEmptyFileCount: number;
   diffTruncated?: boolean;
   apiFileIndex?: FileIndexEntry[];
+  fileContexts?: PrFileContext[];
+  searchEnabled?: boolean;
+  enrichedFileCount?: number;
 };
 
-const SYSTEM_PROMPT = `You are CodeLens, a precise pull-request review assistant.
+export type PrReviewPromptBundle = {
+  systemPrompt: string;
+  userContent: string;
+  skipSearchTools: boolean;
+};
+
+const SYSTEM_PROMPT_BASE = `You are CodeLens, a precise pull-request review assistant.
 Review ONLY the provided diff chunk blocks below. Do not invent files or line numbers.
 Each finding MUST cite a path and a 1-based line number from the "Added lines" sections (format: L{n}).
 Comment only on added lines shown in the chunks. Do not cite deleted-only lines.
 If uncertain about a finding, omit it rather than guess.
+Structural context (if provided) describes the full file at PR head; still cite findings only on Added lines in diff chunks (L{n}).
+Do not cite line numbers from structural context unless they appear in chunk added lines.
 
 Output markdown with these sections:
 ## Overview
@@ -40,43 +53,61 @@ Group under ### path/to/file headers. Use bullets: - **L42** — description (op
 
 Do not use GitHub inline review comment syntax. Output is the PR review body only.`;
 
+const SEARCH_TOOLS_PROMPT = `
+Cross-file context: You may call search_symbol_usage or search_import_target when the diff suggests API/export/import impact.
+Use search sparingly (small PRs often need none). Findings must still cite only Added lines in diff chunks.
+Cross-file search results are hints only; do not cite line numbers from search snippets unless they appear in Added lines.
+After search tools return, produce the final review markdown.`;
+
 @Injectable()
-export class PrSummaryService {
+export class PrReviewPromptService {
   private readonly logger: Logger;
+  private readonly searchConfig: AppConfig['prReview']['search'];
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
-    private readonly llm: LlmService,
+    @Inject(APP_CONFIG) config: AppConfig,
     private readonly serializer: DiffChunkSerializerService,
   ) {
-    this.logger = logger.child({ context: PrSummaryService.name });
+    this.logger = logger.child({ context: PrReviewPromptService.name });
+    this.searchConfig = config.prReview.search;
   }
 
-  async summarize(input: PrSummaryInput): Promise<string> {
-    const className = PrSummaryService.name;
-    const methodName = 'summarize';
+  shouldSkipSearchTools(input: PrReviewPromptInput): boolean {
+    if (!this.searchConfig.enabled || input.searchEnabled === false) {
+      return true;
+    }
+    if (input.chunks.length === 0) {
+      return true;
+    }
+    if ((input.enrichedFileCount ?? 0) === 0) {
+      return true;
+    }
+    const fileCount = new Set(input.chunks.map((c) => c.filePath)).size;
+    const addedLines = input.chunks.reduce((n, c) => n + c.addedLines.length, 0);
+    if (fileCount === 1 && addedLines < 30) {
+      return true;
+    }
+    return false;
+  }
+
+  build(input: PrReviewPromptInput): PrReviewPromptBundle {
+    const className = PrReviewPromptService.name;
+    const methodName = 'build';
 
     const { text: serializedChunks, truncated } =
       this.serializer.serializeChunks(input.chunks);
 
-    const addedLineCount = input.chunks.reduce(
-      (sum, c) => sum + c.addedLines.length,
-      0,
-    );
+    const skipSearchTools = this.shouldSkipSearchTools(input);
 
-    this.logger.info(`[${className}] [${methodName}] :: Generating PR summary`, {
+    this.logger.info(`[${className}] [${methodName}] :: Built PR review prompt`, {
       repoFullName: input.repoFullName,
       prNumber: input.prNumber,
-      fileCount: input.parsed?.files.length,
       chunkCount: input.chunks.length,
-      addedLineCount,
-      truncated,
-      diffTruncated: input.diffTruncated ?? false,
+      skipSearchTools,
     });
 
-    const model = this.llm.getChatModel();
     const description = (input.body ?? '').slice(0, 8_000);
-
     const fileIndexLines = this.formatFileIndex(
       input.apiFileIndex ?? input.fileIndex,
     );
@@ -99,6 +130,11 @@ export class PrSummaryService {
         );
       }
     }
+
+    const addedLineCount = input.chunks.reduce(
+      (sum, c) => sum + c.addedLines.length,
+      0,
+    );
 
     const statsBlock = [
       `Files changed: ${input.parsed?.files.length}`,
@@ -125,62 +161,16 @@ export class PrSummaryService {
         ? `\n## Truncation\n${truncationParts.join('\n')}`
         : '',
       `\n## Diff chunks\n${serializedChunks}`,
+      `\n## Structural context (AST at head; do not cite lines from here unless in chunks)\n${formatFileContextsForPrompt(input.fileContexts ?? [])}`,
     ]
       .filter(Boolean)
       .join('\n\n');
 
-    try {
-      const response = await model.invoke([
-        new SystemMessage(SYSTEM_PROMPT),
-        new HumanMessage(userContent),
-      ]);
+    const systemPrompt = skipSearchTools
+      ? SYSTEM_PROMPT_BASE
+      : `${SYSTEM_PROMPT_BASE}\n${SEARCH_TOOLS_PROMPT}`;
 
-      const text =
-        typeof response.content === 'string'
-          ? response.content
-          : Array.isArray(response.content)
-            ? response.content
-                .map((c) =>
-                  typeof c === 'string'
-                    ? c
-                    : 'text' in c
-                      ? String(c.text)
-                      : '',
-                )
-                .join('')
-            : String(response.content ?? '');
-
-      if (!text.trim()) {
-        this.logger.error(
-          `[${className}] [${methodName}] :: LLM returned empty PR summary`,
-          {
-            repoFullName: input.repoFullName,
-            prNumber: input.prNumber,
-          },
-        );
-        throw new Error('LLM returned empty PR summary');
-      }
-
-      const summary = text.trim();
-
-      this.logger.info(`[${className}] [${methodName}] :: PR summary generated`, {
-        repoFullName: input.repoFullName,
-        prNumber: input.prNumber,
-        summaryChars: summary.length,
-      });
-
-      return summary;
-    } catch (err) {
-      this.logger.error(
-        `[${className}] [${methodName}] :: Failed to generate PR summary`,
-        {
-          repoFullName: input.repoFullName,
-          prNumber: input.prNumber,
-          error: err,
-        },
-      );
-      throw err;
-    }
+    return { systemPrompt, userContent, skipSearchTools };
   }
 
   private formatFileIndex(entries: FileIndexEntry[]): string {
