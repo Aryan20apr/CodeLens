@@ -1,7 +1,7 @@
 import { AIMessage } from '@langchain/core/messages';
 import type { LangGraphRunnableConfig } from '@langchain/langgraph';
 
-import { getAnalyzeAgentConfigurable } from '../../../review/context/analyze-agent-configurable.types';
+import { getAnalyzeAgentConfigurable } from '../../../review/types/analyze-agent-configurable.types';
 import type { AnalyzeAgentStateType } from './analyze-agent.state.annotation';
 
 export type AnalyzeRouteTarget = 'searchTools' | 'analyzeFinalize';

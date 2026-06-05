@@ -12,7 +12,7 @@ import type {
   PrFileEnrichmentInput,
   PrFileEnrichmentResult,
   PrFileEnrichSkipReason,
-} from './pr-file-enrichment.types';
+} from '../types/pr-file-enrichment.types';
 
 export const MAX_ENRICH_FILES = 50;
 export const MAX_FILE_BYTES = 512_000;

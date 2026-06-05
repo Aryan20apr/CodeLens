@@ -3,7 +3,7 @@ import type { LangGraphRunnableConfig } from '@langchain/langgraph';
 
 import { formatCrossFileHintsForPrompt } from '../../../../review/context/format-cross-file-hints.util';
 import { extractTextFromLlmContent } from '../../../../review/context/llm-content.util';
-import { getAnalyzeAgentConfigurable } from '../../../../review/context/analyze-agent-configurable.types';
+import { getAnalyzeAgentConfigurable } from '../../../../review/types/analyze-agent-configurable.types';
 import type { LlmService } from '../../../../llm/llm.service';
 import type { AnalyzeAgentStateType } from '../analyze-agent.state.annotation';
 

@@ -1,4 +1,4 @@
-import type { PrFileContext } from './pr-file-enrichment.types';
+import type { PrFileContext } from '../types/pr-file-enrichment.types';
 
 export function formatFileContextsForPrompt(contexts: PrFileContext[]): string {
   if (contexts.length === 0) {

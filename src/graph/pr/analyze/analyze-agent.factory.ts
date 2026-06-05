@@ -8,11 +8,11 @@ import type { Logger } from 'winston';
 import type { AppConfig } from '../../../config/app-config.types';
 import { APP_CONFIG } from '../../../config/config.constants';
 import { LlmService } from '../../../llm/llm.service';
-import type { CrossFileHint } from '../../../review/context/cross-file-hint.types';
+import type { CrossFileHint } from '../../../review/types/cross-file-hint.types';
 import {
   ANALYZE_AGENT_CONFIG_KEY,
   type AnalyzeAgentConfigurable,
-} from '../../../review/context/analyze-agent-configurable.types';
+} from '../../../review/types/analyze-agent-configurable.types';
 import { extractTextFromLlmContent } from '../../../review/context/llm-content.util';
 import { createAnalyzeSearchTools } from '../../../review/context/pr-search-tools';
 import { PrSearchToolExecutorService } from '../../../review/context/pr-search-tool-executor.service';

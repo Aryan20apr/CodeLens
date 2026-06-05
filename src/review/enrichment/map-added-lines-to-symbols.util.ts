@@ -1,5 +1,5 @@
 import type { CodeSymbol } from '../../graph/state.types';
-import type { AddedLineSymbolRef } from './pr-file-enrichment.types';
+import type { AddedLineSymbolRef } from '../types/pr-file-enrichment.types';
 
 /** Innermost symbol wins (smallest line span). Prefer function over class at equal span. */
 export function mapAddedLinesToSymbols(

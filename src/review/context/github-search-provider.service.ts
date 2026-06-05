@@ -6,7 +6,7 @@ import {
   GithubApiService,
   type CodeSearchResult,
 } from '../../github/github-api.service';
-import type { CrossFileHint, CrossFileHintKind } from './cross-file-hint.types';
+import type { CrossFileHint, CrossFileHintKind } from '../types/cross-file-hint.types';
 import type {
   GlobalSearchProvider,
   SymbolSearchOpts,
