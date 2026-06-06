@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { tool } from '@langchain/core/tools';
 import type { LangGraphRunnableConfig } from '@langchain/langgraph';
 
-import { getAnalyzeAgentConfigurable } from './analyze-agent-configurable.types';
+import { getAnalyzeAgentConfigurable } from '../types/analyze-agent-configurable.types';
 import type { PrSearchToolExecutorService } from './pr-search-tool-executor.service';
 
 export const PR_SEARCH_TOOL_NAMES = {

@@ -1,5 +1,5 @@
 import type { CrossFileHint } from './cross-file-hint.types';
-import type { PrSearchExecutorContext } from './pr-search-tool-executor.service';
+import type { PrSearchExecutorContext } from '../context/pr-search-tool-executor.service';
 
 export const ANALYZE_AGENT_CONFIG_KEY = 'analyzeAgent';
 

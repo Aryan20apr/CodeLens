@@ -1,4 +1,4 @@
-import type { CrossFileHint } from './cross-file-hint.types';
+import type { CrossFileHint } from '../types/cross-file-hint.types';
 
 export function formatHintForToolMessage(hint: CrossFileHint): string {
   if (hint.paths.length === 0) {

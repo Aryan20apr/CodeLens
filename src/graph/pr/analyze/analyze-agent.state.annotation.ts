@@ -1,7 +1,7 @@
 import type { BaseMessage } from '@langchain/core/messages';
 import { Annotation } from '@langchain/langgraph';
 
-import type { CrossFileHint } from '../../../review/context/cross-file-hint.types';
+import type { CrossFileHint } from '../../../review/types/cross-file-hint.types';
 import { lastWins } from '../../state.annotation';
 
 function appendMessages(

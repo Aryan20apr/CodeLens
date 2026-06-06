@@ -63,6 +63,7 @@ export type CodeLocation = {
 
 export type Finding = {
   id: string;
+  filePath ?: string
   category: FindingCategory;
   severity: FindingSeverity;
   title: string;

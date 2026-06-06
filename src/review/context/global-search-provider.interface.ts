@@ -1,4 +1,4 @@
-import type { CrossFileHint } from './cross-file-hint.types';
+import type { CrossFileHint } from '../types/cross-file-hint.types';
 
 export type SymbolSearchOpts = { maxResults?: number };
 

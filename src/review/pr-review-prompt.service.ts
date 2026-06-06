@@ -8,7 +8,7 @@ import { DiffChunkSerializerService } from '../diff/diff-chunk-serializer.servic
 import type { ParsedDiff } from '../diff/types/parsed-diff.types';
 import type { FileIndexEntry, ReviewChunk } from '../diff/types/review-chunk.types';
 import { formatFileContextsForPrompt } from './enrichment/format-file-context.util';
-import type { PrFileContext } from './enrichment/pr-file-enrichment.types';
+import type { PrFileContext } from './types/pr-file-enrichment.types';
 
 export type PrReviewPromptInput = {
   repoFullName: string;

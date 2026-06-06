@@ -4,7 +4,7 @@ import type { Logger } from 'winston';
 
 import type { AppConfig } from '../../config/app-config.types';
 import { APP_CONFIG } from '../../config/config.constants';
-import type { CrossFileHint } from './cross-file-hint.types';
+import type { CrossFileHint } from '../types/cross-file-hint.types';
 import { formatHintForToolMessage } from './format-cross-file-hints.util';
 import {
   GLOBAL_SEARCH_PROVIDER,
