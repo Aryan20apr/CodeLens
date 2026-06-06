@@ -25,20 +25,7 @@ const CONFIDENCE_RANK: Record<Finding['confidence'], number> = {
   low: 1,
 };
 
-function meetsMinConfidence(
-  confidence: Finding['confidence'],
-  min: 'low' | 'medium' | 'high',
-): boolean {
-  return CONFIDENCE_RANK[confidence] >= CONFIDENCE_RANK[min];
-}
 
-function sortFindingsForCap(findings: Finding[]): Finding[] {
-  return [...findings].sort((a, b) => {
-    const sev = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
-    if (sev !== 0) return sev;
-    return CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence];
-  });
-}
 
 @Injectable()
 export class ValidatePrFindingsService {
@@ -51,6 +38,21 @@ export class ValidatePrFindingsService {
   ) {
     this.logger = logger.child({ context: ValidatePrFindingsService.name });
     this.findingsConfig = config.prReview.findings;
+  }
+
+  sortFindingsForCap(findings: Finding[]): Finding[] {
+    return [...findings].sort((a, b) => {
+      const sev = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
+      if (sev !== 0) return sev;
+      return CONFIDENCE_RANK[b.confidence] - CONFIDENCE_RANK[a.confidence];
+    });
+  }
+
+  meetsMinConfidence(
+    confidence: Finding['confidence'],
+    min: 'low' | 'medium' | 'high',
+  ): boolean {
+    return CONFIDENCE_RANK[confidence] >= CONFIDENCE_RANK[min];
   }
 
   validate(input: ValidatePrFindingsInput): ValidatePrFindingsResult {
@@ -104,7 +106,7 @@ export class ValidatePrFindingsService {
         }
       }
 
-      if (!meetsMinConfidence(finding.confidence, cfg.minConfidence)) {
+      if (!this.meetsMinConfidence(finding.confidence, cfg.minConfidence)) {
         recordDrop('low_confidence');
         continue;
       }
@@ -117,7 +119,7 @@ export class ValidatePrFindingsService {
       passed.push(finding);
     }
 
-    const sorted = sortFindingsForCap(passed);
+    const sorted = this.sortFindingsForCap(passed);
 
     const perFileCount = new Map<string, number>();
     const afterPerFile: Finding[] = [];

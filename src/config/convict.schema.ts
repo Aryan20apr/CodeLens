@@ -270,7 +270,7 @@ export const convictSchema = convict<AppConfig>({
       maxSnippetChars: {
         doc: 'Maximum number of snippet characters',
         format: Number,
-        default: 400,
+        default: 1000,
         env: 'PR_REVIEW_SEARCH_MAX_SNIPPET_CHARS',
       },
     },
@@ -278,19 +278,19 @@ export const convictSchema = convict<AppConfig>({
       maxRawFindings: {
         doc: 'Maximum raw findings accepted from LLM JSON',
         format: Number,
-        default: 30,
+        default: 100,
         env: 'PR_REVIEW_MAX_RAW_FINDINGS',
       },
       maxInlineComments: {
         doc: 'Maximum inline GitHub review comments per run',
         format: Number,
-        default: 10,
+        default: 100,
         env: 'PR_REVIEW_MAX_INLINE_COMMENTS',
       },
       maxPerFile: {
         doc: 'Maximum inline comments per file after validation',
         format: Number,
-        default: 3,
+        default: 20,
         env: 'PR_REVIEW_MAX_PER_FILE',
       },
       minConfidence: {
@@ -312,7 +312,7 @@ export const convictSchema = convict<AppConfig>({
       maxCommentBodyChars: {
         doc: 'Max characters per inline review comment body',
         format: Number,
-        default: 12000,
+        default: 18000,
         env: 'PR_REVIEW_MAX_COMMENT_BODY_CHARS',
       },
     },
