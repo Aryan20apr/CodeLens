@@ -1,6 +1,7 @@
 import convict from 'convict';
 
 import type { AppConfig } from './app-config.types';
+import type { FindingSeverity } from '../graph/state.types';
 
 export const convictSchema = convict<AppConfig>({
   env: {
@@ -272,6 +273,48 @@ export const convictSchema = convict<AppConfig>({
         default: 400,
         env: 'PR_REVIEW_SEARCH_MAX_SNIPPET_CHARS',
       },
-    }
-  }
+    },
+    findings: {
+      maxRawFindings: {
+        doc: 'Maximum raw findings accepted from LLM JSON',
+        format: Number,
+        default: 30,
+        env: 'PR_REVIEW_MAX_RAW_FINDINGS',
+      },
+      maxInlineComments: {
+        doc: 'Maximum inline GitHub review comments per run',
+        format: Number,
+        default: 10,
+        env: 'PR_REVIEW_MAX_INLINE_COMMENTS',
+      },
+      maxPerFile: {
+        doc: 'Maximum inline comments per file after validation',
+        format: Number,
+        default: 3,
+        env: 'PR_REVIEW_MAX_PER_FILE',
+      },
+      minConfidence: {
+        doc: 'Minimum finding confidence (low, medium, high)',
+        format: ['low', 'medium', 'high'],
+        default: 'medium',
+        env: 'PR_REVIEW_MIN_CONFIDENCE',
+      },
+      allowedSeverities: {
+        doc: 'Comma-separated severities to allow (critical,warning,info)',
+        format: Array,
+        default: ['critical', 'warning', 'info'] as FindingSeverity[],
+        env: 'PR_REVIEW_ALLOWED_SEVERITIES',
+        coerce(val: string | FindingSeverity[]): FindingSeverity[] {
+          if (Array.isArray(val)) return val;
+          return val.split(',').map((s) => s.trim()) as FindingSeverity[];
+        },
+      },
+      maxCommentBodyChars: {
+        doc: 'Max characters per inline review comment body',
+        format: Number,
+        default: 12000,
+        env: 'PR_REVIEW_MAX_COMMENT_BODY_CHARS',
+      },
+    },
+  },
 });

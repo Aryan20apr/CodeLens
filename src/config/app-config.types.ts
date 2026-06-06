@@ -69,5 +69,13 @@ export interface AppConfig {
       maxResultsPerQuery: number;
       maxSnippetChars: number;
     };
+    findings: {
+      maxRawFindings: number;
+      maxInlineComments: number;
+      maxPerFile: number;
+      minConfidence: 'low' | 'medium' | 'high';
+      allowedSeverities: import('../graph/state.types').FindingSeverity[];
+      maxCommentBodyChars: number;
+    };
   };
 }
