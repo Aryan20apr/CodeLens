@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
-
+import type { GithubReviewCommentInput } from '../review/types/pr-findings.types';
 import { GithubAppAuthService } from './github-app-auth.service';
 
 export const MAX_DIFF_CHARS = 200_000;
@@ -16,7 +16,11 @@ export type PullRequestChangedFile = {
   additions: number;
   deletions: number;
 };
-
+export type CreatePullRequestReviewInput = {
+  headSha: string;
+  body: string;
+  comments: GithubReviewCommentInput[];
+};
 export type CodeSearchHit = {
   path: string;
   line: number | null;
@@ -170,33 +174,62 @@ export class GithubApiService {
     installationId: bigint,
     repoFullName: string,
     prNumber: number,
-    body: string,
+    input: CreatePullRequestReviewInput | string,
   ): Promise<bigint> {
     const className = GithubApiService.name;
     const methodName = 'createPullRequestReview';
+
+    const payload: CreatePullRequestReviewInput =
+      typeof input === 'string'
+        ? { headSha: '', body: input, comments: [] }
+        : input;
 
     this.logger.info(`[${className}] [${methodName}] :: Posting pull request review`, {
       installationId: String(installationId),
       repoFullName,
       prNumber,
-      bodyChars: body.length,
+      bodyChars: payload.body.length,
+      commentCount: payload.comments.length,
+      headSha: payload.headSha || '(none)',
     });
 
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
-    const { data } = await octokit.pulls.createReview({
+
+    const reviewParams: Parameters<
+      typeof octokit.pulls.createReview
+    >[0] = {
       owner,
       repo,
       pull_number: prNumber,
       event: 'COMMENT',
-      body,
-    });
+      body: payload.body,
+    };
+
+    if (payload.headSha) {
+      reviewParams.commit_id = payload.headSha;
+    }
+
+    if (payload.comments.length > 0) {
+      reviewParams.comments = payload.comments.map((c) => ({
+        path: c.path,
+        line: c.line,
+        side: c.side,
+        body: c.body,
+        ...(c.start_line != null
+          ? { start_line: c.start_line, start_side: c.start_side ?? 'RIGHT' }
+          : {}),
+      }));
+    }
+
+    const { data } = await octokit.pulls.createReview(reviewParams);
 
     this.logger.info(`[${className}] [${methodName}] :: Pull request review posted`, {
       installationId: String(installationId),
       repoFullName,
       prNumber,
       githubReviewId: String(data.id),
+      commentCount: payload.comments.length,
     });
 
     return BigInt(data.id);

@@ -3,6 +3,7 @@ import { Annotation } from '@langchain/langgraph';
 
 import type { CrossFileHint } from '../../../review/types/cross-file-hint.types';
 import { lastWins } from '../../state.annotation';
+import { LlmAnalysis } from 'src/graph/state.types';
 
 function appendMessages(
   left: BaseMessage[],
@@ -40,7 +41,7 @@ export const AnalyzeAgentState = Annotation.Root({
     reducer: (left, right) => (right === undefined ? left : right),
     default: () => 0,
   }),
-  summaryMarkdown: Annotation<string | null>({
+  llmAnalysis: Annotation<LlmAnalysis | null>({
     reducer: lastWins,
     default: () => null,
   }),

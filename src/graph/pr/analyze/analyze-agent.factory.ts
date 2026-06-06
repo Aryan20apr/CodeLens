@@ -23,6 +23,8 @@ import {
 import { routeAfterAnalyzeLlm } from './analyze-routing.util';
 import { createAnalyzeFinalizeNode } from './nodes/analyze-finalize.node';
 import { createAnalyzeLlmNode } from './nodes/analyze-llm.node';
+import type { LlmAnalysis } from '../../../graph/state.types';
+import { parsePrLlmAnalysisWithRepair } from '../../../review/findings/pr-finding.schema';
 
 export type AnalyzeAgentInvokeInput = {
   systemPrompt: string;
@@ -33,7 +35,7 @@ export type AnalyzeAgentInvokeInput = {
 };
 
 export type AnalyzeAgentInvokeResult = {
-  summaryMarkdown: string;
+  llmAnalysis: LlmAnalysis;
   crossFileHints: CrossFileHint[];
   searchToolCallCount: number;
 };
@@ -71,17 +73,43 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
   async invokeDirect(
     systemPrompt: string,
     userContent: string,
-  ): Promise<string> {
+  ): Promise<LlmAnalysis> {
+    const className = PrAnalyzeAgentFactory.name;
+    const methodName = 'invokeDirect';
+
     const model = this.llm.getChatModel();
-    const response = await model.invoke([
+    const messages = [
       new SystemMessage(systemPrompt),
       new HumanMessage(userContent),
-    ]);
+    ];
+
+    const response = await model.invoke(messages);
     const text = extractTextFromLlmContent(response.content);
     if (!text.trim()) {
-      throw new Error('LLM returned empty PR summary');
+      throw new Error('LLM returned empty PR analysis');
     }
-    return text.trim();
+
+    const llmAnalysis = await parsePrLlmAnalysisWithRepair(
+      text.trim(),
+      async (repairHint) => {
+        const repairResponse = await model.invoke([
+          ...messages,
+          new HumanMessage(repairHint),
+        ]);
+        const repairText = extractTextFromLlmContent(repairResponse.content);
+        if (!repairText.trim()) {
+          throw new Error('LLM returned empty PR analysis on repair');
+        }
+        return repairText.trim();
+      },
+    );
+
+    this.logger.info(`[${className}] [${methodName}] :: Direct analyze completed`, {
+      findingCount: llmAnalysis.findings.length,
+      summaryChars: llmAnalysis.summary.length,
+    });
+
+    return llmAnalysis;
   }
 
   async invokeWithSearchTools(
@@ -115,12 +143,11 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
       messages: [
         new SystemMessage(input.systemPrompt),
         new HumanMessage(
-          `${input.userContent}\n\nYou may call search tools before writing the review. When done searching, respond with the full review markdown.`,
+          `${input.userContent}\n\nYou may call search tools before producing findings. When done searching, respond with ONLY valid JSON matching the required schema.`,
         ),
       ],
       crossFileHints: [],
       searchToolCallCount: 0,
-      summaryMarkdown: null,
       toolRoundCount: 0,
     };
 
@@ -133,19 +160,20 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
         runName: 'analyze-agent',
       });
 
-      if (!result.summaryMarkdown?.trim()) {
-        throw new Error('Analyze agent finished without summary markdown');
+      if (!result.llmAnalysis?.summary?.trim()) {
+        throw new Error('Analyze agent finished without llmAnalysis summary');
       }
 
       this.logger.info(`[${className}] [${methodName}] :: Analyze agent completed`, {
         repoFullName: input.repoFullName,
-        summaryChars: result.summaryMarkdown.length,
+        summaryChars: result.llmAnalysis.summary.length,
+        findingCount: result.llmAnalysis.findings.length,
         crossFileHintCount: result.crossFileHints.length,
         searchToolCallCount: result.searchToolCallCount,
       });
 
       return {
-        summaryMarkdown: result.summaryMarkdown,
+        llmAnalysis: result.llmAnalysis,
         crossFileHints: result.crossFileHints,
         searchToolCallCount: result.searchToolCallCount,
       };

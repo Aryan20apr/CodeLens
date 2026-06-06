@@ -15,6 +15,10 @@ import { createChunkNode } from './nodes/chunk.node';
 import { createDiffIngestionNode } from './nodes/diff-ingestion.node';
 import { createEnrichFilesNode } from './nodes/enrich-files.node';
 import { createPostReviewNode } from './nodes/post-review.node';
+import type { AppConfig } from '../../config/app-config.types';
+import { APP_CONFIG } from '../../config/config.constants';
+import { ValidatePrFindingsService } from '../../review/findings/validator.service';
+import { createValidateFindingsNode } from './nodes/validate-findings.node';
 import type {
   PrReviewGraphInvokeInput,
   PrReviewGraphInvokeResult,
@@ -31,6 +35,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
+    @Inject(APP_CONFIG) private readonly appConfig: AppConfig,
     private readonly github: GithubApiService,
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
@@ -38,6 +43,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly analyzeAgent: PrAnalyzeAgentFactory,
     private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
+    private readonly findingsValidator: ValidatePrFindingsService,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -45,7 +51,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> analyze -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> analyze -> validateFindings -> postReview -> END',
     );
   }
 
@@ -85,6 +91,10 @@ export class PrReviewGraphFactory implements OnModuleInit {
       chunks: [],
       fileIndex: [],
       crossFileHints: [],
+      rawFindings: [],
+      analysisSummary: null,
+      validatedFindings: [],
+      validationStats: null,
       removedOnlyFileCount: 0,
       binaryOrEmptyFileCount: 0,
       fileContexts: [],
@@ -110,8 +120,11 @@ export class PrReviewGraphFactory implements OnModuleInit {
     if (result.status === 'failed' || result.error) {
       throw new Error(result.error ?? 'PR review graph failed');
     }
-    if (!result.summaryMarkdown || !result.githubReviewId) {
-      throw new Error('PR review graph finished without summary or githubReviewId');
+    if (!result.analysisSummary?.trim() || !result.summaryMarkdown?.trim()) {
+      throw new Error('PR review graph finished without analysis summary');
+    }
+    if (!result.githubReviewId) {
+      throw new Error('PR review graph finished without githubReviewId');
     }
 
     this.logger.info(`[${className}] [${methodName}] :: PR review graph completed`, {
@@ -136,19 +149,30 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.analyzeAgent,
       this.progress,
     );
-    const postReview = createPostReviewNode(this.github, this.progress);
+    const validateFindings = createValidateFindingsNode(
+      this.findingsValidator,
+      this.progress,
+    );
+    const postReview = createPostReviewNode(
+      this.github,
+      this.progress,
+      this.appConfig.prReview.findings.maxCommentBodyChars,
+    );
+
 
     return new StateGraph(PrReviewGraphState)
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
       .addNode('enrichFiles', enrichFiles)
       .addNode('analyze', analyze)
+      .addNode('validateFindings', validateFindings)
       .addNode('postReview', postReview)
       .addEdge(START, 'ingestDiff')
       .addEdge('ingestDiff', 'chunk')
       .addEdge('chunk', 'enrichFiles')
       .addEdge('enrichFiles', 'analyze')
-      .addEdge('analyze', 'postReview')
+      .addEdge('analyze', 'validateFindings')
+      .addEdge('validateFindings', 'postReview')
       .addEdge('postReview', END)
       .compile({ checkpointer: prReviewMemoryCheckpointer });
   }

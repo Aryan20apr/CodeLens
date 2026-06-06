@@ -3,9 +3,14 @@ import type { LangGraphRunnableConfig } from '@langchain/langgraph';
 
 import { formatCrossFileHintsForPrompt } from '../../../../review/context/format-cross-file-hints.util';
 import { extractTextFromLlmContent } from '../../../../review/context/llm-content.util';
-import { getAnalyzeAgentConfigurable } from '../../../../review/types/analyze-agent-configurable.types';
+
+import { parsePrLlmAnalysisWithRepair } from '../../../../review/findings/pr-finding.schema';
 import type { LlmService } from '../../../../llm/llm.service';
 import type { AnalyzeAgentStateType } from '../analyze-agent.state.annotation';
+import { getAnalyzeAgentConfigurable } from '../analyze-agent.types';
+
+const FINALIZE_JSON_NUDGE =
+  'Produce the final PR review as ONLY valid JSON matching the required schema. No markdown. No code fences.';
 
 export function createAnalyzeFinalizeNode(llm: LlmService) {
   return async (
@@ -23,20 +28,35 @@ export function createAnalyzeFinalizeNode(llm: LlmService) {
     const lastAiText = lastAi ? extractTextFromLlmContent(lastAi.content) : '';
 
     const usedTools = searchToolCallCount > 0;
+    const model = llm.getChatModel();
 
-    let summaryMarkdown: string;
+    async function invokeForText(
+      messages: Parameters<typeof model.invoke>[0],
+    ): Promise<string> {
+      const response = await model.invoke(messages);
+      const text = extractTextFromLlmContent(response.content);
+      if (!text.trim()) {
+        throw new Error('LLM returned empty PR analysis');
+      }
+      return text.trim();
+    }
+
+    let rawText: string;
 
     if (lastAiText.trim() && !usedTools) {
-      summaryMarkdown = lastAiText.trim();
-    } else if (lastAiText.trim() && usedTools && lastAi?.tool_calls?.length === 0) {
-      summaryMarkdown = lastAiText.trim();
+      rawText = lastAiText.trim();
+    } else if (
+      lastAiText.trim() &&
+      usedTools &&
+      lastAi?.tool_calls?.length === 0
+    ) {
+      rawText = lastAiText.trim();
     } else {
-      const model = llm.getChatModel();
-      const response = await model.invoke([
+      rawText = await invokeForText([
         ...state.messages,
         new HumanMessage(
           [
-            'Produce the final PR review markdown now.',
+            FINALIZE_JSON_NUDGE,
             crossFileHints.length > 0
               ? `\n## Cross-file search results\n${formatCrossFileHintsForPrompt(crossFileHints)}`
               : '',
@@ -45,15 +65,30 @@ export function createAnalyzeFinalizeNode(llm: LlmService) {
             .join('\n'),
         ),
       ]);
-      const text = extractTextFromLlmContent(response.content);
-      if (!text.trim()) {
-        throw new Error('LLM returned empty PR summary');
-      }
-      summaryMarkdown = text.trim();
     }
 
+    const llmAnalysis = await parsePrLlmAnalysisWithRepair(
+      rawText,
+      async (repairHint) =>
+        invokeForText([
+          ...state.messages,
+          new HumanMessage(
+            [
+              FINALIZE_JSON_NUDGE,
+              crossFileHints.length > 0
+                ? `\n## Cross-file search results\n${formatCrossFileHintsForPrompt(crossFileHints)}`
+                : '',
+              '',
+              repairHint,
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          ),
+        ]),
+    );
+
     return {
-      summaryMarkdown,
+      llmAnalysis,
       crossFileHints,
       searchToolCallCount,
     };

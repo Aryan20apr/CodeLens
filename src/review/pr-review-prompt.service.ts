@@ -33,31 +33,42 @@ export type PrReviewPromptBundle = {
   skipSearchTools: boolean;
 };
 
+const PR_JSON_SCHEMA_EXAMPLE = `{
+  "summary": string,
+  "findings": [{
+    "filePath": string,
+    "category": "security"|"correctness"|"performance"|"best_practices"|"maintainability",
+    "severity": "critical"|"warning"|"info",
+    "title": string,
+    "description": string,
+    "location": { "startLine": number, "endLine": number },
+    "evidenceSnippet"?: string,
+    "suggestedFix"?: string,
+    "confidence": "high"|"medium"|"low"
+  }]
+}`;
+
 const SYSTEM_PROMPT_BASE = `You are CodeLens, a precise pull-request review assistant.
+Return ONLY valid JSON. No markdown. No code fences.
 Review ONLY the provided diff chunk blocks below. Do not invent files or line numbers.
-Each finding MUST cite a path and a 1-based line number from the "Added lines" sections (format: L{n}).
-Comment only on added lines shown in the chunks. Do not cite deleted-only lines.
-If uncertain about a finding, omit it rather than guess.
-Structural context (if provided) describes the full file at PR head; still cite findings only on Added lines in diff chunks (L{n}).
-Do not cite line numbers from structural context unless they appear in chunk added lines.
 
-Output markdown with these sections:
-## Overview
-2-4 sentences on the PR as a whole.
+Hard requirements:
+- Each finding MUST include filePath and location.startLine from "Added lines" in diff chunks (format L{n} in chunks).
+- Comment only on added lines shown in the chunks. Do not cite deleted-only lines.
+- If uncertain about a finding, omit it rather than guess.
+- Structural context describes the full file at PR head; still cite findings only on Added lines in diff chunks.
+- Do not cite line numbers from structural context unless they appear in chunk added lines.
+- Keep findings focused; prefer fewer high-confidence items.
+- summary: 2-4 sentences on the PR as a whole.
 
-## Findings by file
-Group under ### path/to/file headers. Use bullets: - **L42** — description (optional severity: critical/warning/info).
-
-## Risks
-## Suggested follow-ups
-
-Do not use GitHub inline review comment syntax. Output is the PR review body only.`;
+JSON schema:
+${PR_JSON_SCHEMA_EXAMPLE}`;
 
 const SEARCH_TOOLS_PROMPT = `
 Cross-file context: You may call search_symbol_usage or search_import_target when the diff suggests API/export/import impact.
-Use search sparingly (small PRs often need none). Findings must still cite only Added lines in diff chunks.
-Cross-file search results are hints only; do not cite line numbers from search snippets unless they appear in Added lines.
-After search tools return, produce the final review markdown.`;
+Use search sparingly (small PRs often need none). Findings must still cite only Added lines in diff chunks for line numbers.
+Cross-file search results are hints only; you may reference hinted file paths in filePath when search supports a cross-file concern.
+When done searching, respond with ONLY the final JSON object (no markdown).`;
 
 @Injectable()
 export class PrReviewPromptService {
