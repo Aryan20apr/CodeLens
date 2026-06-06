@@ -14,6 +14,9 @@ import {
 import type { PrFileContext } from '../../review/types/pr-file-enrichment.types';
 import type { PrReviewRunStatus } from '../state.types';
 import type { CrossFileHint } from '../../review/types/cross-file-hint.types';
+import type { Finding } from '../state.types';
+import type { ValidationStats } from '../../review/types/pr-findings.types';
+
 
 export const PrReviewGraphState = Annotation.Root({
   reviewRunId: Annotation<string>({
@@ -92,7 +95,22 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => [],
   }),
-
+  rawFindings: Annotation<Finding[]>({
+    reducer: lastWins,
+    default: () => [],
+  }),
+  analysisSummary: Annotation<string | null>({
+    reducer: lastWins,
+    default: () => null,
+  }),
+  validatedFindings: Annotation<Finding[]>({
+    reducer: lastWins,
+    default: () => [],
+  }),
+  validationStats: Annotation<ValidationStats | null>({
+    reducer: lastWins,
+    default: () => null,
+  }),
   summaryMarkdown: Annotation<string | null>({
     reducer: lastWins,
     default: () => null,

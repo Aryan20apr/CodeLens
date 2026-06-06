@@ -7,7 +7,8 @@ import { runPrSteps } from '../pr-node-progress.util';
 type AnalyzeUpdate = Partial<
   Pick<
     PrReviewGraphStateType,
-    | 'summaryMarkdown'
+    | 'rawFindings'
+    | 'analysisSummary'
     | 'crossFileHints'
     | 'events'
     | 'error'
@@ -68,12 +69,12 @@ export function createAnalyzeNode(
           const prompt = promptService.build(promptInput);
 
           if (prompt.skipSearchTools) {
-            const summaryMarkdown = await analyzeAgent.invokeDirect(
+            const llmAnalysis = await analyzeAgent.invokeDirect(
               prompt.systemPrompt,
               prompt.userContent,
             );
             return {
-              summaryMarkdown,
+              llmAnalysis,
               crossFileHints: [],
               searchToolCallCount: 0,
             };
@@ -106,7 +107,8 @@ export function createAnalyzeNode(
     }
 
     return {
-      summaryMarkdown: result.summaryMarkdown,
+      rawFindings: result.llmAnalysis.findings,
+      analysisSummary: result.llmAnalysis.summary,
       crossFileHints: result.crossFileHints,
       events,
     };
