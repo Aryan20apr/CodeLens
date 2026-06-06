@@ -7,6 +7,7 @@ import { GithubSearchProvider } from './context/github-search-provider.service';
 import { GLOBAL_SEARCH_PROVIDER } from './context/global-search-provider.interface';
 import { PrSearchToolExecutorService } from './context/pr-search-tool-executor.service';
 import { PrReviewPromptService } from './pr-review-prompt.service';
+import { ValidatePrFindingsService } from './findings/validator.service';
 
 @Module({
   imports: [AppConfigModule, LlmModule, DiffModule],
@@ -18,10 +19,12 @@ import { PrReviewPromptService } from './pr-review-prompt.service';
     },
     PrSearchToolExecutorService,
     PrReviewPromptService,
+    ValidatePrFindingsService
   ],
   exports: [
     PrReviewPromptService,
     PrSearchToolExecutorService,
+    ValidatePrFindingsService,
     GLOBAL_SEARCH_PROVIDER,
     GithubSearchProvider,
   ],
