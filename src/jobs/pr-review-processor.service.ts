@@ -150,6 +150,7 @@ export class PrReviewProcessorService extends WorkerHost {
           isFinalAttempt,
           attemptsMade: job.attemptsMade,
           error: err,
+          message
         },
       );
 

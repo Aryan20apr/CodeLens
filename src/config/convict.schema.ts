@@ -185,6 +185,30 @@ export const convictSchema = convict<AppConfig>({
       default: '',
       env: 'GEMINI_MODEL',
     },
+    nvidiaApiKey: {
+      doc: 'Nvidia NIM API key',
+      format: String,
+      default: '',
+      env: 'NVIDIA_API_KEY',
+    },
+    nvidiaModel: {
+      doc: 'Nvidia NIM model name',
+      format: String,
+      default: 'meta/llama-3.3-70b-instruct',
+      env: 'NVIDIA_MODEL',
+    },
+    nvidiaBaseUrl: {
+      doc: 'Nvidia NIM base URL',
+      format: String,
+      default: 'https://integrate.api.nvidia.com/v1',
+      env: 'NVIDIA_BASE_URL',
+    },
+    provider: {
+      doc: 'LLM provider to use: gemini or nvidia',
+      format: ['gemini', 'nvidia'],
+      default: 'nvidia',
+      env: 'LLM_PROVIDER',
+    },
   },
   langsmith: {
     tracing: {

@@ -3,37 +3,53 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import type { AppConfig } from '../config/app-config.types';
 import { APP_CONFIG } from '../config/config.constants';
-import { AppConfigModule } from '../config/config.module';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { HumanMessage } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 @Injectable()
 export class LlmService {
     private readonly logger: Logger;
-    private readonly googleGenerativeAiApiKey: string;
-    private readonly googleApiKeyFallback: string;
-    private readonly geminiModel: string;
+    private readonly config: AppConfig['llm'];
 
     constructor(
         @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
         @Inject(APP_CONFIG) config: AppConfig,
     ) {
         this.logger = logger.child({ context: LlmService.name });
-        this.googleGenerativeAiApiKey = config.llm.googleGenerativeAiApiKey;
-        this.googleApiKeyFallback = config.llm.googleApiKeyFallback;
-        this.geminiModel = config.llm.geminiModel;
+        this.config = config.llm;
     }
 
-    getChatModel(): ChatGoogleGenerativeAI {
-        
-        const apiKey = this.googleGenerativeAiApiKey || this.googleApiKeyFallback;
-        if(!apiKey || !this.geminiModel) {
-            throw new Error('Google Generative AI API key or Gemini model is not set');
+    getChatModel(): BaseChatModel {
+        const provider = this.config.provider;
+
+        if (provider === 'nvidia') {
+            if (!this.config.nvidiaApiKey) {
+                throw new Error('NVIDIA_API_KEY is not set');
+            }
+            this.logger.debug(`[LlmService] [getChatModel] :: using Nvidia NIM`, {
+                model: this.config.nvidiaModel,
+            });
+            return new ChatOpenAI({
+                apiKey: this.config.nvidiaApiKey,
+                model: this.config.nvidiaModel,
+                configuration: {
+                    baseURL: this.config.nvidiaBaseUrl,
+                },
+            });
         }
+
+        // gemini
+        const apiKey = this.config.googleGenerativeAiApiKey || this.config.googleApiKeyFallback;
+        if (!apiKey || !this.config.geminiModel) {
+            throw new Error('GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_MODEL is not set');
+        }
+        this.logger.debug(`[LlmService] [getChatModel] :: using Gemini`, {
+            model: this.config.geminiModel,
+        });
         return new ChatGoogleGenerativeAI({
             apiKey,
-            model: this.geminiModel,
+            model: this.config.geminiModel,
         });
     }
-    
 }

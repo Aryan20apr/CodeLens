@@ -24,6 +24,7 @@ import { AgentPromptService } from './agent-prompt.service';
   ],
   exports: [
     PrReviewPromptService,
+    AgentPromptService,
     PrSearchToolExecutorService,
     ValidatePrFindingsService,
     GLOBAL_SEARCH_PROVIDER,

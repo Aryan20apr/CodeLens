@@ -54,6 +54,10 @@ export interface AppConfig {
     googleGenerativeAiApiKey: string;
     googleApiKeyFallback: string;
     geminiModel: string;
+    nvidiaApiKey: string;
+    nvidiaModel: string;
+    nvidiaBaseUrl: string;
+    provider: 'gemini' | 'nvidia';
   };
   githubApp: {
     appId: string;
