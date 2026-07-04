@@ -16,6 +16,7 @@ import type { PrReviewRunStatus } from '../state.types';
 import type { CrossFileHint } from '../../review/types/cross-file-hint.types';
 import type { Finding } from '../state.types';
 import type { ValidationStats } from '../../review/types/pr-findings.types';
+import type { AgentRole } from '../../review/types/agent-prompt.types';
 
 
 function concatFindings(
@@ -124,6 +125,10 @@ export const PrReviewGraphState = Annotation.Root({
   analysisRoute: Annotation<'simple' | 'specialized' | null>({
     reducer: lastWins,
     default: () => null,
+  }),
+  selectedAgents: Annotation<AgentRole[]>({
+    reducer: lastWins,
+    default: () => [],
   }),
   agentFindings: Annotation<Finding[]>({
     reducer: concatFindings,

@@ -22,7 +22,7 @@ import { APP_CONFIG } from '../../config/config.constants';
 import { ValidatePrFindingsService } from '../../review/findings/validator.service';
 import { createValidateFindingsNode } from './nodes/validate-findings.node';
 import { LlmService } from '../../llm/llm.service';
-import { createTriageAnalysisNode } from './nodes/triage-analysis.node';
+import { createTriageAnalysisNode, routeAfterTriage } from './nodes/triage-analysis.node';
 import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
 import type {
   PrReviewGraphInvokeInput,
@@ -99,6 +99,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       fileIndex: [],
       crossFileHints: [],
       analysisRoute: null,
+      selectedAgents: [],
       agentFindings: [],
       agentSummaries: [],
       rawFindings: [],
@@ -213,33 +214,17 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addEdge('ingestDiff', 'chunk')
       .addEdge('chunk', 'enrichFiles')
       .addEdge('enrichFiles', 'triageAnalysis')
-      // conditional routing: 'simple' goes to simpleAnalyze;
-      // 'specialized' fans out to all three agents in parallel via three separate routes
-      .addConditionalEdges(
-        'triageAnalysis',
-        (state) => state.analysisRoute ?? 'specialized',
-        {
-          simple: 'simpleAnalyze',
-          specialized: 'securityAgent',
-        },
-      )
-      // parallel fan-out for the specialized path: perfAgent and bpAgent
-      // run alongside securityAgent (all three start when triageAnalysis completes as 'specialized')
-      .addConditionalEdges(
-        'triageAnalysis',
-        (state) => state.analysisRoute ?? 'specialized',
-        {
-          specialized: 'perfAgent',
-        },
-      )
-      .addConditionalEdges(
-        'triageAnalysis',
-        (state) => state.analysisRoute ?? 'specialized',
-        {
-          specialized: 'bpAgent',
-        },
-      )
-      // both paths converge at aggregateFindings
+      // Dynamic Send-based fan-out: routeAfterTriage returns Send[] for only
+      // the agents triage selected. The path-hint array tells LangGraph which
+      // nodes are reachable (for diagram generation); it has no effect at runtime.
+      .addConditionalEdges('triageAnalysis', routeAfterTriage, [
+        'simpleAnalyze',
+        'securityAgent',
+        'perfAgent',
+        'bpAgent',
+      ])
+      // Fan-in edges: each agent points to aggregateFindings. With Send, only
+      // the dispatched agents actually run — the others' edges are never traversed.
       .addEdge('simpleAnalyze', 'aggregateFindings')
       .addEdge('securityAgent', 'aggregateFindings')
       .addEdge('perfAgent', 'aggregateFindings')
