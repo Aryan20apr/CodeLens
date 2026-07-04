@@ -8,7 +8,7 @@ import { GLOBAL_SEARCH_PROVIDER } from './context/global-search-provider.interfa
 import { PrSearchToolExecutorService } from './context/pr-search-tool-executor.service';
 import { PrReviewPromptService } from './pr-review-prompt.service';
 import { ValidatePrFindingsService } from './findings/validator.service';
-
+import { AgentPromptService } from './agent-prompt.service';
 @Module({
   imports: [AppConfigModule, LlmModule, DiffModule],
   providers: [
@@ -19,7 +19,8 @@ import { ValidatePrFindingsService } from './findings/validator.service';
     },
     PrSearchToolExecutorService,
     PrReviewPromptService,
-    ValidatePrFindingsService
+    ValidatePrFindingsService,
+    AgentPromptService
   ],
   exports: [
     PrReviewPromptService,

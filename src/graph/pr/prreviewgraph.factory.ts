@@ -9,8 +9,10 @@ import { GithubApiService } from '../../github/github-api.service';
 import { PrFileEnrichmentService } from '../../review/enrichment/pr-file-enrichment.service';
 import { PrAnalyzeAgentFactory } from './analyze/analyze-agent.factory';
 import { PrReviewPromptService } from '../../review/pr-review-prompt.service';
+import { AgentPromptService } from '../../review/agent-prompt.service';
 import { PrReviewProgressPublisher } from '../../streaming/pr-review-progress-publisher.service';
-import { createAnalyzeNode } from './nodes/analyze.node';
+import { createSpecializedAgentNode } from './nodes/specialized-agent.node';
+import { createAggregateFindingsNode } from './nodes/aggregate-findings.node';
 import { createChunkNode } from './nodes/chunk.node';
 import { createDiffIngestionNode } from './nodes/diff-ingestion.node';
 import { createEnrichFilesNode } from './nodes/enrich-files.node';
@@ -40,6 +42,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
     private readonly promptService: PrReviewPromptService,
+    private readonly agentPromptService: AgentPromptService,
     private readonly analyzeAgent: PrAnalyzeAgentFactory,
     private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
@@ -51,7 +54,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> analyze -> validateFindings -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> [securityAgent ‖ perfAgent ‖ bpAgent] -> aggregateFindings -> validateFindings -> postReview -> END',
     );
   }
 
@@ -132,6 +135,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
     this.logger.info(`[${className}] [${methodName}] :: PR review graph completed`, {
       reviewRunId,
       githubReviewId: result.githubReviewId,
+      agentFindingCount: result.agentFindings.length,
+      validatedFindingCount: result.validatedFindings.length,
       eventCount: result.events.length,
     });
 
@@ -146,11 +151,30 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
-    const analyze = createAnalyzeNode(
+
+    const securityAgent = createSpecializedAgentNode(
+      'security',
+      this.agentPromptService,
       this.promptService,
       this.analyzeAgent,
       this.progress,
     );
+    const perfAgent = createSpecializedAgentNode(
+      'performance',
+      this.agentPromptService,
+      this.promptService,
+      this.analyzeAgent,
+      this.progress,
+    );
+    const bpAgent = createSpecializedAgentNode(
+      'best_practices',
+      this.agentPromptService,
+      this.promptService,
+      this.analyzeAgent,
+      this.progress,
+    );
+
+    const aggregateFindings = createAggregateFindingsNode(this.progress);
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
       this.progress,
@@ -161,19 +185,28 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.appConfig.prReview.findings.maxCommentBodyChars,
     );
 
-
     return new StateGraph(PrReviewGraphState)
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
       .addNode('enrichFiles', enrichFiles)
-      .addNode('analyze', analyze)
+      .addNode('securityAgent', securityAgent)
+      .addNode('perfAgent', perfAgent)
+      .addNode('bpAgent', bpAgent)
+      .addNode('aggregateFindings', aggregateFindings)
       .addNode('validateFindings', validateFindings)
       .addNode('postReview', postReview)
       .addEdge(START, 'ingestDiff')
       .addEdge('ingestDiff', 'chunk')
       .addEdge('chunk', 'enrichFiles')
-      .addEdge('enrichFiles', 'analyze')
-      .addEdge('analyze', 'validateFindings')
+      // parallel fan-out
+      .addEdge('enrichFiles', 'securityAgent')
+      .addEdge('enrichFiles', 'perfAgent')
+      .addEdge('enrichFiles', 'bpAgent')
+      // fan-in — all three must complete before aggregateFindings runs
+      .addEdge('securityAgent', 'aggregateFindings')
+      .addEdge('perfAgent', 'aggregateFindings')
+      .addEdge('bpAgent', 'aggregateFindings')
+      .addEdge('aggregateFindings', 'validateFindings')
       .addEdge('validateFindings', 'postReview')
       .addEdge('postReview', END)
       .compile({ checkpointer: prReviewMemoryCheckpointer });
