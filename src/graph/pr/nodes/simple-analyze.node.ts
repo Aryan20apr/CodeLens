@@ -4,25 +4,23 @@ import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-pro
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
 
-type AnalyzeUpdate = Partial<
+type SimpleAnalyzeUpdate = Partial<
   Pick<
     PrReviewGraphStateType,
-    | 'rawFindings'
-    | 'analysisSummary'
+    | 'agentFindings'
+    | 'agentSummaries'
     | 'crossFileHints'
     | 'events'
     | 'error'
     | 'status'
-    | 'parsed'
-    | 'chunks'
   >
 >;
 
-export function createAnalyzeNode(
+export function createSimpleAnalyzeNode(
   promptService: PrReviewPromptService,
   analyzeAgent: PrAnalyzeAgentFactory,
   progress: PrReviewProgressPublisher,
-): (state: PrReviewGraphStateType) => Promise<AnalyzeUpdate> {
+): (state: PrReviewGraphStateType) => Promise<SimpleAnalyzeUpdate> {
   return async (state) => {
     if (!state.parsed || state.chunks.length === 0) {
       return {
@@ -30,7 +28,7 @@ export function createAnalyzeNode(
         error: 'Missing parsed diff or chunks',
         events: [
           {
-            node: 'analyze',
+            node: 'simpleAnalyze',
             status: 'failed',
             message: 'Missing parsed diff or chunks',
             at: new Date().toISOString(),
@@ -39,7 +37,7 @@ export function createAnalyzeNode(
       };
     }
 
-    const { reviewRunId, repoFullName, prNumber, installationId } = state;
+    const { reviewRunId, repoFullName, prNumber, installationId, headSha } = state;
     const enrichedFileCount = (state.fileContexts ?? []).filter(
       (c) => c.fetchStatus === 'ok',
     ).length;
@@ -63,7 +61,7 @@ export function createAnalyzeNode(
     const { result, events } = await runPrSteps(reviewRunId, progress, [
       {
         step: 'summarizing',
-        graphNode: 'analyze',
+        graphNode: 'simpleAnalyze',
         meta: { chunkCount: state.chunks.length },
         fn: async () => {
           const prompt = promptService.build(promptInput);
@@ -73,18 +71,16 @@ export function createAnalyzeNode(
               prompt.systemPrompt,
               prompt.userContent,
             );
-            return {
-              llmAnalysis,
-              crossFileHints: [],
-              searchToolCallCount: 0,
-            };
+            return { llmAnalysis, crossFileHints: [], searchToolCallCount: 0 };
           }
 
           return analyzeAgent.invokeWithSearchTools({
+            agentRole: 'best_practices',   // general prompt; role used only for logging
             systemPrompt: prompt.systemPrompt,
             userContent: prompt.userContent,
             installationId: BigInt(installationId),
             repoFullName,
+            headSha,
             onSearchToolCall: ({ toolName, symbol, modulePath }) => {
               void progress.stepStarted(
                 reviewRunId,
@@ -107,8 +103,8 @@ export function createAnalyzeNode(
     }
 
     return {
-      rawFindings: result.llmAnalysis.findings,
-      analysisSummary: result.llmAnalysis.summary,
+      agentFindings: result.llmAnalysis.findings,
+      agentSummaries: [{ role: 'general', summary: result.llmAnalysis.summary }],
       crossFileHints: result.crossFileHints,
       events,
     };

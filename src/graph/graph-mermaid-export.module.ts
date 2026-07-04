@@ -16,6 +16,8 @@ import { AstExtractService } from './lib/ast-extract.service';
 import { LanguageDetectService } from './lib/language-detect.service';
 import { QueryLoaderService } from './lib/queries/query-loader.service';
 import { TreeSitterService } from './lib/tree-sitter/tree-sitter.service';
+import { AgentPromptService } from '../review/agent-prompt.service';
+import { ValidatePrFindingsService } from '../review/findings/validator.service';
 import { GraphFactory } from './graph.factory';
 
 const noopProgressPublisher: Pick<
@@ -46,6 +48,8 @@ const noopSearchProvider = {
     LanguageDetectService,
     PrFileEnrichmentService,
     PrReviewPromptService,
+    AgentPromptService,
+    ValidatePrFindingsService,
     PrSearchToolExecutorService,
     {
       provide: PrReviewProgressPublisher,
