@@ -33,6 +33,12 @@ function buildCombinedSummary(
     return 'No significant issues found.';
   }
 
+   // Simple path: single general-purpose summary — return it directly without role headers
+   if (summaries.length === 1 && summaries[0].role === 'general') {
+    return summaries[0].summary.trim();
+  }
+
+   // Specialized path: one section per agent in canonical role order
   const byRole = new Map(summaries.map((s) => [s.role, s.summary.trim()]));
   const sections = AGENT_ROLES
     .map((role) => {

@@ -21,6 +21,9 @@ import type { AppConfig } from '../../config/app-config.types';
 import { APP_CONFIG } from '../../config/config.constants';
 import { ValidatePrFindingsService } from '../../review/findings/validator.service';
 import { createValidateFindingsNode } from './nodes/validate-findings.node';
+import { LlmService } from '../../llm/llm.service';
+import { createTriageAnalysisNode } from './nodes/triage-analysis.node';
+import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
 import type {
   PrReviewGraphInvokeInput,
   PrReviewGraphInvokeResult,
@@ -46,6 +49,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly analyzeAgent: PrAnalyzeAgentFactory,
     private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
+    private readonly llm: LlmService,
     private readonly findingsValidator: ValidatePrFindingsService,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
@@ -54,7 +58,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> [securityAgent ‖ perfAgent ‖ bpAgent] -> aggregateFindings -> validateFindings -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> triageAnalysis -> {simpleAnalyze | [securityAgent ‖ perfAgent ‖ bpAgent]} -> aggregateFindings -> validateFindings -> postReview -> END',
     );
   }
 
@@ -152,7 +156,14 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
-
+  
+    const triageAnalysis = createTriageAnalysisNode(this.llm, this.progress);
+    const simpleAnalyze = createSimpleAnalyzeNode(
+      this.promptService,
+      this.analyzeAgent,
+      this.progress,
+    );
+  
     const securityAgent = createSpecializedAgentNode(
       'security',
       this.agentPromptService,
@@ -174,7 +185,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.analyzeAgent,
       this.progress,
     );
-
+  
     const aggregateFindings = createAggregateFindingsNode(this.progress);
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
@@ -185,11 +196,13 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.progress,
       this.appConfig.prReview.findings.maxCommentBodyChars,
     );
-
+  
     return new StateGraph(PrReviewGraphState)
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
       .addNode('enrichFiles', enrichFiles)
+      .addNode('triageAnalysis', triageAnalysis)
+      .addNode('simpleAnalyze', simpleAnalyze)
       .addNode('securityAgent', securityAgent)
       .addNode('perfAgent', perfAgent)
       .addNode('bpAgent', bpAgent)
@@ -199,11 +212,35 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addEdge(START, 'ingestDiff')
       .addEdge('ingestDiff', 'chunk')
       .addEdge('chunk', 'enrichFiles')
-      // parallel fan-out
-      .addEdge('enrichFiles', 'securityAgent')
-      .addEdge('enrichFiles', 'perfAgent')
-      .addEdge('enrichFiles', 'bpAgent')
-      // fan-in — all three must complete before aggregateFindings runs
+      .addEdge('enrichFiles', 'triageAnalysis')
+      // conditional routing: 'simple' goes to simpleAnalyze;
+      // 'specialized' fans out to all three agents in parallel via three separate routes
+      .addConditionalEdges(
+        'triageAnalysis',
+        (state) => state.analysisRoute ?? 'specialized',
+        {
+          simple: 'simpleAnalyze',
+          specialized: 'securityAgent',
+        },
+      )
+      // parallel fan-out for the specialized path: perfAgent and bpAgent
+      // run alongside securityAgent (all three start when triageAnalysis completes as 'specialized')
+      .addConditionalEdges(
+        'triageAnalysis',
+        (state) => state.analysisRoute ?? 'specialized',
+        {
+          specialized: 'perfAgent',
+        },
+      )
+      .addConditionalEdges(
+        'triageAnalysis',
+        (state) => state.analysisRoute ?? 'specialized',
+        {
+          specialized: 'bpAgent',
+        },
+      )
+      // both paths converge at aggregateFindings
+      .addEdge('simpleAnalyze', 'aggregateFindings')
       .addEdge('securityAgent', 'aggregateFindings')
       .addEdge('perfAgent', 'aggregateFindings')
       .addEdge('bpAgent', 'aggregateFindings')
