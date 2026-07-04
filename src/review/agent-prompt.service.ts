@@ -30,7 +30,7 @@ const PR_JSON_SCHEMA_EXAMPLE = `{
   
   const SEARCH_TOOL_ADDENDUM = `
   Cross-file context: You may call search_symbol_usage or search_import_target when the diff suggests API/export/import impact relevant to your focus area.
-  File access: You may call get_file_content to view the full source of any changed file when you need more context beyond the diff chunks and AST summary. Pass the path exactly as listed in the changed files section.
+  File access: You may call get_file_content to view the full source of any changed file when you need more context beyond the diff chunks and AST summary. Use sparingly (maximum 3 files)  Pass the path exactly as listed in the changed files section.
   Findings must still cite only Added lines in diff chunks for line numbers.
   When done with any tool calls, respond with ONLY the final JSON object (no markdown).`;
   

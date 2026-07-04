@@ -9,6 +9,7 @@ import type { AppConfig } from '../../../config/app-config.types';
 import { APP_CONFIG } from '../../../config/config.constants';
 import { LlmService } from '../../../llm/llm.service';
 import type { CrossFileHint } from '../../../review/types/cross-file-hint.types';
+import type { AgentRole } from '../../../review/types/agent-prompt.types';
 import {
   ANALYZE_AGENT_CONFIG_KEY,
   type AnalyzeAgentConfigurable,
@@ -27,10 +28,12 @@ import type { LlmAnalysis } from '../../../graph/state.types';
 import { parsePrLlmAnalysisWithRepair } from '../../../review/findings/pr-finding.schema';
 
 export type AnalyzeAgentInvokeInput = {
+  agentRole: AgentRole;
   systemPrompt: string;
   userContent: string;
   installationId: bigint;
   repoFullName: string;
+  headSha: string;
   onSearchToolCall?: AnalyzeAgentConfigurable['onSearchToolCall'];
 };
 
@@ -123,11 +126,14 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
     const searchCtx = this.searchExecutor.createContext(
       input.installationId,
       input.repoFullName,
+      input.headSha,
     );
 
     const analyzeAgent: AnalyzeAgentConfigurable = {
+      agentRole: input.agentRole,
       installationId: String(input.installationId),
       repoFullName: input.repoFullName,
+      headSha: input.headSha,
       searchCtx,
       hintsAccumulator,
       searchToolCallCount,
@@ -143,7 +149,7 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
       messages: [
         new SystemMessage(input.systemPrompt),
         new HumanMessage(
-          `${input.userContent}\n\nYou may call search tools before producing findings. When done searching, respond with ONLY valid JSON matching the required schema.`,
+          `${input.userContent}\n\nYou may call search tools or get_file_content before producing findings. When done, respond with ONLY valid JSON matching the required schema.`,
         ),
       ],
       crossFileHints: [],
@@ -157,7 +163,7 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
           [ANALYZE_AGENT_CONFIG_KEY]: analyzeAgent,
         },
         recursionLimit,
-        runName: 'analyze-agent',
+        runName: `analyze-agent:${input.agentRole}`,
       });
 
       if (!result.llmAnalysis?.summary?.trim()) {
@@ -165,6 +171,7 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
       }
 
       this.logger.info(`[${className}] [${methodName}] :: Analyze agent completed`, {
+        agentRole: input.agentRole,
         repoFullName: input.repoFullName,
         summaryChars: result.llmAnalysis.summary.length,
         findingCount: result.llmAnalysis.findings.length,
@@ -182,13 +189,14 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
         this.logger.error(
           `[${className}] [${methodName}] :: Analyze agent recursion limit exceeded`,
           {
+            agentRole: input.agentRole,
             repoFullName: input.repoFullName,
             recursionLimit,
             error: err,
           },
         );
         throw new Error(
-          `PR analyze agent exceeded recursion limit (${recursionLimit})`,
+          `PR analyze agent (${input.agentRole}) exceeded recursion limit (${recursionLimit})`,
         );
       }
       throw err;

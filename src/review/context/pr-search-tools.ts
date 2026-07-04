@@ -8,8 +8,8 @@ import type { PrSearchToolExecutorService } from './pr-search-tool-executor.serv
 export const PR_SEARCH_TOOL_NAMES = {
   symbolUsage: 'search_symbol_usage',
   importTarget: 'search_import_target',
+  fileContent: 'get_file_content',
 } as const;
-
 
 export function createAnalyzeSearchTools(
   executor: PrSearchToolExecutorService,
@@ -82,6 +82,32 @@ export function createAnalyzeSearchTools(
             .string()
             .min(1)
             .describe('Repo-relative path or import path segment'),
+        }),
+      },
+    ),
+    tool(
+      async ({ filePath }, config: LangGraphRunnableConfig) => {
+        const cfg = getAnalyzeAgentConfigurable(config);
+        if (!cfg) {
+          return 'File access is not configured for this review run.';
+        }
+
+        const { toolMessage } = await executor.executeToolCall(
+          cfg.searchCtx,
+          PR_SEARCH_TOOL_NAMES.fileContent,
+          { filePath },
+        );
+        return toolMessage;
+      },
+      {
+        name: PR_SEARCH_TOOL_NAMES.fileContent,
+        description:
+          'Fetch the full source of a changed file at the PR head commit. Use when diff chunks alone are insufficient — for example, to see the full function body for a performance or security concern. Pass the path exactly as listed in the changed files section.',
+        schema: z.object({
+          filePath: z
+            .string()
+            .min(1)
+            .describe('Repo-relative file path, e.g. src/auth/auth.service.ts'),
         }),
       },
     ),
