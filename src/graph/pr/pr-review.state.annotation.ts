@@ -117,11 +117,13 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => [],
   }),
-
-  // Phase F: concat reducers so parallel agents each append their output
   crossFileHints: Annotation<CrossFileHint[]>({
     reducer: concatHints,
     default: () => [],
+  }),
+  analysisRoute: Annotation<'simple' | 'specialized' | null>({
+    reducer: lastWins,
+    default: () => null,
   }),
   agentFindings: Annotation<Finding[]>({
     reducer: concatFindings,

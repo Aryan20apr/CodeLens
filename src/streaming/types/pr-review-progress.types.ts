@@ -6,6 +6,7 @@ export const PR_REVIEW_STEPS = [
   'chunking',
   'enriching_files',
   'searching_code',
+  'triaging',
   'summarizing', // Not needed with multi-agent fanout
   'analyzing_security',
   'analyzing_performance',
