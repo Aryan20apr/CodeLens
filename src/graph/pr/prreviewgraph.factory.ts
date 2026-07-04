@@ -91,6 +91,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
       chunks: [],
       fileIndex: [],
       crossFileHints: [],
+      agentFindings: [],
+      agentSummaries: [],
       rawFindings: [],
       analysisSummary: null,
       validatedFindings: [],

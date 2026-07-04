@@ -18,6 +18,32 @@ import type { Finding } from '../state.types';
 import type { ValidationStats } from '../../review/types/pr-findings.types';
 
 
+function concatFindings(
+  left: Finding[],
+  right: Finding[] | undefined,
+): Finding[] {
+  if (!right || right.length === 0) return left;
+  return [...left, ...right];
+}
+
+function concatSummaries(
+  left: Array<{ role: string; summary: string }>,
+  right: Array<{ role: string; summary: string }> | undefined,
+): Array<{ role: string; summary: string }> {
+  if (!right || right.length === 0) return left;
+  return [...left, ...right];
+}
+
+function concatHints(
+  left: CrossFileHint[],
+  right: CrossFileHint[] | undefined,
+): CrossFileHint[] {
+  if (!right || right.length === 0) return left;
+  return [...left, ...right];
+}
+
+
+
 export const PrReviewGraphState = Annotation.Root({
   reviewRunId: Annotation<string>({
     reducer: firstWriteWins,
@@ -91,10 +117,22 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => [],
   }),
+
+  // Phase F: concat reducers so parallel agents each append their output
   crossFileHints: Annotation<CrossFileHint[]>({
-    reducer: lastWins,
+    reducer: concatHints,
     default: () => [],
   }),
+  agentFindings: Annotation<Finding[]>({
+    reducer: concatFindings,
+    default: () => [],
+  }),
+  agentSummaries: Annotation<Array<{ role: string; summary: string }>>({
+    reducer: concatSummaries,
+    default: () => [],
+  }),
+
+  // Written by aggregateFindings; consumed by validateFindings
   rawFindings: Annotation<Finding[]>({
     reducer: lastWins,
     default: () => [],
@@ -103,6 +141,7 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => null,
   }),
+
   validatedFindings: Annotation<Finding[]>({
     reducer: lastWins,
     default: () => [],

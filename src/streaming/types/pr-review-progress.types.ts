@@ -6,7 +6,11 @@ export const PR_REVIEW_STEPS = [
   'chunking',
   'enriching_files',
   'searching_code',
-  'summarizing',
+  'summarizing', // Not needed with multi-agent fanout
+  'analyzing_security',
+  'analyzing_performance',
+  'analyzing_best_practices',
+  'aggregating_findings',
   'validating_findings',
   'posting_review',
 ] as const;
