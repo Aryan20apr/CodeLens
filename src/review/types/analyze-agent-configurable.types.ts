@@ -1,11 +1,14 @@
 import type { CrossFileHint } from './cross-file-hint.types';
 import type { PrSearchExecutorContext } from '../context/pr-search-tool-executor.service';
+import type { AgentRole } from './agent-prompt.types';
 
 export const ANALYZE_AGENT_CONFIG_KEY = 'analyzeAgent';
 
 export type AnalyzeAgentConfigurable = {
+  agentRole: AgentRole;
   installationId: string;
   repoFullName: string;
+  headSha: string;
   searchCtx: PrSearchExecutorContext;
   hintsAccumulator: CrossFileHint[];
   searchToolCallCount: { current: number };
