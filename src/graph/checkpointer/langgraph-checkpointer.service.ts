@@ -12,9 +12,6 @@ import { APP_CONFIG } from '../../config/config.constants';
  *
  * Uses a dedicated pool separate from Prisma's connection so the two
  * lifecycles remain independent and connection limits can be tuned separately.
- *
- * Tables are created in the `langgraph` schema on first boot (idempotent)
- * to avoid colliding with Prisma-managed tables in `public`.
  */
 @Injectable()
 export class LangGraphCheckpointerService implements OnModuleInit, OnModuleDestroy {

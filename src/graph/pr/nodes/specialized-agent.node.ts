@@ -95,6 +95,7 @@ export function createSpecializedAgentNode(
             }
   
             return analyzeAgent.invokeWithSearchTools({
+              reviewRunId,
               agentRole: role,
               systemPrompt,
               userContent: prompt.userContent,
