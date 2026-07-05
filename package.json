@@ -30,6 +30,7 @@
     "@langchain/core": "^1.2.1",
     "@langchain/google-genai": "^2.2.0",
     "@langchain/langgraph": "^1.4.7",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.4",
     "@langchain/openai": "^1.5.3",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.18",

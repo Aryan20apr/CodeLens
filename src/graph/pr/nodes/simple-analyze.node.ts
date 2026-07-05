@@ -75,6 +75,7 @@ export function createSimpleAnalyzeNode(
           }
 
           return analyzeAgent.invokeWithSearchTools({
+            reviewRunId,
             agentRole: 'best_practices',   // general prompt; role used only for logging
             systemPrompt: prompt.systemPrompt,
             userContent: prompt.userContent,

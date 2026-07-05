@@ -12,6 +12,7 @@ import { StreamingModule } from 'src/streaming/streaming.module';
 import { PrFileEnrichmentService } from '../review/enrichment/pr-file-enrichment.service';
 import { PrAnalyzeAgentFactory } from './pr/analyze/analyze-agent.factory';
 import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
+import { LangGraphCheckpointerService } from './checkpointer/langgraph-checkpointer.service';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
     StreamingModule,
   ],
   providers: [
+    LangGraphCheckpointerService,
     GraphFactory,
     PrAnalyzeAgentFactory,
     PrReviewGraphFactory,
@@ -31,6 +33,6 @@ import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
     LanguageDetectService,
     PrFileEnrichmentService,
   ],
-  exports: [GraphFactory, PrReviewGraphFactory],
+  exports: [GraphFactory, PrReviewGraphFactory, LangGraphCheckpointerService],
 })
 export class GraphModule {}
