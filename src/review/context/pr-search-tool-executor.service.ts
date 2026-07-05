@@ -13,8 +13,8 @@ import {
 import { PR_SEARCH_TOOL_NAMES } from './pr-search-tools';
 import { GithubApiService } from '../../github/github-api.service';
 
-const PR_FILE_CONTENT_FETCH_CAP = 3;
-const MAX_FILE_CONTENT_CHARS = 12_000;
+const PR_FILE_CONTENT_FETCH_CAP = 10;
+const MAX_FILE_CONTENT_CHARS = 20_000;
 
 export type PrSearchExecutorContext = {
   installationId: bigint;

@@ -1,4 +1,4 @@
-import { Annotation, MemorySaver } from '@langchain/langgraph';
+import { Annotation } from '@langchain/langgraph';
 
 import type { ParsedDiff } from '../../diff/types/parsed-diff.types';
 import type {
@@ -180,5 +180,4 @@ export const PrReviewGraphState = Annotation.Root({
   }),
 });
 
-export const prReviewMemoryCheckpointer = new MemorySaver();
 export type PrReviewGraphStateType = typeof PrReviewGraphState.State;

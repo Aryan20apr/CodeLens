@@ -28,10 +28,8 @@ import type {
   PrReviewGraphInvokeInput,
   PrReviewGraphInvokeResult,
 } from './pr-review-graph.types';
-import {
-  PrReviewGraphState,
-  prReviewMemoryCheckpointer,
-} from './pr-review.state.annotation';
+import { PrReviewGraphState } from './pr-review.state.annotation';
+import { LangGraphCheckpointerService } from '../checkpointer/langgraph-checkpointer.service';
 
 @Injectable()
 export class PrReviewGraphFactory implements OnModuleInit {
@@ -51,6 +49,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly progress: PrReviewProgressPublisher,
     private readonly llm: LlmService,
     private readonly findingsValidator: ValidatePrFindingsService,
+    private readonly checkpointerService: LangGraphCheckpointerService,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -74,50 +73,62 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const methodName = 'invokePrReview';
     const { reviewRunId } = input;
 
+    const checkpointConfig = { configurable: { thread_id: reviewRunId } };
+    const existing = await this.checkpointerService
+      .getSaver()
+      .getTuple(checkpointConfig);
+
     this.logger.info(`[${className}] [${methodName}] :: Invoking PR review graph`, {
       reviewRunId,
       repoFullName: input.repoFullName,
       prNumber: input.prNumber,
+      resuming: existing != null,
     });
 
     const graph = this.getCompiledGraph();
 
-    const initialState = {
-      reviewRunId,
-      installationId: input.installationId,
-      repoFullName: input.repoFullName,
-      prNumber: input.prNumber,
-      headSha: input.headSha,
-      baseSha: input.baseSha,
-      prTitle: null,
-      prBody: null,
-      diffText: null,
-      diffTruncated: false,
-      apiFileIndex: undefined,
-      parsed: null,
-      chunks: [],
-      fileIndex: [],
-      crossFileHints: [],
-      analysisRoute: null,
-      selectedAgents: [],
-      agentFindings: [],
-      agentSummaries: [],
-      rawFindings: [],
-      analysisSummary: null,
-      validatedFindings: [],
-      validationStats: null,
-      removedOnlyFileCount: 0,
-      binaryOrEmptyFileCount: 0,
-      fileContexts: [],
-      summaryMarkdown: null,
-      githubReviewId: null,
-      status: 'pending' as const,
-      error: null,
-      events: [],
-    } satisfies typeof PrReviewGraphState.State;
+    // On first attempt (no checkpoint) supply the full initial state so
+    // LangGraph starts a fresh run. On retries, pass null so LangGraph
+    // loads the saved checkpoint and resumes from the last failed node,
+    // avoiding redundant token spend on already-completed nodes.
+    const invokeInput = existing
+      ? null
+      : ({
+          reviewRunId,
+          installationId: input.installationId,
+          repoFullName: input.repoFullName,
+          prNumber: input.prNumber,
+          headSha: input.headSha,
+          baseSha: input.baseSha,
+          prTitle: null,
+          prBody: null,
+          diffText: null,
+          diffTruncated: false,
+          apiFileIndex: undefined,
+          parsed: null,
+          chunks: [],
+          fileIndex: [],
+          crossFileHints: [],
+          analysisRoute: null,
+          selectedAgents: [],
+          agentFindings: [],
+          agentSummaries: [],
+          rawFindings: [],
+          analysisSummary: null,
+          validatedFindings: [],
+          validationStats: null,
+          removedOnlyFileCount: 0,
+          binaryOrEmptyFileCount: 0,
+          fileContexts: [],
+          summaryMarkdown: null,
+          githubReviewId: null,
+          status: 'pending' as const,
+          error: null,
+          events: [],
+        } satisfies typeof PrReviewGraphState.State);
 
-    const result = await graph.invoke(initialState, {
-      configurable: { thread_id: reviewRunId },
+    const result = await graph.invoke(invokeInput, {
+      ...checkpointConfig,
       runName: 'pr-review-graph',
       tags: ['pr-review'],
       metadata: {
@@ -154,17 +165,19 @@ export class PrReviewGraphFactory implements OnModuleInit {
   }
 
   private build() {
+    const checkpointer = this.checkpointerService.getSaver();
+
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
-  
+
     const triageAnalysis = createTriageAnalysisNode(this.llm, this.progress);
     const simpleAnalyze = createSimpleAnalyzeNode(
       this.promptService,
       this.analyzeAgent,
       this.progress,
     );
-  
+
     const securityAgent = createSpecializedAgentNode(
       'security',
       this.agentPromptService,
@@ -186,7 +199,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.analyzeAgent,
       this.progress,
     );
-  
+
     const aggregateFindings = createAggregateFindingsNode(this.progress);
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
@@ -197,7 +210,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.progress,
       this.appConfig.prReview.findings.maxCommentBodyChars,
     );
-  
+
     return new StateGraph(PrReviewGraphState)
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
@@ -232,6 +245,6 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addEdge('aggregateFindings', 'validateFindings')
       .addEdge('validateFindings', 'postReview')
       .addEdge('postReview', END)
-      .compile({ checkpointer: prReviewMemoryCheckpointer });
+      .compile({ checkpointer });
   }
 }
