@@ -1,30 +1,8 @@
 import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-progress-publisher.service';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
-import type { Finding, FindingSeverity } from '../../../graph/state.types';
 import { AGENT_ROLES, AGENT_ROLE_LABEL } from '../../../review/types/agent-prompt.types';
-
-const SEVERITY_RANK: Record<FindingSeverity, number> = {
-  critical: 3,
-  warning: 2,
-  info: 1,
-};
-
-function deduplicateFindings(findings: Finding[]): Finding[] {
-  const map = new Map<string, Finding>();
-  for (const finding of findings) {
-    if (!finding.filePath) continue;
-    const key = `${finding.filePath}:${finding.location.startLine}:${finding.category}`;
-    const existing = map.get(key);
-    if (
-      !existing ||
-      SEVERITY_RANK[finding.severity] > SEVERITY_RANK[existing.severity]
-    ) {
-      map.set(key, finding);
-    }
-  }
-  return [...map.values()];
-}
+import { clusterAndMergeFindings } from '../../../review/findings/finding-dedup.util';
 
 function buildCombinedSummary(
   summaries: Array<{ role: string; summary: string }>,
@@ -61,6 +39,7 @@ type AggregateUpdate = Partial<
 
 export function createAggregateFindingsNode(
   progress: PrReviewProgressPublisher,
+  mergeSimilarityThreshold: number,
 ): (state: PrReviewGraphStateType) => Promise<AggregateUpdate> {
   return async (state) => {
     const { reviewRunId } = state;
@@ -71,7 +50,9 @@ export function createAggregateFindingsNode(
         graphNode: 'aggregateFindings',
         meta: { rawCount: state.agentFindings.length },
         fn: async () => {
-          const rawFindings = deduplicateFindings(state.agentFindings);
+          const rawFindings = clusterAndMergeFindings(state.agentFindings, {
+            similarityThreshold: mergeSimilarityThreshold,
+          });
           const analysisSummary = buildCombinedSummary(state.agentSummaries);
 
           return { rawFindings, analysisSummary };
