@@ -100,7 +100,7 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => false,
   }),
-  apiFileIndex: Annotation<FileIndexEntry[] | undefined>({
+  completeFileIndex: Annotation<FileIndexEntry[] | undefined>({
     reducer: lastWins,
     default: () => undefined,
   }),
