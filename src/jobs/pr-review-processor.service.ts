@@ -40,6 +40,9 @@ export class PrReviewProcessorService extends WorkerHost {
       installationId: installationIdStr,
       repoFullName,
       prNumber,
+      reviewMode,
+      priorHeadSha,
+      parentRunId,
     } = job.data;
 
     this.logger.info(`[${className}] [${methodName}] :: Starting PR review job`, {
@@ -49,6 +52,9 @@ export class PrReviewProcessorService extends WorkerHost {
       installationId: installationIdStr,
       repoFullName,
       prNumber,
+      reviewMode,
+      priorHeadSha: priorHeadSha ?? null,
+      parentRunId: parentRunId ?? null,
     });
 
     const installationId = BigInt(installationIdStr);

@@ -201,18 +201,22 @@ export class GithubApiService {
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
 
-    const compare = await octokit.repos.compareCommits({
+    const compare = await octokit.request({
+      method: 'GET',
+      url: '/repos/{owner}/{repo}/compare/{basehead}',
       owner,
       repo,
-      base: baseSha,
-      head: headSha,
+      basehead: `${baseSha}...${headSha}`,
       headers: { accept: 'application/vnd.github.v3.diff' },
     });
 
-    const text =
-      typeof compare.data === 'string'
-        ? compare.data
-        : String(compare.data ?? '');
+    if (typeof compare.data !== 'string') {
+      throw new Error(
+        'Compare API did not return diff text (expected unified diff media type)',
+      );
+    }
+
+    const text = compare.data;
 
     const truncated = truncateDiffText(text);
 

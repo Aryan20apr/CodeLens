@@ -4,6 +4,7 @@ import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-pro
 import { TerminalReviewError } from '../errors/terminal-review.error';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
+import type { Logger } from 'winston';
 
 type ChunkUpdate = Partial<
   Pick<
@@ -23,6 +24,7 @@ export function createChunkNode(
   diffParser: DiffParserService,
   chunker: DiffChunkerService,
   progress: PrReviewProgressPublisher,
+  logger: Logger,
 ): (state: PrReviewGraphStateType) => Promise<ChunkUpdate> {
   return async (state) => {
     if (!state.diffText) {
@@ -72,6 +74,17 @@ export function createChunkNode(
     ]);
     allEvents.push(...chunkStep.events);
     const chunks = chunkStep.result;
+
+    const chunkFilePaths = [...new Set(chunks.map((c) => c.filePath))];
+    logger.info(`[ChunkNode] [chunk] :: Review scope after chunking`, {
+      reviewRunId,
+      reviewMode: state.reviewMode,
+      priorHeadSha: state.priorHeadSha,
+      parsedFileCount: parsed.files.length,
+      chunkCount: chunks.length,
+      chunkFileCount: chunkFilePaths.length,
+      chunkFilePaths,
+    });
 
     return {
       parsed,

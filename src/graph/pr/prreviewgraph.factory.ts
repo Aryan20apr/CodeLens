@@ -84,6 +84,10 @@ export class PrReviewGraphFactory implements OnModuleInit {
       reviewRunId,
       repoFullName: input.repoFullName,
       prNumber: input.prNumber,
+      reviewMode: input.reviewMode,
+      priorHeadSha: input.priorHeadSha ?? null,
+      parentRunId: input.parentRunId ?? null,
+      headSha: input.headSha,
       resuming: existing != null,
     });
 
@@ -172,8 +176,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
   private build() {
     const checkpointer = this.checkpointerService.getSaver();
 
-    const ingestDiff = createDiffIngestionNode(this.github, this.progress);
-    const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
+    const ingestDiff = createDiffIngestionNode(this.github, this.progress, this.logger);
+    const chunk = createChunkNode(this.diffParser, this.chunker, this.progress, this.logger);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
 
     const triageAnalysis = createTriageAnalysisNode(this.llm, this.progress);

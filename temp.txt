@@ -1,0 +1,454 @@
+
+> codelens@0.0.1 start /Users/aryansingh/projects/peronal/CodeLens
+> nest start
+
+[ParseNode.createParseNode] Initializing parse node factory
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[GraphFactory][39m [32mLangGraph (snippet) compiled: START -> parse -> llm-analysis -> score-report -> END[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[PrAnalyzeAgentFactory][39m [32mLangGraph (analyze-agent) compiled: analyzeLlm -> searchTools loop -> analyzeFinalize[39m [33m+3ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32mLangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> triageAnalysis -> {simpleAnalyze | [securityAgent ‖ perfAgent ‖ bpAgent]} -> aggregateFindings -> validateFindings -> postReview -> END[39m [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[LangGraphCheckpointerService][39m [32m[LangGraphCheckpointerService] [onModuleInit] :: LangGraph checkpoint tables ready (schema: langgraph)[39m [33m+51ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[NestFactory][39m [32mStarting Nest application...[39m [33m+6ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mAppConfigModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mClsIntegrationModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mClsModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mClsCommonModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mLoggerModule dependencies initialized[39m [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullmqModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mPassportModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mDiffModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mJwtModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mConfigHostModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mDiscoveryModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mClsRootModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mConfigModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mClsPluginsModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mTerminusModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mWinstonModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mRedisModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mPrismaModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mLlmModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mBullModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mHealthModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mExampleJobsModule dependencies initialized[39m [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mGithubModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mStreamingModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mReviewModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mTestModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mUserModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mWebhookModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mGraphModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mAppModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mRepositoriesModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mAuthModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mReviewRunsModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[InstanceLoader][39m [32mJobsModule dependencies initialized[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mAppController {/api/v1}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/enqueue-example, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mHealthController {/api/v1/health}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/health, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mAuthController {/api/v1/auth}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/register, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/login, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/refresh, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/logout, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/github, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/github/install, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/github/callback, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/github/installations, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/google, GET} route[39m [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/auth/google/callback, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mUserController {/api/v1/users}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/users/me, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/users/me, PATCH} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/users/me/api-key, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mEventStreamController {/api/v1/snippet-evaluations-async}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/snippet-evaluations-async/:threadId/stream, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mEvaluationController {/api/v1/test}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/test/snippet, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mCodeReviewController {/api/v1/codereview}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/codereview/job, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/codereview/:jobId, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mGithubWebhookController {/api/v1/webhooks/github}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/webhooks/github, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mRepositoriesController {/api/v1/repositories}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories/github/installations, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories/:repoId/pull-requests, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories/:repoId/pull-requests/:prNumber, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories/:repoId/pull-requests/:prNumber/diff, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/repositories/:repoId/pull-requests/:prNumber/files, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RoutesResolver][39m [32mReviewRunsController {/api/v1/review-runs}:[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/review-runs, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/review-runs/repositories/:repoId/pull-requests/:prNumber, POST} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/review-runs/:id, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[RouterExplorer][39m [32mMapped {/api/v1/review-runs/:id/stream, GET} route[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:48:48 PM [32m    LOG[39m [33m[NestApplication][39m [32mNest application successfully started[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:14 PM [32m    LOG[39m [33m[GithubWebhookController][39m [32m[GithubWebhookController] [receive] :: Received GitHub webhook request[39m - {
+  event: [32m'pull_request'[39m,
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+27s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:14 PM [32m    LOG[39m [33m[GithubWebhookService][39m [32m[GithubWebhookService] [handle] :: Handling webhook[39m - {
+  event: [32m'pull_request'[39m,
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+20ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[GithubWebhookService][39m [32m[GithubWebhookService] [handle] :: Enqueueing PR review[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  action: [32m'synchronize'[39m,
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  baseSha: [32m'f5e29ac6ea52bbacb0b4dfcb8464567c345c974c'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+279ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [createReceived] :: Recording received webhook delivery[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  event: [32m'pull_request'[39m,
+  action: [32m'synchronize'[39m,
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [createReceived] :: Webhook delivery recorded[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  status: [32m'RECEIVED'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+38ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [createPending] :: Creating pending PR review[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+55ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [createPending] :: PR review created[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  status: [32m'PENDING'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+8ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewProducerService][39m [32m[PrReviewProducerService] [enqueue] :: Enqueueing PR review job[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewProducerService][39m [32m[PrReviewProducerService] [enqueue] :: PR review job enqueued[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  jobId: [32m'71'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+7ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [setBullmqJobId] :: Linking BullMQ job to PR review[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  jobId: [32m'71'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [setBullmqJobId] :: BullMQ job linked[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  jobId: [32m'71'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+5ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [markStatus] :: Updating webhook delivery status[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  status: [32m'ENQUEUED'[39m,
+  jobId: [32m'71'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewProcessorService][39m [32m[PrReviewProcessorService] [process] :: Starting PR review job[39m - {
+  jobId: [32m'71'[39m,
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  parentRunId: [32m'019f50e2-01a7-7053-b135-146f0416fab5'[39m
+} [33m+2ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [markStatus] :: Webhook delivery status updated[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  status: [32m'ENQUEUED'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+2ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[GithubWebhookService][39m [32m[GithubWebhookService] [handle] :: PR review job enqueued[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  jobId: [32m'71'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[GithubWebhookController][39m [32m[GithubWebhookController] [receive] :: Webhook handled successfully[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  event: [32m'pull_request'[39m,
+  correlationId: [32m'0928b395-8bbf-4cdc-af3e-79be324de512'[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [markRunning] :: Marking PR review running[39m - { reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m } [33m+11ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [markRunning] :: PR review running[39m - { reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m, status: [32m'RUNNING'[39m } [33m+5ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[PrReviewGraphFactory] [invokePrReview] :: Invoking PR review graph[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  parentRunId: [32m'019f50e2-01a7-7053-b135-146f0416fab5'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  resuming: [33mfalse[39m
+} [33m+28ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[DiffIngestionNode] [ingestDiff] :: Starting diff ingestion[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+81ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:15 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getPullRequest] :: Fetching pull request[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m
+} [33m+8ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:16 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getPullRequest] :: Pull request fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m
+} [33m+1s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:16 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[DiffIngestionNode] [ingestDiff] :: Attempting incremental compare[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+9ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:16 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [compareCommits] :: Comparing commits[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  baseSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+11ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [compareCommits] :: Compare diff fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  baseSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  diffChars: [33m4028[39m,
+  truncated: [33mfalse[39m
+} [33m+1s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[DiffIngestionNode] [ingestDiff] :: Incremental compare result[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  diffChars: [33m4028[39m,
+  diffFileCount: [33m2[39m,
+  diffTruncated: [33mfalse[39m,
+  diffEmpty: [33mfalse[39m
+} [33m+5ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[DiffIngestionNode] [ingestDiff] :: Diff ingestion outcome[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  diffSource: [32m'incremental'[39m,
+  fallbackReason: [1mnull[22m,
+  diffChars: [33m4028[39m,
+  diffFileCount: [33m2[39m,
+  diffTruncated: [33mfalse[39m,
+  hasCompleteFileIndex: [33mfalse[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[ChunkNode] [chunk] :: Review scope after chunking[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  reviewMode: [32m'INCREMENTAL'[39m,
+  priorHeadSha: [32m'a0be9cf2b58a5151d82f89d6e7471364b8e8ea09'[39m,
+  parsedFileCount: [33m2[39m,
+  chunkCount: [33m3[39m,
+  chunkFileCount: [33m2[39m,
+  chunkFilePaths: [ [32m'.gitignore'[39m, [32m'StringProcessor.java'[39m ]
+} [33m+25ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[PrFileEnrichmentService][39m [32m[PrFileEnrichmentService] [enrich] :: Starting file enrichment[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  fileCount: [33m2[39m
+} [33m+12ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: Fetching file at ref[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'.gitignore'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:17 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: Fetching file at ref[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:18 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: File fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'.gitignore'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  sizeBytes: [33m7[39m
+} [33m+636ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:18 PM [32m    LOG[39m [33m[LanguageDetectService][39m [32m[LanguageDetectService.detectLanguage] Detected from content heuristics: unknown[39m [33m+2ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:19 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: File fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  sizeBytes: [33m2407[39m
+} [33m+899ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:19 PM [32m    LOG[39m [33m[LanguageDetectService][39m [32m[LanguageDetectService.detectLanguage] Detected from filename: StringProcessor.java -> java[39m [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:19 PM [32m    LOG[39m [33m[TreeSitterService][39m [32mTree-sitter WASM runtime initialized[39m [33m+45ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:19 PM [32m    LOG[39m [33m[AstExtractService][39m [32m[AstExtractService.buildMetadata] Metadata extraction complete[39m - {
+  functionsCount: [33m5[39m,
+  classesCount: [33m1[39m,
+  importCount: [33m5[39m,
+  entryPointCount: [33m5[39m,
+  linesOfCode: [33m74[39m
+} [33m+40ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:19 PM [32m    LOG[39m [33m[PrFileEnrichmentService][39m [32m[PrFileEnrichmentService] [enrich] :: File enrichment complete[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  enrichedCount: [33m1[39m,
+  skippedCount: [33m1[39m,
+  failedCount: [33m0[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:31 PM [32m    LOG[39m [33m[PrReviewPromptService][39m [32m[PrReviewPromptService] [build] :: Built PR review prompt[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  chunkCount: [33m3[39m,
+  skipSearchTools: [33mfalse[39m
+} [33m+12s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:31 PM [32m    LOG[39m [33m[PrReviewPromptService][39m [32m[PrReviewPromptService] [build] :: Built PR review prompt[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  chunkCount: [33m3[39m,
+  skipSearchTools: [33mfalse[39m
+} [33m+9ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:31 PM [32m    LOG[39m [33m[PrAnalyzeAgentFactory][39m [32m[PrAnalyzeAgentFactory] [invokeWithSearchTools] :: Invoking analyze agent[39m - {
+  agentRole: [32m'performance'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  threadId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28:performance'[39m,
+  resuming: [33mfalse[39m
+} [33m+16ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:31 PM [32m    LOG[39m [33m[PrAnalyzeAgentFactory][39m [32m[PrAnalyzeAgentFactory] [invokeWithSearchTools] :: Invoking analyze agent[39m - {
+  agentRole: [32m'best_practices'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  threadId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28:best_practices'[39m,
+  resuming: [33mfalse[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:32 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: Fetching file at ref[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+717ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:33 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: File fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  sizeBytes: [33m2407[39m
+} [33m+835ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:33 PM [32m    LOG[39m [33m[PrSearchToolExecutorService][39m [32m[PrSearchToolExecutorService] [executeFileContentFetch] :: File content fetched[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  filePath: [32m'StringProcessor.java'[39m,
+  sizeBytes: [33m2407[39m,
+  truncated: [33mfalse[39m,
+  fileContentFetched: [33m1[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:35 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: Fetching file at ref[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+3s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:36 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [getFileContentAtRef] :: File fetched[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  path: [32m'StringProcessor.java'[39m,
+  ref: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m,
+  sizeBytes: [33m2407[39m
+} [33m+671ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:49:36 PM [32m    LOG[39m [33m[PrSearchToolExecutorService][39m [32m[PrSearchToolExecutorService] [executeFileContentFetch] :: File content fetched[39m - {
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  filePath: [32m'StringProcessor.java'[39m,
+  sizeBytes: [33m2407[39m,
+  truncated: [33mfalse[39m,
+  fileContentFetched: [33m1[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:03 PM [32m    LOG[39m [33m[PrAnalyzeAgentFactory][39m [32m[PrAnalyzeAgentFactory] [invokeWithSearchTools] :: Analyze agent completed[39m - {
+  agentRole: [32m'performance'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  summaryChars: [33m245[39m,
+  findingCount: [33m4[39m,
+  crossFileHintCount: [33m0[39m,
+  searchToolCallCount: [33m0[39m
+} [33m+27s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:11 PM [32m    LOG[39m [33m[PrAnalyzeAgentFactory][39m [32m[PrAnalyzeAgentFactory] [invokeWithSearchTools] :: Analyze agent completed[39m - {
+  agentRole: [32m'best_practices'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  summaryChars: [33m375[39m,
+  findingCount: [33m5[39m,
+  crossFileHintCount: [33m0[39m,
+  searchToolCallCount: [33m0[39m
+} [33m+8s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:11 PM [32m    LOG[39m [33m[ValidatePrFindingsService][39m [32m[ValidatePrFindingsService] [validate] :: Findings validated[39m - { rawCount: [33m9[39m, validCount: [33m9[39m, droppedCount: [33m0[39m, dropReasons: {} } [33m+53ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:11 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [createPullRequestReview] :: Posting pull request review[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  bodyChars: [33m713[39m,
+  commentCount: [33m9[39m,
+  headSha: [32m'7356a6047e652172fadc242aa9c8d91e00a54142'[39m
+} [33m+28ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[GithubApiService][39m [32m[GithubApiService] [createPullRequestReview] :: Pull request review posted[39m - {
+  installationId: [32m'135167762'[39m,
+  repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m,
+  prNumber: [33m12[39m,
+  githubReviewId: [32m'4677607775'[39m,
+  commentCount: [33m9[39m
+} [33m+3s[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PostedFindingRepository][39m [32m[PostedFindingRepository] [insertMany] :: Persisting posted finding fingerprints[39m - { count: [33m9[39m, repoFullName: [32m'Aryan20apr/codelens-pr-test'[39m, prNumber: [33m12[39m } [33m+3ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PrReviewGraphFactory][39m [32m[PrReviewGraphFactory] [invokePrReview] :: PR review graph completed[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  githubReviewId: [32m'4677607775'[39m,
+  agentFindingCount: [33m9[39m,
+  validatedFindingCount: [33m9[39m,
+  eventCount: [33m22[39m
+} [33m+29ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [markCompleted] :: Marking PR review completed[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  githubReviewId: [32m'4677607775'[39m,
+  summaryChars: [33m713[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PrReviewRepository][39m [32m[PrReviewRepository] [markCompleted] :: PR review completed[39m - {
+  reviewId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  status: [32m'COMPLETED'[39m
+} [33m+3ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [markStatus] :: Updating webhook delivery status[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  status: [32m'PROCESSED'[39m
+} [33m+1ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[WebhookDeliveryRepository][39m [32m[WebhookDeliveryRepository] [markStatus] :: Webhook delivery status updated[39m - {
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  status: [32m'PROCESSED'[39m
+} [33m+3ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PrReviewProgressPublisher][39m [32m[PrReviewProgressPublisher] [done] :: Published terminal progress[39m - {
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  status: [32m'COMPLETED'[39m
+} [33m+0ms[39m
+[32m[CodeLens][39m [32m79460[39m 7/11/2026, 4:50:14 PM [32m    LOG[39m [33m[PrReviewProcessorService][39m [32m[PrReviewProcessorService] [process] :: PR review job completed[39m - {
+  jobId: [32m'71'[39m,
+  reviewRunId: [32m'019f50e7-2c62-7d0a-a864-88984f470b28'[39m,
+  deliveryId: [32m'58ba6bb0-7d1a-11f1-875c-fa22af681d14'[39m,
+  githubReviewId: [32m'4677607775'[39m
+} [33m+1ms[39m

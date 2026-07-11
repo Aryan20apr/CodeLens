@@ -70,8 +70,10 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: firstWriteWins,
     default: () => '',
   }),
+  // lastWins: default is FULL, but invoke input must override to INCREMENTAL.
+  // firstWriteWins would keep FULL because hasFirstWriteValue('FULL') is true.
   reviewMode: Annotation<'FULL' | 'INCREMENTAL'>({
-    reducer: firstWriteWins,
+    reducer: lastWins,
     default: () => 'FULL',
   }),
   priorHeadSha: Annotation<string | null>({

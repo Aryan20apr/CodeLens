@@ -7,6 +7,7 @@ import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-pro
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
 import { GraphEvent } from 'src/graph/state.annotation';
+import type { Logger } from 'winston';
 
 type IngestUpdate = Partial<
   Pick<
@@ -27,6 +28,22 @@ type DiffFetchResult = {
   diffTruncated: boolean;
   completeFileIndex?: FileIndexEntry[];
 };
+
+function countFilesInUnifiedDiff(diffText: string): number {
+  const matches = diffText.match(/^diff --git /gm);
+  return matches?.length ?? 0;
+}
+
+function logDiffIngestOutcome(
+  logger: Logger,
+  reviewRunId: string,
+  data: Record<string, unknown>,
+): void {
+  logger.info(
+    `[DiffIngestionNode] [ingestDiff] :: Diff ingestion outcome`,
+    { reviewRunId, ...data },
+  );
+}
 
 async function buildCompleteFileIndex(
   github: GithubApiService,
@@ -51,11 +68,21 @@ async function buildCompleteFileIndex(
 export function createDiffIngestionNode(
   github: GithubApiService,
   progress: PrReviewProgressPublisher,
+  logger: Logger,
 ): (state: PrReviewGraphStateType) => Promise<IngestUpdate> {
   return async (state) => {
     const installationId = BigInt(state.installationId);
-    const { reviewRunId, repoFullName, prNumber } = state;
+    const { reviewRunId, repoFullName, prNumber, headSha } = state;
     const allEvents: GraphEvent[] = [];
+
+    logger.info(`[DiffIngestionNode] [ingestDiff] :: Starting diff ingestion`, {
+      reviewRunId,
+      repoFullName,
+      prNumber,
+      reviewMode: state.reviewMode,
+      priorHeadSha: state.priorHeadSha,
+      headSha,
+    });
 
     const prStep = await runPrSteps(reviewRunId, progress, [
       {
@@ -101,10 +128,17 @@ export function createDiffIngestionNode(
     };
 
     let diffResult: DiffFetchResult;
+    let diffSource: 'full_direct' | 'incremental' | 'full_fallback' = 'full_direct';
+    let fallbackReason: string | undefined;
 
     if (state.reviewMode === 'INCREMENTAL' && state.priorHeadSha?.trim()) {
       const priorHeadSha = state.priorHeadSha.trim();
       let fallbackToFull = false;
+
+      logger.info(
+        `[DiffIngestionNode] [ingestDiff] :: Attempting incremental compare`,
+        { reviewRunId, priorHeadSha, headSha },
+      );
 
       try {
         const incrementalStep = await runPrSteps(reviewRunId, progress, [
@@ -125,9 +159,42 @@ export function createDiffIngestionNode(
         ]);
         allEvents.push(...incrementalStep.events);
         const incremental = incrementalStep.result;
+        const incrementalFileCount = countFilesInUnifiedDiff(incremental.diffText);
+
+        logger.info(
+          `[DiffIngestionNode] [ingestDiff] :: Incremental compare result`,
+          {
+            reviewRunId,
+            diffChars: incremental.diffText.length,
+            diffFileCount: incrementalFileCount,
+            diffTruncated: incremental.diffTruncated,
+            diffEmpty: !incremental.diffText.trim(),
+          },
+        );
+
+        const looksLikeUnifiedDiff =
+          incremental.diffText.includes('diff --git ') ||
+          incremental.diffText.includes('\n+++ ') ||
+          incremental.diffText.includes('\n--- ');
 
         if (incremental.diffTruncated) {
           fallbackToFull = true;
+          fallbackReason = 'incremental_truncated';
+        } else if (
+          incremental.diffText.trim() &&
+          !looksLikeUnifiedDiff &&
+          incrementalFileCount === 0
+        ) {
+          fallbackToFull = true;
+          fallbackReason = 'invalid_compare_diff_format';
+          logger.warn(
+            `[DiffIngestionNode] [ingestDiff] :: Incremental compare returned non-diff payload`,
+            {
+              reviewRunId,
+              diffChars: incremental.diffText.length,
+              diffPreview: incremental.diffText.slice(0, 80),
+            },
+          );
         } else if (!incremental.diffText.trim()) {
           const changedFiles = await github.getCompareChangedFileCount(
             installationId,
@@ -135,29 +202,75 @@ export function createDiffIngestionNode(
             priorHeadSha,
             state.headSha,
           );
+          logger.info(
+            `[DiffIngestionNode] [ingestDiff] :: Empty incremental patch`,
+            { reviewRunId, compareChangedFileCount: changedFiles },
+          );
           if (changedFiles > 0) {
             fallbackToFull = true;
+            fallbackReason = 'empty_patch_with_compare_files';
           } else {
             diffResult = {
               diffText: incremental.diffText,
               diffTruncated: false,
             };
+            diffSource = 'incremental';
           }
         } else {
           diffResult = incremental;
+          diffSource = 'incremental';
         }
-      } catch {
+      } catch (err) {
         fallbackToFull = true;
+        fallbackReason = 'compare_error';
+        logger.warn(
+          `[DiffIngestionNode] [ingestDiff] :: Incremental compare failed, falling back to full PR diff`,
+          {
+            reviewRunId,
+            priorHeadSha,
+            headSha,
+            error: err,
+          },
+        );
       }
 
       if (fallbackToFull) {
-        diffResult = await fetchFullDiff({ fallbackToFull: true, priorHeadSha });
+        logger.warn(
+          `[DiffIngestionNode] [ingestDiff] :: Falling back to full PR diff`,
+          { reviewRunId, fallbackReason, priorHeadSha },
+        );
+        diffResult = await fetchFullDiff({
+          fallbackToFull: true,
+          priorHeadSha,
+          fallbackReason,
+        });
+        diffSource = 'full_fallback';
       }
     } else {
+      logger.info(
+        `[DiffIngestionNode] [ingestDiff] :: Using full PR diff (not incremental)`,
+        {
+          reviewRunId,
+          reviewMode: state.reviewMode,
+          priorHeadSha: state.priorHeadSha,
+        },
+      );
       diffResult = await fetchFullDiff();
     }
 
     const { diffText, diffTruncated, completeFileIndex } = diffResult!;
+
+    logDiffIngestOutcome(logger, reviewRunId, {
+      diffSource,
+      fallbackReason: fallbackReason ?? null,
+      diffChars: diffText.length,
+      diffFileCount: countFilesInUnifiedDiff(diffText),
+      diffTruncated,
+      hasCompleteFileIndex: completeFileIndex != null,
+      reviewMode: state.reviewMode,
+      priorHeadSha: state.priorHeadSha,
+      headSha,
+    });
 
     return {
       prTitle: pr.title ?? `PR #${prNumber}`,
