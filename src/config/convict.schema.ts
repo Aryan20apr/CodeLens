@@ -339,6 +339,26 @@ export const convictSchema = convict<AppConfig>({
         default: 18000,
         env: 'PR_REVIEW_MAX_COMMENT_BODY_CHARS',
       },
+      mergeSimilarityThreshold: {
+        doc: 'Min Jaccard similarity (0-1) to merge overlapping cross-agent findings',
+        format: Number,
+        default: 0.4,
+        env: 'PR_REVIEW_MERGE_SIMILARITY_THRESHOLD',
+      },
+    },
+    incremental: {
+      enabled: {
+        doc: 'Enable incremental PR reviews on synchronize',
+        format: Boolean,
+        default: true,
+        env: 'PR_REVIEW_INCREMENTAL_ENABLED',
+      },
+      skipIfInFlight: {
+        doc: 'Skip enqueue when another review is pending or running for the same PR',
+        format: Boolean,
+        default: true,
+        env: 'PR_REVIEW_SKIP_IF_IN_FLIGHT',
+      },
     },
   },
 });
