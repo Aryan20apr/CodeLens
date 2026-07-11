@@ -7,6 +7,21 @@ import { GithubAppAuthService } from './github-app-auth.service';
 export const MAX_DIFF_CHARS = 200_000;
 export const MAX_FILE_CONTENT_BYTES = 512_000;
 
+const DIFF_TRUNCATION_SUFFIX = (max: number) =>
+  `\n\n[Diff truncated at ${max} characters for review.]`;
+
+export function isDiffTruncated(text: string): boolean {
+  return (
+    text.includes(`[Diff truncated at ${MAX_DIFF_CHARS}`) ||
+    text.length >= MAX_DIFF_CHARS
+  );
+}
+
+function truncateDiffText(text: string): string {
+  if (text.length <= MAX_DIFF_CHARS) return text;
+  return text.slice(0, MAX_DIFF_CHARS) + DIFF_TRUNCATION_SUFFIX(MAX_DIFF_CHARS);
+}
+
 export type RepoCoords = { owner: string; repo: string };
 
 export type PullRequestChangedFile = {
@@ -154,10 +169,7 @@ export class GithubApiService {
         diffChars: text.length,
         maxDiffChars: MAX_DIFF_CHARS,
       });
-      return (
-        text.slice(0, MAX_DIFF_CHARS) +
-        `\n\n[Diff truncated at ${MAX_DIFF_CHARS} characters for review.]`
-      );
+      return truncateDiffText(text);
     }
 
     this.logger.info(`[${className}] [${methodName}] :: Diff assembled from file patches`, {
@@ -168,6 +180,69 @@ export class GithubApiService {
     });
 
     return text;
+  }
+
+  async compareCommits(
+    installationId: bigint,
+    repoFullName: string,
+    baseSha: string,
+    headSha: string,
+  ): Promise<string> {
+    const className = GithubApiService.name;
+    const methodName = 'compareCommits';
+
+    this.logger.info(`[${className}] [${methodName}] :: Comparing commits`, {
+      installationId: String(installationId),
+      repoFullName,
+      baseSha,
+      headSha,
+    });
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+
+    const compare = await octokit.repos.compareCommits({
+      owner,
+      repo,
+      base: baseSha,
+      head: headSha,
+      headers: { accept: 'application/vnd.github.v3.diff' },
+    });
+
+    const text =
+      typeof compare.data === 'string'
+        ? compare.data
+        : String(compare.data ?? '');
+
+    const truncated = truncateDiffText(text);
+
+    this.logger.info(`[${className}] [${methodName}] :: Compare diff fetched`, {
+      installationId: String(installationId),
+      repoFullName,
+      baseSha,
+      headSha,
+      diffChars: truncated.length,
+      truncated: truncated.length < text.length,
+    });
+
+    return truncated;
+  }
+
+  async getCompareChangedFileCount(
+    installationId: bigint,
+    repoFullName: string,
+    baseSha: string,
+    headSha: string,
+  ): Promise<number> {
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+    const { data } = await octokit.repos.compareCommits({
+      owner,
+      repo,
+      base: baseSha,
+      head: headSha,
+    });
+    return data.files?.length ?? 0;
   }
 
   async createPullRequestReview(

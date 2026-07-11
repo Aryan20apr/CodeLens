@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -8,10 +9,15 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { uuidv7 } from 'uuidv7';
 import type { Logger } from 'winston';
 
+import type { AppConfig } from '../config/app-config.types';
+import { APP_CONFIG } from '../config/config.constants';
+import { PostedFindingRepository } from '../db/github/posted-finding.repository';
 import { GitHubInstallationRepository } from '../db/github/github-installation.repository';
 import { PrReviewRepository } from '../db/github/pr-review.repository';
+import { ReviewMode } from '../../generated/prisma/client';
 import { GithubApiService } from '../github/github-api.service';
 import { PrReviewProducerService } from '../jobs/pr-review-producer.service';
+import { resolveReviewEnqueue } from '../review/pr-review-mode.util';
 import type { ReviewRunDto } from './dto/review-run.dto';
 
 @Injectable()
@@ -20,7 +26,9 @@ export class ReviewRunsService {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
+    @Inject(APP_CONFIG) private readonly appConfig: AppConfig,
     private readonly runs: PrReviewRepository,
+    private readonly postedFindings: PostedFindingRepository,
     private readonly installations: GitHubInstallationRepository,
     private readonly github: GithubApiService,
     private readonly producer: PrReviewProducerService,
@@ -56,6 +64,37 @@ export class ReviewRunsService {
     );
     const headSha = pr.head.sha;
     const baseSha = pr.base.sha;
+
+    const [prior, inFlight] = await Promise.all([
+      this.runs.findLatestCompletedWithReview(repoFullName, prNumber),
+      this.runs.findInFlight(repoFullName, prNumber),
+    ]);
+
+    const decision = resolveReviewEnqueue({
+      headSha,
+      prior,
+      incrementalEnabled: this.appConfig.prReview.incremental.enabled,
+      skipIfInFlight: this.appConfig.prReview.incremental.skipIfInFlight,
+      hasInFlight: inFlight != null,
+      forceFull: true,
+    });
+
+    if (decision.kind === 'SKIP_IN_FLIGHT') {
+      throw new ConflictException(
+        `A review is already in progress for ${repoFullName}#${prNumber}`,
+      );
+    }
+
+    if (decision.kind === 'SKIP_SAME_SHA') {
+      throw new ConflictException(
+        `No new commits to review for ${repoFullName}#${prNumber}`,
+      );
+    }
+
+    if (decision.reviewMode === ReviewMode.FULL) {
+      await this.postedFindings.deleteByPullRequest(repoFullName, prNumber);
+    }
+
     const reviewRunId = uuidv7();
 
     await this.runs.createPendingManual({
@@ -66,6 +105,9 @@ export class ReviewRunsService {
       prNumber,
       headSha,
       baseSha,
+      reviewMode: decision.reviewMode,
+      priorHeadSha: decision.priorHeadSha,
+      parentRunId: decision.parentRunId,
     });
 
     const { jobId } = await this.producer.enqueue({
@@ -75,6 +117,9 @@ export class ReviewRunsService {
       prNumber,
       headSha,
       baseSha,
+      reviewMode: decision.reviewMode,
+      priorHeadSha: decision.priorHeadSha ?? undefined,
+      parentRunId: decision.parentRunId ?? undefined,
     });
 
     await this.runs.setBullmqJobId(reviewRunId, jobId);
@@ -174,6 +219,8 @@ export class ReviewRunsService {
     prNumber: number;
     headSha: string;
     baseSha: string;
+    reviewMode: 'FULL' | 'INCREMENTAL';
+    priorHeadSha: string | null;
     status: string;
     triggeredBy: string;
     summaryText: string | null;
@@ -190,6 +237,8 @@ export class ReviewRunsService {
       prNumber: run.prNumber,
       headSha: run.headSha,
       baseSha: run.baseSha,
+      reviewMode: run.reviewMode,
+      priorHeadSha: run.priorHeadSha,
       status: run.status as ReviewRunDto['status'],
       triggeredBy: run.triggeredBy as ReviewRunDto['triggeredBy'],
       summaryText: run.summaryText,
