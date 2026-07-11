@@ -97,7 +97,7 @@ Reasoning requirements:
 `;
 
 function buildTriageDigest(state: PrReviewGraphStateType): string {
-  const files = (state.apiFileIndex ?? state.fileIndex)
+  const files = (state.completeFileIndex ?? state.fileIndex)
     .map((f) => `  - ${f.path} [${f.status}] +${f.additions}/-${f.deletions}`)
     .join('\n');
 

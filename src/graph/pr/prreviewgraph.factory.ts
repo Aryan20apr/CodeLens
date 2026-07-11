@@ -109,7 +109,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
           prBody: null,
           diffText: null,
           diffTruncated: false,
-          apiFileIndex: undefined,
+          completeFileIndex: undefined,
           parsed: null,
           chunks: [],
           fileIndex: [],

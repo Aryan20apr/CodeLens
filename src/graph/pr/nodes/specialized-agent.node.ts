@@ -64,7 +64,7 @@ export function createSpecializedAgentNode(
         removedOnlyFileCount: state.removedOnlyFileCount,
         binaryOrEmptyFileCount: state.binaryOrEmptyFileCount,
         diffTruncated: state.diffTruncated,
-        apiFileIndex: state.apiFileIndex,
+        completeFileIndex: state.completeFileIndex,
         fileContexts: state.fileContexts ?? [],
         enrichedFileCount,
       };

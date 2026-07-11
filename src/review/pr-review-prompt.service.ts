@@ -21,7 +21,7 @@ export type PrReviewPromptInput = {
   removedOnlyFileCount: number;
   binaryOrEmptyFileCount: number;
   diffTruncated?: boolean;
-  apiFileIndex?: FileIndexEntry[];
+  completeFileIndex?: FileIndexEntry[];
   fileContexts?: PrFileContext[];
   searchEnabled?: boolean;
   enrichedFileCount?: number;
@@ -120,7 +120,7 @@ export class PrReviewPromptService {
 
     const description = (input.body ?? '').slice(0, 8_000);
     const fileIndexLines = this.formatFileIndex(
-      input.apiFileIndex ?? input.fileIndex,
+      input.completeFileIndex ?? input.fileIndex,
     );
 
     const truncationParts: string[] = [];
