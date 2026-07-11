@@ -4,6 +4,7 @@ import type { Logger } from 'winston';
 import {
   PrReviewStatus,
   PrReviewTrigger,
+  ReviewMode,
 } from '../../../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 
@@ -26,6 +27,9 @@ export class PrReviewRepository {
     prNumber: number;
     headSha: string;
     baseSha: string;
+    reviewMode?: ReviewMode;
+    priorHeadSha?: string | null;
+    parentRunId?: string | null;
     bullmqJobId?: string;
   }) {
     const className = PrReviewRepository.name;
@@ -43,6 +47,9 @@ export class PrReviewRepository {
       const record = await this.prisma.prReview.create({
         data: {
           ...data,
+          reviewMode: data.reviewMode ?? ReviewMode.FULL,
+          priorHeadSha: data.priorHeadSha ?? null,
+          parentRunId: data.parentRunId ?? null,
           status: PrReviewStatus.PENDING,
           triggeredBy: PrReviewTrigger.WEBHOOK,
         },
@@ -72,6 +79,9 @@ export class PrReviewRepository {
     prNumber: number;
     headSha: string;
     baseSha: string;
+    reviewMode?: ReviewMode;
+    priorHeadSha?: string | null;
+    parentRunId?: string | null;
     bullmqJobId?: string;
   }) {
     const className = PrReviewRepository.name;
@@ -91,9 +101,40 @@ export class PrReviewRepository {
     return this.prisma.prReview.create({
       data: {
         ...data,
+        reviewMode: data.reviewMode ?? ReviewMode.FULL,
+        priorHeadSha: data.priorHeadSha ?? null,
+        parentRunId: data.parentRunId ?? null,
         status: PrReviewStatus.PENDING,
         triggeredBy: PrReviewTrigger.MANUAL,
       },
+    });
+  }
+
+  async findLatestCompletedWithReview(
+    repoFullName: string,
+    prNumber: number,
+  ) {
+    return this.prisma.prReview.findFirst({
+      where: {
+        repoFullName,
+        prNumber,
+        status: PrReviewStatus.COMPLETED,
+        githubReviewId: { not: null },
+      },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, headSha: true },
+    });
+  }
+
+  async findInFlight(repoFullName: string, prNumber: number) {
+    return this.prisma.prReview.findFirst({
+      where: {
+        repoFullName,
+        prNumber,
+        status: { in: [PrReviewStatus.PENDING, PrReviewStatus.RUNNING] },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
     });
   }
 
