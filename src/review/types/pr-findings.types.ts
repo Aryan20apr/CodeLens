@@ -47,3 +47,14 @@ export type GithubReviewCommentInput = {
   start_line?: number;
   start_side?: 'RIGHT';
 };
+
+export type ReviewFinding = {
+  repoFullName: string;
+  prNumber: number;
+  fingerprint: string;
+  reviewRunId: string;
+  filePath?: string | null;
+  category: string;
+  headSha: string;
+  githubReviewId?: bigint | null;
+};

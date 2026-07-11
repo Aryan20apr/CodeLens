@@ -70,6 +70,18 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: firstWriteWins,
     default: () => '',
   }),
+  reviewMode: Annotation<'FULL' | 'INCREMENTAL'>({
+    reducer: firstWriteWins,
+    default: () => 'FULL',
+  }),
+  priorHeadSha: Annotation<string | null>({
+    reducer: firstWriteWins,
+    default: () => null,
+  }),
+  parentRunId: Annotation<string | null>({
+    reducer: firstWriteWins,
+    default: () => null,
+  }),
 
   prTitle: Annotation<string | null>({
     reducer: lastWins,

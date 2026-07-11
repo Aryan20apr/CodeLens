@@ -5,6 +5,7 @@ import type { Logger } from 'winston';
 
 import { DiffChunkerService } from '../../diff/diff-chunker.service';
 import { DiffParserService } from '../../diff/diff-parser.service';
+import { PostedFindingRepository } from '../../db/github/posted-finding.repository';
 import { GithubApiService } from '../../github/github-api.service';
 import { PrFileEnrichmentService } from '../../review/enrichment/pr-file-enrichment.service';
 import { PrAnalyzeAgentFactory } from './analyze/analyze-agent.factory';
@@ -50,6 +51,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly llm: LlmService,
     private readonly findingsValidator: ValidatePrFindingsService,
     private readonly checkpointerService: LangGraphCheckpointerService,
+    private readonly postedFindings: PostedFindingRepository,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -100,6 +102,9 @@ export class PrReviewGraphFactory implements OnModuleInit {
           prNumber: input.prNumber,
           headSha: input.headSha,
           baseSha: input.baseSha,
+          reviewMode: input.reviewMode,
+          priorHeadSha: input.priorHeadSha ?? null,
+          parentRunId: input.parentRunId ?? null,
           prTitle: null,
           prBody: null,
           diffText: null,
@@ -200,7 +205,10 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.progress,
     );
 
-    const aggregateFindings = createAggregateFindingsNode(this.progress);
+    const aggregateFindings = createAggregateFindingsNode(
+      this.progress,
+      this.appConfig.prReview.findings.mergeSimilarityThreshold,
+    );
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
       this.progress,
@@ -208,6 +216,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const postReview = createPostReviewNode(
       this.github,
       this.progress,
+      this.postedFindings,
       this.appConfig.prReview.findings.maxCommentBodyChars,
     );
 
