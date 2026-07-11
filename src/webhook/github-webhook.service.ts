@@ -3,10 +3,15 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import { uuidv7 } from 'uuidv7';
 
+import type { AppConfig } from '../config/app-config.types';
+import { APP_CONFIG } from '../config/config.constants';
+import { PostedFindingRepository } from '../db/github/posted-finding.repository';
 import { PrReviewRepository } from '../db/github/pr-review.repository';
 import { WebhookDeliveryRepository } from '../db/github/webhook.repository';
+import { ReviewMode } from '../../generated/prisma/client';
 import { GithubInstallationService } from '../github/github-installation.service';
 import { PrReviewProducerService } from '../jobs/pr-review-producer.service';
+import { resolveReviewEnqueue } from '../review/pr-review-mode.util';
 import {
   InstallationPayloadSchema,
   InstallationRepositoriesPayloadSchema,
@@ -20,8 +25,10 @@ export class GithubWebhookService {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
+    @Inject(APP_CONFIG) private readonly appConfig: AppConfig,
     private readonly deliveries: WebhookDeliveryRepository,
     private readonly runs: PrReviewRepository,
+    private readonly postedFindings: PostedFindingRepository,
     private readonly installations: GithubInstallationService,
     private readonly producer: PrReviewProducerService,
   ) {
@@ -218,6 +225,42 @@ export class GithubWebhookService {
       throw err;
     }
 
+    const [prior, inFlight] = await Promise.all([
+      this.runs.findLatestCompletedWithReview(repoFullName, number),
+      this.runs.findInFlight(repoFullName, number),
+    ]);
+
+    const decision = resolveReviewEnqueue({
+      action,
+      headSha,
+      prior,
+      incrementalEnabled: this.appConfig.prReview.incremental.enabled,
+      skipIfInFlight: this.appConfig.prReview.incremental.skipIfInFlight,
+      hasInFlight: inFlight != null,
+    });
+
+    if (decision.kind === 'SKIP_IN_FLIGHT') {
+      this.logger.info(
+        `[${className}] [${methodName}] :: Skipping PR review, run already in flight`,
+        { deliveryId, repoFullName, prNumber: number, inFlightRunId: inFlight?.id },
+      );
+      await this.deliveries.markIgnored(deliveryId);
+      return;
+    }
+
+    if (decision.kind === 'SKIP_SAME_SHA') {
+      this.logger.info(
+        `[${className}] [${methodName}] :: Skipping PR review, head SHA unchanged`,
+        { deliveryId, repoFullName, prNumber: number, headSha },
+      );
+      await this.deliveries.markIgnored(deliveryId);
+      return;
+    }
+
+    if (decision.reviewMode === ReviewMode.FULL) {
+      await this.postedFindings.deleteByPullRequest(repoFullName, number);
+    }
+
     const reviewRunId = uuidv7();
     await this.runs.createPending({
       id: reviewRunId,
@@ -227,6 +270,9 @@ export class GithubWebhookService {
       prNumber: number,
       headSha,
       baseSha,
+      reviewMode: decision.reviewMode,
+      priorHeadSha: decision.priorHeadSha,
+      parentRunId: decision.parentRunId,
     });
 
     const { jobId } = await this.producer.enqueue({
@@ -237,6 +283,9 @@ export class GithubWebhookService {
       prNumber: number,
       headSha,
       baseSha,
+      reviewMode: decision.reviewMode,
+      priorHeadSha: decision.priorHeadSha ?? undefined,
+      parentRunId: decision.parentRunId ?? undefined,
     });
 
     await this.runs.setBullmqJobId(reviewRunId, jobId);
@@ -248,6 +297,8 @@ export class GithubWebhookService {
       jobId,
       repoFullName,
       prNumber: number,
+      reviewMode: decision.reviewMode,
+      priorHeadSha: decision.priorHeadSha,
     });
   }
 }

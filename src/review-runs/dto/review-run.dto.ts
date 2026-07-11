@@ -4,6 +4,8 @@ export interface ReviewRunDto {
   prNumber: number;
   headSha: string;
   baseSha: string;
+  reviewMode: 'FULL' | 'INCREMENTAL';
+  priorHeadSha: string | null;
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   triggeredBy: 'WEBHOOK' | 'MANUAL';
   summaryText: string | null;

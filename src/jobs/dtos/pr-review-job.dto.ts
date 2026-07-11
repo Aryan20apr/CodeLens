@@ -6,4 +6,7 @@ export type PrReviewJobPayload = {
   prNumber: number;
   headSha: string;
   baseSha: string;
+  reviewMode: 'FULL' | 'INCREMENTAL';
+  priorHeadSha?: string;
+  parentRunId?: string;
 };

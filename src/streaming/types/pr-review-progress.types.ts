@@ -1,6 +1,7 @@
 export const PR_REVIEW_STEPS = [
   'validating',
   'fetching_pr',
+  'computing_incremental_diff',
   'fetching_diff',
   'parsing_diff',
   'chunking',
