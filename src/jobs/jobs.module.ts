@@ -12,6 +12,7 @@ import { PrReviewProcessorService } from './pr-review-processor.service';
 import { PrReviewProducerService } from './pr-review-producer.service';
 import { CodeReviewProducer } from './code-review-producer.service';
 import { StreamingModule } from 'src/streaming/streaming.module';
+import { LlmProviderModule } from '../llm-provider/llm-provider.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { StreamingModule } from 'src/streaming/streaming.module';
     BullModule,
     BullModule.registerQueue({ name: CODE_REVIEW_QUEUE }),
     BullModule.registerQueue({ name: PR_REVIEW_QUEUE }),
+    LlmProviderModule,
   ],
   providers: [
     CodeReviewProducer,

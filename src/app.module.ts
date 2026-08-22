@@ -22,6 +22,7 @@ import { WebhookModule } from './webhook/webhook.module';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { ReviewRunsModule } from './review-runs/review-runs.module';
 import { StreamingModule } from './streaming/streaming.module';
+import { LlmProviderModule } from './llm-provider/llm-provider.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StreamingModule } from './streaming/streaming.module';
     RepositoriesModule,
     ReviewRunsModule,
     StreamingModule,
+    LlmProviderModule,
   ],
   controllers: [AppController],
   providers: [
