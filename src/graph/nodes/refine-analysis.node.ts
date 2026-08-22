@@ -1,4 +1,5 @@
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
 
 import type { LlmService } from 'src/llm/llm.service';
 import { parseLlmAnalysis } from "../utils/parse-llm-analysis.util";
@@ -24,6 +25,7 @@ export function createRefineAnalysisNode(
 ) {
   return async (
     state: SnippetGraphStateType,
+    config?: RunnableConfig,
   ): Promise<NodeUpdate> => {
     const now = () => new Date().toISOString();
 
@@ -37,7 +39,8 @@ export function createRefineAnalysisNode(
     }
 
     try {
-      const chat = llm.getChatModel();
+      const userLlmKey = config?.configurable?.userLlmKey;
+      const chat = llm.getChatModel(userLlmKey);
 
       const system = new SystemMessage(`
 You are refining a previous code review.
