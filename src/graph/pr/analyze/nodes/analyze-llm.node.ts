@@ -12,7 +12,8 @@ export function createAnalyzeLlmNode(
     state: AnalyzeAgentStateType,
     _config?: LangGraphRunnableConfig,
   ): Promise<Partial<AnalyzeAgentStateType>> => {
-    const model = llm.getChatModel();
+    const userLlmKey = _config?.configurable?.userLlmKey;
+    const model = llm.getChatModel(userLlmKey);
     if (typeof model.bindTools !== 'function') {
       throw new Error('Chat model does not support bindTools');
     }

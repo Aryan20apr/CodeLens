@@ -28,7 +28,8 @@ export function createAnalyzeFinalizeNode(llm: LlmService) {
     const lastAiText = lastAi ? extractTextFromLlmContent(lastAi.content) : '';
 
     const usedTools = searchToolCallCount > 0;
-    const model = llm.getChatModel();
+    const userLlmKey = config?.configurable?.userLlmKey;
+    const model = llm.getChatModel(userLlmKey);
 
     async function invokeForText(
       messages: Parameters<typeof model.invoke>[0],

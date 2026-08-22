@@ -30,6 +30,7 @@ import type {
 } from './pr-review-graph.types';
 import { PrReviewGraphState } from './pr-review.state.annotation';
 import { LangGraphCheckpointerService } from '../checkpointer/langgraph-checkpointer.service';
+import type { UserLlmKey } from '../../llm-provider/llm-provider.service';
 
 @Injectable()
 export class PrReviewGraphFactory implements OnModuleInit {
@@ -68,6 +69,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
 
   async invokePrReview(
     input: PrReviewGraphInvokeInput,
+    config?: { userLlmKey?: UserLlmKey }
   ): Promise<PrReviewGraphInvokeResult> {
     const className = PrReviewGraphFactory.name;
     const methodName = 'invokePrReview';
@@ -129,6 +131,10 @@ export class PrReviewGraphFactory implements OnModuleInit {
 
     const result = await graph.invoke(invokeInput, {
       ...checkpointConfig,
+      configurable: {
+        ...checkpointConfig.configurable,
+        userLlmKey: config?.userLlmKey,
+      },
       runName: 'pr-review-graph',
       tags: ['pr-review'],
       metadata: {

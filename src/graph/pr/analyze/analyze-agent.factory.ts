@@ -15,6 +15,7 @@ import {
   type AnalyzeAgentConfigurable,
 } from '../../../review/types/analyze-agent-configurable.types';
 import { extractTextFromLlmContent } from '../../../review/context/llm-content.util';
+import type { UserLlmKey } from '../../../llm-provider/llm-provider.service';
 import { createAnalyzeSearchTools } from '../../../review/context/pr-search-tools';
 import { PrSearchToolExecutorService } from '../../../review/context/pr-search-tool-executor.service';
 import {
@@ -36,6 +37,7 @@ export type AnalyzeAgentInvokeInput = {
   installationId: bigint;
   repoFullName: string;
   headSha: string;
+  userLlmKey?: UserLlmKey;
   onSearchToolCall?: AnalyzeAgentConfigurable['onSearchToolCall'];
 };
 
@@ -79,11 +81,12 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
   async invokeDirect(
     systemPrompt: string,
     userContent: string,
+    userLlmKey?: UserLlmKey,
   ): Promise<LlmAnalysis> {
     const className = PrAnalyzeAgentFactory.name;
     const methodName = 'invokeDirect';
 
-    const model = this.llm.getChatModel();
+    const model = this.llm.getChatModel(userLlmKey);
     const messages = [
       new SystemMessage(systemPrompt),
       new HumanMessage(userContent),
@@ -179,6 +182,7 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
         configurable: {
           ...checkpointConfig.configurable,
           [ANALYZE_AGENT_CONFIG_KEY]: analyzeAgent,
+          userLlmKey: input.userLlmKey,
         },
         recursionLimit,
         runName: `analyze-agent:${input.agentRole}`,

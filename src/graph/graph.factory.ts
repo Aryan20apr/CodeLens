@@ -20,6 +20,7 @@ import { createScoreReportNode } from "./nodes/score-report.node";
 import { LlmService } from "src/llm/llm.service";
 import { createQualityGateNode } from './nodes/quality-gate.node';
 import { createRefineAnalysisNode } from './nodes/refine-analysis.node';
+import type { UserLlmKey } from '../llm-provider/llm-provider.service';
 
 @Injectable()
 export class GraphFactory implements OnModuleInit {
@@ -54,7 +55,7 @@ export class GraphFactory implements OnModuleInit {
     return this.compiled;
   }
 
-  async invokeSnippet(source: SnippetSource, threadId: string) {
+  async invokeSnippet(source: SnippetSource, threadId: string, config?: { userLlmKey?: UserLlmKey }) {
     const className = GraphFactory.name;
     const methodName = 'invokeSnippet';
 
@@ -90,6 +91,7 @@ export class GraphFactory implements OnModuleInit {
       result = await graph.invoke(initialState, {
         configurable: {
           thread_id: threadId,
+          userLlmKey: config?.userLlmKey,
         },
         runName: 'snippet-graph',
         tags: ['snippet'],
