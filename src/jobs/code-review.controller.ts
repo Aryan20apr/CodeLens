@@ -10,7 +10,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
-
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 @Controller('codereview')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -52,7 +52,7 @@ export class CodeReviewController {
       },
     },
   })
-  async enqueue(@Body() dto: EnqueueCodeReviewDto) {
+  async enqueue(@Body() dto: EnqueueCodeReviewDto, @CurrentUser() user: any) {
 
     const source: SnippetSource = {
       type: 'snippet',
@@ -61,7 +61,7 @@ export class CodeReviewController {
       filename: dto.filename,
     };
 
-    return this.producer.enqueue(source);
+    return this.producer.enqueue(source, user.id);
   }
 
   @Get(':jobId')
