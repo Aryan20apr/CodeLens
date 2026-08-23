@@ -1,5 +1,5 @@
-import { Controller, Get, Put, Delete, Body, Param, UseGuards, ParseEnumPipe, UsePipes } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Put, Delete, Body, Param, UseGuards, ParseEnumPipe } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { LlmProviderService } from './llm-provider.service';
@@ -27,15 +27,24 @@ export class LlmProviderController {
   @Put('keys/:provider')
   @ApiOperation({ summary: 'Save or update an API key for a provider' })
   @ApiParam({ name: 'provider', enum: LlmProvider })
-  @UsePipes(new ZodValidationPipe(SaveProviderKeySchema))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['apiKey'],
+      properties: {
+        apiKey: { type: 'string', minLength: 10, example: 'sk-proj-...' },
+        baseUrl: { type: 'string', format: 'uri', example: 'https://integrate.api.nvidia.com/v1' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Key saved successfully, returns available models' })
   @ApiResponse({ status: 401, description: 'Invalid API key' })
   async saveKey(
     @CurrentUser() user: any,
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
-    @Body() dto: SaveProviderKeyDto,
+    @Body(new ZodValidationPipe(SaveProviderKeySchema)) dto: SaveProviderKeyDto,
   ) {
-    return this.llmProviderService.saveKey(user.id, provider, dto.apiKey, dto.nvidiaBaseUrl);
+    return this.llmProviderService.saveKey(user.id, provider, dto.apiKey, dto.baseUrl);
   }
 
   @Delete('keys/:provider')
@@ -72,11 +81,20 @@ export class LlmProviderController {
 
   @Put('active')
   @ApiOperation({ summary: 'Set active provider and model' })
-  @UsePipes(new ZodValidationPipe(SetActiveProviderSchema))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['provider', 'model'],
+      properties: {
+        provider: { type: 'string', enum: Object.values(LlmProvider), example: 'GEMINI' },
+        model: { type: 'string', example: 'gemini-2.5-flash' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Active provider updated' })
   async setActiveProvider(
     @CurrentUser() user: any,
-    @Body() dto: SetActiveProviderDto,
+    @Body(new ZodValidationPipe(SetActiveProviderSchema)) dto: SetActiveProviderDto,
   ) {
     await this.llmProviderService.setActive(user.id, dto.provider, dto.model);
     return { success: true };

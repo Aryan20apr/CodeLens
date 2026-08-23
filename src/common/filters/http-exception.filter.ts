@@ -53,7 +53,7 @@ function normalizeHttpExceptionPayload(
   );
 
   const msg = body['message'];
-  const customDetails = body['details'];
+  const customDetails = body['details'] ?? body['errors'];
 
   if (Array.isArray(msg)) {
     const detailsValue =
