@@ -10,7 +10,7 @@ export interface UserLlmKey {
   provider: LlmProvider;
   rawKey: string;
   model?: string;
-  nvidiaBaseUrl?: string | null;
+  baseUrl?: string | null;
 }
 
 @Injectable()
@@ -21,9 +21,9 @@ export class LlmProviderService {
     @Inject(APP_CONFIG) private config: AppConfig,
   ) { }
 
-  async saveKey(userId: string, provider: LlmProvider, rawKey: string, nvidiaBaseUrl?: string) {
+  async saveKey(userId: string, provider: LlmProvider, rawKey: string, baseUrl?: string) {
     // 1. Validate key and fetch models
-    const models = await this.modelFetcher.listModels(provider, rawKey, nvidiaBaseUrl);
+    const models = await this.modelFetcher.listModels(provider, rawKey, baseUrl);
 
     // 2. Encrypt key
     const encryptedKey = encrypt(rawKey, this.config.auth.encryptionKey);
@@ -37,14 +37,14 @@ export class LlmProviderService {
       update: {
         encryptedKey,
         maskedKey,
-        nvidiaBaseUrl: nvidiaBaseUrl || null,
+        baseUrl: baseUrl || null,
       },
       create: {
         userId,
         provider,
         encryptedKey,
         maskedKey,
-        nvidiaBaseUrl: nvidiaBaseUrl || null,
+        baseUrl: baseUrl || null,
       },
     });
 
@@ -65,7 +65,7 @@ export class LlmProviderService {
       throw new UnauthorizedException('No key saved for this provider');
     }
     const rawKey = decrypt(keyRecord.encryptedKey, this.config.auth.encryptionKey);
-    return this.modelFetcher.listModels(provider, rawKey, keyRecord.nvidiaBaseUrl || undefined);
+    return this.modelFetcher.listModels(provider, rawKey, keyRecord.baseUrl || undefined);
   }
 
   async getStoredKeys(userId: string) {
@@ -75,7 +75,7 @@ export class LlmProviderService {
         provider: true,
         maskedKey: true,
         updatedAt: true,
-        nvidiaBaseUrl: true,
+        baseUrl: true,
       },
     });
     return keys;
@@ -133,7 +133,7 @@ export class LlmProviderService {
       provider: keyRecord.provider,
       rawKey,
       model: targetProvider === prefs?.activeProvider ? prefs?.activeModel || undefined : undefined,
-      nvidiaBaseUrl: keyRecord.nvidiaBaseUrl,
+      baseUrl: keyRecord.baseUrl,
     };
   }
 }

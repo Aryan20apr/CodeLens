@@ -38,6 +38,7 @@ export class LlmService {
                     return new ChatOpenAI({
                         apiKey: userKey.rawKey,
                         model: userKey.model || 'gpt-4o',
+                        configuration: userKey.baseUrl ? { baseURL: userKey.baseUrl } : undefined,
                     });
                 case 'GROQ':
                     return new ChatGroq({
@@ -48,7 +49,7 @@ export class LlmService {
                     return new ChatOpenAI({
                         apiKey: userKey.rawKey,
                         model: userKey.model || this.config.nvidiaModel,
-                        configuration: userKey.nvidiaBaseUrl ? { baseURL: userKey.nvidiaBaseUrl } : undefined,
+                        configuration: userKey.baseUrl ? { baseURL: userKey.baseUrl } : undefined,
                     });
             }
         }

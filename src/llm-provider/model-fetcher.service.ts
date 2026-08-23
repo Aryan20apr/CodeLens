@@ -5,7 +5,7 @@ import { LlmProvider } from '../../generated/prisma/client';
 export class ModelFetcherService {
   private readonly logger = new Logger(ModelFetcherService.name);
 
-  async listModels(provider: LlmProvider, rawKey: string, nvidiaBaseUrl?: string): Promise<string[]> {
+  async listModels(provider: LlmProvider, rawKey: string, baseUrl?: string): Promise<string[]> {
     try {
       switch (provider) {
         case LlmProvider.GEMINI:
@@ -15,7 +15,7 @@ export class ModelFetcherService {
         case LlmProvider.GROQ:
           return await this.fetchGroqModels(rawKey);
         case LlmProvider.NVIDIA:
-          return await this.fetchNvidiaModels(rawKey, nvidiaBaseUrl);
+          return await this.fetchNvidiaModels(rawKey, baseUrl);
         default:
           return [];
       }

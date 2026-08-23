@@ -139,7 +139,7 @@ model LlmApiKey {
   provider       LlmProvider
   encryptedKey   String
   maskedKey      String
-  nvidiaBaseUrl  String?
+  baseUrl        String?
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
