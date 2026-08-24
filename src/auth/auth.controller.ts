@@ -30,6 +30,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { RegisterSchema, type RegisterDto } from './dto/register.dto';
+import { LoginSchema, type LoginDto } from './dto/login.dto';
+import { OnboardInstallationSchema } from './dto/onboard-installation.dto';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { APP_CONFIG } from '../config/config.constants';
 import type { AppConfig } from '../config/app-config.types';
 import {
@@ -55,22 +58,7 @@ export class AuthController {
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   @ApiOperation({ summary: 'Register with email + password' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password'],
-      properties: {
-        email: { type: 'string', format: 'email', example: 'user@example.com' },
-        password: {
-          type: 'string',
-          minLength: 8,
-          example: 'Secret123',
-          description: 'At least 8 characters, one uppercase letter, one number',
-        },
-        name: { type: 'string', maxLength: 100, example: 'Jane Doe' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(RegisterSchema) })
   @ApiResponse({
     status: 201,
     description:
@@ -112,16 +100,7 @@ export class AuthController {
     description:
       'Returns access token + user in JSON; refresh token is set as an httpOnly cookie.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password'],
-      properties: {
-        email: { type: 'string', format: 'email', example: 'user@example.com' },
-        password: { type: 'string', example: 'Secret123' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(LoginSchema) })
   @ApiResponse({
     status: 200,
     description: 'Login successful',
@@ -143,10 +122,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
   async login(
-    @Req() req: { user: any },
+    @CurrentUser() user: any,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    const { refreshToken, ...body } = await this.authService.login(req.user);
+    const { refreshToken, ...body } = await this.authService.login(user);
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
     return body;
   }
@@ -256,20 +235,12 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Onboard a GitHub App installation for the current user' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['installationId'],
-      properties: {
-        installationId: { type: 'number', example: 135116734 },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(OnboardInstallationSchema) })
   @ApiResponse({ status: 204, description: 'Installation linked and repositories seeded.' })
   @ApiResponse({ status: 401, description: 'Not authenticated.' })
   async onboardInstallation(
     @CurrentUser() user: { id: string },
-    @Body() body: { installationId: number },
+    @Body(new ZodValidationPipe(OnboardInstallationSchema)) body: { installationId: number },
   ) {
     await this.onboarding.onboardInstallation(body.installationId, user.id);
   }

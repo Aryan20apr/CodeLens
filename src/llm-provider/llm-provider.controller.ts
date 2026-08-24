@@ -6,6 +6,7 @@ import { LlmProviderService } from './llm-provider.service';
 import { SaveProviderKeyDto, SaveProviderKeySchema } from './dto/save-provider-key.dto';
 import { SetActiveProviderDto, SetActiveProviderSchema } from './dto/set-active-provider.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { LlmProvider } from '../../generated/prisma/client';
 
 @ApiTags('LLM Provider (BYOK)')
@@ -32,16 +33,7 @@ export class LlmProviderController {
   @Put('keys/:provider')
   @ApiOperation({ summary: 'Save or update an API key for a provider' })
   @ApiParam({ name: 'provider', enum: LlmProvider })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['apiKey'],
-      properties: {
-        apiKey: { type: 'string', minLength: 10, example: 'sk-proj-...' },
-        baseUrl: { type: 'string', format: 'uri', example: 'https://integrate.api.nvidia.com/v1' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(SaveProviderKeySchema) })
   @ApiResponse({ status: 200, description: 'Key saved successfully, returns available models' })
   @ApiResponse({ status: 401, description: 'Invalid API key' })
   async saveKey(
@@ -103,16 +95,7 @@ export class LlmProviderController {
 
   @Put('active')
   @ApiOperation({ summary: 'Set active provider and model' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['provider', 'model'],
-      properties: {
-        provider: { type: 'string', enum: Object.values(LlmProvider), example: 'GEMINI' },
-        model: { type: 'string', example: 'gemini-2.5-flash' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(SetActiveProviderSchema) })
   @ApiResponse({ status: 200, description: 'Active provider updated' })
   async setActiveProvider(
     @CurrentUser() user: any,

@@ -1,7 +1,10 @@
-import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, UsePipes } from '@nestjs/common';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '..//common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
+import { UpdateProfileDto, UpdateProfileSchema } from './dto/update-user.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -49,20 +52,14 @@ export class UserController {
   }
 
   @Patch('me')
+  @UsePipes(new ZodValidationPipe(UpdateProfileSchema))
   @ApiOperation({ summary: 'Update the current user profile' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', maxLength: 100, example: 'Jane Doe' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(UpdateProfileSchema) })
   @ApiResponse({ status: 200, description: 'Updated user profile' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   updateMe(
     @CurrentUser() user: any,
-    @Body() body: { name?: string },
+    @Body() body: UpdateProfileDto,
   ) {
     return this.userService.updateProfile(user.id, body);
   }

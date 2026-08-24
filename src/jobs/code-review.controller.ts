@@ -8,6 +8,7 @@ import { CodeReviewProducer } from './code-review-producer.service';
 import type { SnippetSource } from 'src/graph/state.types';
 import { Public } from '@common/decorators/public.decorator';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
+import { zodToOpenApi } from '@common/utils/zod-to-openapi.util';
 import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -23,17 +24,7 @@ export class CodeReviewController {
   @Post("/job")
   @UsePipes(new ZodValidationPipe(EnqueCodeReviewDtoSchema))
   @ApiOperation({ summary: 'Enqueue a Snippet code review job' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-        required: ['code', 'language', 'filename', 'threadId'],
-        properties: {
-          code: { type: 'string', example: 'console.log("Hello, world!");' },
-          language: { type: 'string', example: 'javascript' },
-          filename: { type: 'string', example: 'index.js' }
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(EnqueCodeReviewDtoSchema) })
   @ApiResponse({
     status: 201,
     description:

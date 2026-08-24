@@ -1,6 +1,7 @@
 import { Body, Controller, Post, UseGuards, UsePipes, } from "@nestjs/common";
 import { uuidv7 } from "uuidv7";
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { GraphFactory } from "src/graph/graph.factory";
 import { SnippetEvaluateDtoSchema, type SnippetReviewDto } from "./dto/snippet-review.dto";
 import { Public } from "@common/decorators/public.decorator";
@@ -17,18 +18,7 @@ export class EvaluationController {
   @Post("/snippet")
   @UsePipes(new ZodValidationPipe(SnippetEvaluateDtoSchema))
   @ApiOperation({ summary: 'Test endpoint for Snippet code review' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-        required: ['code', 'language', 'filename', 'threadId'],
-        properties: {
-          code: { type: 'string', example: 'console.log("Hello, world!");' },
-          language: { type: 'string', example: 'javascript' },
-          filename: { type: 'string', example: 'index.js' },
-          threadId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174000' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(SnippetEvaluateDtoSchema) })
   @ApiResponse({
     status: 201,
     description:
