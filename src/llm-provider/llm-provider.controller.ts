@@ -21,7 +21,12 @@ export class LlmProviderController {
   @ApiOperation({ summary: 'List saved LLM provider keys' })
   @ApiResponse({ status: 200, description: 'List of saved providers with masked keys' })
   async getStoredKeys(@CurrentUser() user: any) {
-    return this.llmProviderService.getStoredKeys(user.id);
+    const keys = await this.llmProviderService.getStoredKeys(user.id);
+    return {
+      success: true,
+      message: 'Stored LLM provider keys retrieved successfully',
+      data: keys,
+    };
   }
 
   @Put('keys/:provider')
@@ -44,7 +49,12 @@ export class LlmProviderController {
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
     @Body(new ZodValidationPipe(SaveProviderKeySchema)) dto: SaveProviderKeyDto,
   ) {
-    return this.llmProviderService.saveKey(user.id, provider, dto.apiKey, dto.baseUrl);
+    const result = await this.llmProviderService.saveKey(user.id, provider, dto.apiKey, dto.baseUrl);
+    return {
+      success: true,
+      message: `API key for ${provider} saved successfully`,
+      data: result,
+    };
   }
 
   @Delete('keys/:provider')
@@ -56,7 +66,11 @@ export class LlmProviderController {
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
   ) {
     await this.llmProviderService.deleteKey(user.id, provider);
-    return { success: true };
+    return {
+      success: true,
+      message: `API key for ${provider} deleted successfully`,
+      data: null,
+    };
   }
 
   @Get('keys/:provider/models')
@@ -68,7 +82,11 @@ export class LlmProviderController {
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
   ) {
     const models = await this.llmProviderService.listModelsForProvider(user.id, provider);
-    return { models };
+    return {
+      success: true,
+      message: `Available models for ${provider} retrieved successfully`,
+      data: { models },
+    };
   }
 
   @Get('active')
@@ -76,7 +94,11 @@ export class LlmProviderController {
   @ApiResponse({ status: 200, description: 'Current active provider and model' })
   async getActiveProvider(@CurrentUser() user: any) {
     const active = await this.llmProviderService.getActive(user.id);
-    return active || { provider: null, model: null };
+    return {
+      success: true,
+      message: 'Active provider and model retrieved successfully',
+      data: active || { provider: null, model: null },
+    };
   }
 
   @Put('active')
@@ -97,7 +119,11 @@ export class LlmProviderController {
     @Body(new ZodValidationPipe(SetActiveProviderSchema)) dto: SetActiveProviderDto,
   ) {
     await this.llmProviderService.setActive(user.id, dto.provider, dto.model);
-    return { success: true };
+    return {
+      success: true,
+      message: 'Active provider and model updated successfully',
+      data: { provider: dto.provider, model: dto.model },
+    };
   }
 }
 

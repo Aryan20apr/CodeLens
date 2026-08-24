@@ -23,7 +23,21 @@ async function bootstrap() {
     { bufferLogs: true, rawBody: true },
   );
 
-  applyPassportReplyShim(app.getHttpAdapter().getInstance());
+  const fastifyInstance = app.getHttpAdapter().getInstance();
+  applyPassportReplyShim(fastifyInstance);
+
+  fastifyInstance.addHook('onRequest', (request, _reply, done) => {
+    const contentLength = request.headers['content-length'];
+    const isZeroOrMissingLength =
+      contentLength === '0' ||
+      (contentLength === undefined &&
+        (request.method === 'GET' || request.method === 'DELETE' || request.method === 'HEAD'));
+
+    if (isZeroOrMissingLength && request.headers['content-type']) {
+      delete request.headers['content-type'];
+    }
+    done();
+  });
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 

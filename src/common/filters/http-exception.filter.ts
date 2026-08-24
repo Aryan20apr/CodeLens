@@ -15,10 +15,12 @@ import { APP_CONFIG } from '../../config/config.constants';
 import type { AppConfig } from '../../config/app-config.types';
 
 export interface HttpErrorBody {
-  statusCode: number;
+  success: boolean;
   message: string;
+  data: unknown | null;
+  statusCode: number;
   error: string;
-  details: unknown | null;
+  details?: unknown | null;
 }
 
 /** Fastify reply shape used by this filter (avoids a direct `fastify` package dependency). */
@@ -105,10 +107,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         responseBody,
       );
       const body: HttpErrorBody = {
-        statusCode: status,
+        success: false,
         message,
+        data: details ?? null,
         error,
-        details,
+        statusCode: status,
       };
       reply.status(status).send(body);
       return;
@@ -129,10 +132,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
     const body: HttpErrorBody = {
-      statusCode: status,
+      success: false,
       message,
+      data: null,
       error: resolveErrorName(status),
-      details: null,
+      statusCode: status,
     };
     reply.status(status).send(body);
   }
