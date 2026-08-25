@@ -6,12 +6,14 @@ import { EnqueCodeReviewDtoSchema, type EnqueueCodeReviewDto } from './dtos/code
 import { CODE_REVIEW_QUEUE } from './constants';
 import { CodeReviewProducer } from './code-review-producer.service';
 import type { SnippetSource } from 'src/graph/state.types';
-import { Public } from '@common/decorators/public.decorator';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '@common/utils/zod-to-openapi.util';
-import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { apiEnvelopeSchema } from '@common/utils/swagger.util';
+
+@ApiTags('CodeReview')
 @Controller('codereview')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -27,21 +29,24 @@ export class CodeReviewController {
   @ApiBody({ schema: zodToOpenApi(EnqueCodeReviewDtoSchema) })
   @ApiResponse({
     status: 201,
-    description:
-      'Enqueued a Snippet code review job',
-    schema: {
-      properties: {
-        threadId: { type: 'string', format: 'uuid' },
-        status: { type: 'string', example: 'pending' },
-        error: { type: 'string', nullable: true },
-        language: { type: 'string', example: 'javascript' },
-        metadata: { type: 'object', nullable: true },
-        llmAnalysis: { type: 'object', nullable: true },
-        score: { type: 'object', nullable: true },
-        report: { type: 'object', nullable: true },
-        events: { type: 'array', items: { type: 'object' } },
+    description: 'Enqueued a Snippet code review job',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          threadId: { type: 'string', format: 'uuid' },
+          status: { type: 'string', example: 'pending' },
+          error: { type: 'string', nullable: true },
+          language: { type: 'string', example: 'javascript' },
+          metadata: { type: 'object', nullable: true },
+          llmAnalysis: { type: 'object', nullable: true },
+          score: { type: 'object', nullable: true },
+          report: { type: 'object', nullable: true },
+          events: { type: 'array', items: { type: 'object' } },
+        },
       },
-    },
+      { message: 'Code review job enqueued successfully' },
+    ),
   })
   async enqueue(@Body() dto: EnqueueCodeReviewDto, @CurrentUser() user: any) {
 
@@ -62,7 +67,24 @@ export class CodeReviewController {
 
   @Get(':jobId')
   @ApiOperation({ summary: 'Get code review job status and result' })
-  @ApiResponse({ status: 200, description: 'Code review job status and result' })
+  @ApiParam({ name: 'jobId', type: String, description: 'BullMQ Job ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Code review job status and result',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          jobId: { type: 'string', example: '123' },
+          state: { type: 'string', example: 'completed' },
+          progress: { type: 'number', example: 100 },
+          failedReason: { type: 'string', nullable: true, example: null },
+          result: { type: 'object', nullable: true },
+        },
+      },
+      { message: 'Code review job status retrieved successfully' },
+    ),
+  })
   @ApiResponse({ status: 404, description: 'Code review job not found' })
   async getResult(@Param('jobId') jobId: string) {
     const job = await this.queue.getJob(jobId);

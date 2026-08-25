@@ -1,12 +1,28 @@
 import { Controller, Get, Param, Res } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { RedisPubSubService } from './redis-pub-sub.service';
 
+@ApiTags('EventStream')
 @Controller('snippet-evaluations-async')
 export class EventStreamController {
   constructor(private readonly pubsub: RedisPubSubService) {}
 
   @Get(':threadId/stream')
+  @ApiOperation({ summary: 'Stream snippet evaluation progress (SSE)' })
+  @ApiParam({ name: 'threadId', type: String, description: 'Evaluation thread UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Server-Sent Events stream of evaluation progress (connected, job, status, message)',
+    content: {
+      'text/event-stream': {
+        schema: {
+          type: 'string',
+          example: 'event: connected\ndata: {"threadId":"01952f4a-71bc-7000-8f1d-91b427b03a7a"}\n\n',
+        },
+      },
+    },
+  })
   async stream(@Param('threadId') threadId: string, @Res() reply: FastifyReply) {
     reply.raw.setHeader('Content-Type', 'text/event-stream');
     reply.raw.setHeader('Cache-Control', 'no-cache');

@@ -5,6 +5,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { UpdateProfileDto, UpdateProfileSchema } from './dto/update-user.dto';
+import { apiEnvelopeSchema } from '../common/utils/swagger.util';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -12,6 +13,18 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
+
+const UserProfileSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    email: { type: 'string' },
+    name: { type: 'string', nullable: true },
+    avatarUrl: { type: 'string', nullable: true },
+    role: { type: 'string', example: 'USER' },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -25,16 +38,9 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Current user profile',
-    schema: {
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        email: { type: 'string' },
-        name: { type: 'string', nullable: true },
-        avatarUrl: { type: 'string', nullable: true },
-        role: { type: 'string', example: 'USER' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
+    schema: apiEnvelopeSchema(UserProfileSchema, {
+      message: 'User profile retrieved successfully',
+    }),
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   getMe(@CurrentUser() user: any) {
@@ -59,7 +65,13 @@ export class UserController {
   @UsePipes(new ZodValidationPipe(UpdateProfileSchema))
   @ApiOperation({ summary: 'Update the current user profile' })
   @ApiBody({ schema: zodToOpenApi(UpdateProfileSchema) })
-  @ApiResponse({ status: 200, description: 'Updated user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated user profile',
+    schema: apiEnvelopeSchema(UserProfileSchema, {
+      message: 'User profile updated successfully',
+    }),
+  })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   async updateMe(
     @CurrentUser() user: any,
@@ -81,12 +93,18 @@ export class UserController {
   @ApiResponse({
     status: 201,
     description: 'New API key generated',
-    schema: {
-      properties: {
-        apiKey: { type: 'string', example: 'cl_live_xxxxxxxxxxxxxxxx' },
-        message: { type: 'string' },
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          apiKey: { type: 'string', example: 'cl_live_xxxxxxxxxxxxxxxx' },
+        },
       },
-    },
+      {
+        message:
+          'New API key generated successfully. Store this key securely — it will not be shown again.',
+      },
+    ),
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   async regenerateApiKey(@CurrentUser() user: any) {

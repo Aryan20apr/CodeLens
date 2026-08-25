@@ -7,6 +7,7 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Webhooks } from '@octokit/webhooks';
 import type { FastifyRequest } from 'fastify';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
@@ -16,7 +17,9 @@ import { Public } from '../common/decorators/public.decorator';
 import type { AppConfig } from '../config/app-config.types';
 import { APP_CONFIG } from '../config/config.constants';
 import { GithubWebhookService } from './github-webhook.service';
+import { apiEnvelopeSchema } from '../common/utils/swagger.util';
 
+@ApiTags('GithubWebhook')
 @Controller('webhooks/github')
 export class GithubWebhookController {
   private readonly logger: Logger;
@@ -34,6 +37,24 @@ export class GithubWebhookController {
   @Public()
   @Post()
   @HttpCode(200)
+  @ApiOperation({ summary: 'Receive GitHub App webhook delivery events' })
+  @ApiHeader({ name: 'x-github-event', description: 'GitHub webhook event name (e.g. pull_request, installation)' })
+  @ApiHeader({ name: 'x-github-delivery', description: 'Unique webhook delivery GUID' })
+  @ApiHeader({ name: 'x-hub-signature-256', description: 'HMAC-SHA256 signature calculated with the webhook secret' })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook received and processed or acknowledged',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean', example: true },
+        },
+      },
+      { message: 'Webhook processed successfully' },
+    ),
+  })
+  @ApiResponse({ status: 401, description: 'Missing headers, missing body, or invalid signature' })
   async receive(
     @Req() req: FastifyRequest,
     @Headers('x-github-event') event: string | undefined,

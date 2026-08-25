@@ -8,6 +8,7 @@ import { SetActiveProviderDto, SetActiveProviderSchema } from './dto/set-active-
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { LlmProvider } from '../../generated/prisma/client';
+import { apiEnvelopeSchema, apiArrayEnvelopeSchema } from '../common/utils/swagger.util';
 
 @ApiTags('LLM Provider (BYOK)')
 @ApiBearerAuth()
@@ -20,7 +21,22 @@ export class LlmProviderController {
 
   @Get('keys')
   @ApiOperation({ summary: 'List saved LLM provider keys' })
-  @ApiResponse({ status: 200, description: 'List of saved providers with masked keys' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of saved providers with masked keys',
+    schema: apiArrayEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          provider: { type: 'string', enum: Object.values(LlmProvider) },
+          maskedKey: { type: 'string', example: 'sk-...1234' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          baseUrl: { type: 'string', nullable: true, example: 'https://api.groq.com/openai/v1' },
+        },
+      },
+      { message: 'Stored LLM provider keys retrieved successfully' },
+    ),
+  })
   async getStoredKeys(@CurrentUser() user: any) {
     const keys = await this.llmProviderService.getStoredKeys(user.id);
     return {
@@ -34,7 +50,24 @@ export class LlmProviderController {
   @ApiOperation({ summary: 'Save or update an API key for a provider' })
   @ApiParam({ name: 'provider', enum: LlmProvider })
   @ApiBody({ schema: zodToOpenApi(SaveProviderKeySchema) })
-  @ApiResponse({ status: 200, description: 'Key saved successfully, returns available models' })
+  @ApiResponse({
+    status: 200,
+    description: 'Key saved successfully, returns available models',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          maskedKey: { type: 'string', example: 'sk-...1234' },
+          models: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['gemini-2.0-flash', 'gemini-1.5-pro'],
+          },
+        },
+      },
+      { message: 'API key for GEMINI saved successfully' },
+    ),
+  })
   @ApiResponse({ status: 401, description: 'Invalid API key' })
   async saveKey(
     @CurrentUser() user: any,
@@ -52,7 +85,11 @@ export class LlmProviderController {
   @Delete('keys/:provider')
   @ApiOperation({ summary: 'Delete a saved API key' })
   @ApiParam({ name: 'provider', enum: LlmProvider })
-  @ApiResponse({ status: 200, description: 'Key deleted' })
+  @ApiResponse({
+    status: 200,
+    description: 'Key deleted',
+    schema: apiEnvelopeSchema(null, { message: 'API key for GEMINI deleted successfully' }),
+  })
   async deleteKey(
     @CurrentUser() user: any,
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
@@ -68,7 +105,23 @@ export class LlmProviderController {
   @Get('keys/:provider/models')
   @ApiOperation({ summary: 'Fetch model list for an already saved key' })
   @ApiParam({ name: 'provider', enum: LlmProvider })
-  @ApiResponse({ status: 200, description: 'List of available models' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of available models',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          models: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['gemini-2.0-flash', 'gemini-1.5-pro'],
+          },
+        },
+      },
+      { message: 'Available models for GEMINI retrieved successfully' },
+    ),
+  })
   async listModelsForProvider(
     @CurrentUser() user: any,
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
@@ -83,7 +136,29 @@ export class LlmProviderController {
 
   @Get('active')
   @ApiOperation({ summary: 'Get current active provider and model' })
-  @ApiResponse({ status: 200, description: 'Current active provider and model' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current active provider and model',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          provider: {
+            type: 'string',
+            nullable: true,
+            enum: Object.values(LlmProvider),
+            example: 'GEMINI',
+          },
+          model: {
+            type: 'string',
+            nullable: true,
+            example: 'gemini-2.0-flash',
+          },
+        },
+      },
+      { message: 'Active provider and model retrieved successfully' },
+    ),
+  })
   async getActiveProvider(@CurrentUser() user: any) {
     const active = await this.llmProviderService.getActive(user.id);
     return {
@@ -96,7 +171,20 @@ export class LlmProviderController {
   @Put('active')
   @ApiOperation({ summary: 'Set active provider and model' })
   @ApiBody({ schema: zodToOpenApi(SetActiveProviderSchema) })
-  @ApiResponse({ status: 200, description: 'Active provider updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active provider updated',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          provider: { type: 'string', enum: Object.values(LlmProvider), example: 'GEMINI' },
+          model: { type: 'string', example: 'gemini-2.0-flash' },
+        },
+      },
+      { message: 'Active provider and model updated successfully' },
+    ),
+  })
   async setActiveProvider(
     @CurrentUser() user: any,
     @Body(new ZodValidationPipe(SetActiveProviderSchema)) dto: SetActiveProviderDto,
