@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
@@ -52,13 +52,23 @@ export class CodeReviewController {
       filename: dto.filename,
     };
 
-    return this.producer.enqueue(source, user.id);
+    const result = await this.producer.enqueue(source, user.id);
+    return {
+      success: true,
+      message: 'Code review job enqueued successfully',
+      data: result,
+    };
   }
 
   @Get(':jobId')
+  @ApiOperation({ summary: 'Get code review job status and result' })
+  @ApiResponse({ status: 200, description: 'Code review job status and result' })
+  @ApiResponse({ status: 404, description: 'Code review job not found' })
   async getResult(@Param('jobId') jobId: string) {
     const job = await this.queue.getJob(jobId);
-    if (!job) return { status: 'not_found' };
+    if (!job) {
+      throw new NotFoundException(`Code review job '${jobId}' not found`);
+    }
 
     const state = await job.getState();
     const progress = job.progress;
@@ -68,11 +78,15 @@ export class CodeReviewController {
     const result = job.returnvalue;
 
     return {
-      jobId,
-      state,
-      progress,
-      failedReason,
-      result,
+      success: true,
+      message: 'Code review job status retrieved successfully',
+      data: {
+        jobId,
+        state,
+        progress,
+        failedReason,
+        result,
+      },
     };
   }
-}
+}

@@ -80,7 +80,11 @@ export class GithubWebhookController {
       this.logger.info(`[${className}] [${methodName}] :: Responding to ping`, {
         deliveryId,
       });
-      return { ok: true };
+      return {
+        success: true,
+        message: 'Pong',
+        data: { ok: true },
+      };
     }
 
     const payload =
@@ -95,6 +99,10 @@ export class GithubWebhookController {
       event,
     });
 
-    return { ok: true };
+    return {
+      success: true,
+      message: 'Webhook processed successfully',
+      data: { ok: true },
+    };
   }
 }

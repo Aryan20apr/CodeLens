@@ -88,7 +88,11 @@ export class AuthController {
   ) {
     const { refreshToken, ...body } = await this.authService.register(dto);
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'User registered successfully',
+      data: body,
+    };
   }
 
   @Public()
@@ -127,7 +131,11 @@ export class AuthController {
   ) {
     const { refreshToken, ...body } = await this.authService.login(user);
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'Login successful',
+      data: body,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -163,18 +171,22 @@ export class AuthController {
       req.user.tokenId,
     );
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'Access token refreshed successfully',
+      data: body,
+    };
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtRefreshAuthGuard)
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
     summary: 'Revoke the current refresh token',
     description: 'Uses the refresh httpOnly cookie; clears the cookie on success.',
   })
-  @ApiResponse({ status: 204, description: 'Refresh token revoked' })
+  @ApiResponse({ status: 200, description: 'Refresh token revoked' })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async logout(
     @Req() req: { user: { tokenId: string } },
@@ -182,6 +194,11 @@ export class AuthController {
   ) {
     await this.authService.logout(req.user.tokenId);
     clearRefreshTokenCookie(res, this.appConfig);
+    return {
+      success: true,
+      message: 'Logged out successfully',
+      data: null,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -210,7 +227,11 @@ export class AuthController {
     },
   })
   githubInstallUrl() {
-    return { installUrl: this.appConfig.githubApp.appInstallUrl };
+    return {
+      success: true,
+      message: 'GitHub installation URL retrieved successfully',
+      data: { installUrl: this.appConfig.githubApp.appInstallUrl },
+    };
   }
 
   @Public()
@@ -233,16 +254,21 @@ export class AuthController {
   @Post('github/installations')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Onboard a GitHub App installation for the current user' })
   @ApiBody({ schema: zodToOpenApi(OnboardInstallationSchema) })
-  @ApiResponse({ status: 204, description: 'Installation linked and repositories seeded.' })
+  @ApiResponse({ status: 200, description: 'Installation linked and repositories seeded.' })
   @ApiResponse({ status: 401, description: 'Not authenticated.' })
   async onboardInstallation(
     @CurrentUser() user: { id: string },
     @Body(new ZodValidationPipe(OnboardInstallationSchema)) body: { installationId: number },
   ) {
     await this.onboarding.onboardInstallation(body.installationId, user.id);
+    return {
+      success: true,
+      message: 'GitHub installation onboarded successfully',
+      data: null,
+    };
   }
 
   // ---------------------------------------------------------------------------

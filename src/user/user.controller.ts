@@ -48,7 +48,11 @@ export class UserController {
       preferences,
       ...safe
     } = user;
-    return safe;
+    return {
+      success: true,
+      message: 'User profile retrieved successfully',
+      data: safe,
+    };
   }
 
   @Patch('me')
@@ -57,11 +61,16 @@ export class UserController {
   @ApiBody({ schema: zodToOpenApi(UpdateProfileSchema) })
   @ApiResponse({ status: 200, description: 'Updated user profile' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  updateMe(
+  async updateMe(
     @CurrentUser() user: any,
     @Body() body: UpdateProfileDto,
   ) {
-    return this.userService.updateProfile(user.id, body);
+    const updated = await this.userService.updateProfile(user.id, body);
+    return {
+      success: true,
+      message: 'User profile updated successfully',
+      data: updated,
+    };
   }
 
   @Post('me/api-key')
@@ -83,8 +92,11 @@ export class UserController {
   async regenerateApiKey(@CurrentUser() user: any) {
     const rawKey = await this.userService.regenerateApiKey(user.id);
     return {
-      apiKey: rawKey,
-      message: 'Store this key securely — it will not be shown again.',
+      success: true,
+      message: 'New API key generated successfully. Store this key securely — it will not be shown again.',
+      data: {
+        apiKey: rawKey,
+      },
     };
   }
 }

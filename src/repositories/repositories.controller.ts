@@ -41,8 +41,13 @@ export class RepositoriesController {
       },
     },
   })
-  listInstallations(@CurrentUser() user: { id: string }) {
-    return this.repositories.listInstallations(user.id);
+  async listInstallations(@CurrentUser() user: { id: string }) {
+    const installations = await this.repositories.listInstallations(user.id);
+    return {
+      success: true,
+      message: 'GitHub installations retrieved successfully',
+      data: installations,
+    };
   }
 
   @Get()
@@ -81,8 +86,13 @@ export class RepositoriesController {
       },
     },
   })
-  listRepositories(@CurrentUser() user: { id: string }) {
-    return this.repositories.listRepositoriesForUser(user.id);
+  async listRepositories(@CurrentUser() user: { id: string }) {
+    const data = await this.repositories.listRepositoriesForUser(user.id);
+    return {
+      success: true,
+      message: 'Connected repositories retrieved successfully',
+      data,
+    };
   }
 
   @Get(':repoId/pull-requests')
@@ -90,49 +100,69 @@ export class RepositoriesController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiQuery({ name: 'state', required: false, enum: ['open', 'closed', 'all'] })
-  listPullRequests(
+  async listPullRequests(
     @CurrentUser() user: { id: string },
     @Param('repoId') repoId: string,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
     @Query('state') state?: 'open' | 'closed' | 'all',
   ) {
-    return this.repositories.listPullRequests(
+    const pullRequests = await this.repositories.listPullRequests(
       user.id,
       repoId,
       page ? Number(page) : 1,
       perPage ? Number(perPage) : 30,
       state ?? 'open',
     );
+    return {
+      success: true,
+      message: 'Pull requests retrieved successfully',
+      data: pullRequests,
+    };
   }
 
   @Get(':repoId/pull-requests/:prNumber')
   @ApiOperation({ summary: 'Get pull request details' })
-  getPullRequest(
+  async getPullRequest(
     @CurrentUser() user: { id: string },
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    return this.repositories.getPullRequest(user.id, repoId, prNumber);
+    const pr = await this.repositories.getPullRequest(user.id, repoId, prNumber);
+    return {
+      success: true,
+      message: 'Pull request details retrieved successfully',
+      data: pr,
+    };
   }
 
   @Get(':repoId/pull-requests/:prNumber/diff')
   @ApiOperation({ summary: 'Get structured pull request diff' })
-  getPullRequestDiff(
+  async getPullRequestDiff(
     @CurrentUser() user: { id: string },
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    return this.repositories.getPullRequestDiff(user.id, repoId, prNumber);
+    const diff = await this.repositories.getPullRequestDiff(user.id, repoId, prNumber);
+    return {
+      success: true,
+      message: 'Pull request diff retrieved successfully',
+      data: diff,
+    };
   }
 
   @Get(':repoId/pull-requests/:prNumber/files')
   @ApiOperation({ summary: 'List changed files in a pull request (no hunks)' })
-  getPullRequestFiles(
+  async getPullRequestFiles(
     @CurrentUser() user: { id: string },
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    return this.repositories.getPullRequestFiles(user.id, repoId, prNumber);
+    const files = await this.repositories.getPullRequestFiles(user.id, repoId, prNumber);
+    return {
+      success: true,
+      message: 'Pull request changed files retrieved successfully',
+      data: files,
+    };
   }
 }

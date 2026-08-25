@@ -13,17 +13,27 @@ export class AppController {
 
   @Get()
   @ApiOperation({ summary: 'Root greeting' })
-  @ApiResponse({ status: 200, description: 'Plain text greeting' })
-  getHello(): string {
-    return this.appService.getHello();
+  @ApiResponse({ status: 200, description: 'API root greeting' })
+  getHello() {
+    return {
+      success: true,
+      message: 'Welcome to CodeLens API',
+      data: {
+        greeting: this.appService.getHello(),
+      },
+    };
   }
 
   /** Temporary: hit GET /enqueue-example to push one job onto the example queue. */
   @Get('enqueue-example')
   @ApiOperation({ summary: 'Enqueue one example BullMQ job' })
   @ApiResponse({ status: 200, description: 'Job enqueued' })
-  async enqueueExample(): Promise<{ ok: true }> {
+  async enqueueExample() {
     await this.exampleJobs.enqueue({ message: 'hello' });
-    return { ok: true };
+    return {
+      success: true,
+      message: 'Example job enqueued successfully',
+      data: null,
+    };
   }
 }

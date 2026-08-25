@@ -51,15 +51,19 @@ export class EvaluationController {
     );
 
     return {
-      threadId,
-      status: out.status,
-      error: out.error,
-      language: out.language,
-      metadata: out.metadata,
-      llmAnalysis: out.llmAnalysis,
-      score: out.score,
-      report: out.report,
-      events: out.events,
+      success: true,
+      message: 'Snippet evaluated successfully',
+      data: {
+        threadId,
+        status: out.status,
+        error: out.error,
+        language: out.language,
+        metadata: out.metadata,
+        llmAnalysis: out.llmAnalysis,
+        score: out.score,
+        report: out.report,
+        events: out.events,
+      },
     };
   }
 }
