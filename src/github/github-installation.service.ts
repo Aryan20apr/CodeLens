@@ -100,7 +100,7 @@ export class GithubInstallationService {
   }
 
   async checkPullRequestInstallation(installationId: bigint): Promise<
-    | { eligible: true }
+    | { eligible: true; userId: string | null }
     | { eligible: false; reason: 'missing' | 'deleted' | 'suspended' }
   > {
     const record = await this.installations.findById(installationId);
@@ -113,6 +113,6 @@ export class GithubInstallationService {
     if (record.suspendedAt) {
       return { eligible: false, reason: 'suspended' };
     }
-    return { eligible: true };
+    return { eligible: true, userId: record.userId ?? null };
   }
 }
