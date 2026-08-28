@@ -1,7 +1,11 @@
-import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, UsePipes } from '@nestjs/common';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '..//common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
+import { UpdateProfileDto, UpdateProfileSchema } from './dto/update-user.dto';
+import { apiEnvelopeSchema } from '../common/utils/swagger.util';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -9,6 +13,18 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
+
+const UserProfileSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    email: { type: 'string' },
+    name: { type: 'string', nullable: true },
+    avatarUrl: { type: 'string', nullable: true },
+    role: { type: 'string', example: 'USER' },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -22,16 +38,9 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Current user profile',
-    schema: {
-      properties: {
-        id: { type: 'string', format: 'uuid' },
-        email: { type: 'string' },
-        name: { type: 'string', nullable: true },
-        avatarUrl: { type: 'string', nullable: true },
-        role: { type: 'string', example: 'USER' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
+    schema: apiEnvelopeSchema(UserProfileSchema, {
+      message: 'User profile retrieved successfully',
+    }),
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   getMe(@CurrentUser() user: any) {
@@ -45,26 +54,35 @@ export class UserController {
       preferences,
       ...safe
     } = user;
-    return safe;
+    return {
+      success: true,
+      message: 'User profile retrieved successfully',
+      data: safe,
+    };
   }
 
   @Patch('me')
+  @UsePipes(new ZodValidationPipe(UpdateProfileSchema))
   @ApiOperation({ summary: 'Update the current user profile' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', maxLength: 100, example: 'Jane Doe' },
-      },
-    },
+  @ApiBody({ schema: zodToOpenApi(UpdateProfileSchema) })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated user profile',
+    schema: apiEnvelopeSchema(UserProfileSchema, {
+      message: 'User profile updated successfully',
+    }),
   })
-  @ApiResponse({ status: 200, description: 'Updated user profile' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  updateMe(
+  async updateMe(
     @CurrentUser() user: any,
-    @Body() body: { name?: string },
+    @Body() body: UpdateProfileDto,
   ) {
-    return this.userService.updateProfile(user.id, body);
+    const updated = await this.userService.updateProfile(user.id, body);
+    return {
+      success: true,
+      message: 'User profile updated successfully',
+      data: updated,
+    };
   }
 
   @Post('me/api-key')
@@ -75,19 +93,28 @@ export class UserController {
   @ApiResponse({
     status: 201,
     description: 'New API key generated',
-    schema: {
-      properties: {
-        apiKey: { type: 'string', example: 'cl_live_xxxxxxxxxxxxxxxx' },
-        message: { type: 'string' },
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          apiKey: { type: 'string', example: 'cl_live_xxxxxxxxxxxxxxxx' },
+        },
       },
-    },
+      {
+        message:
+          'New API key generated successfully. Store this key securely — it will not be shown again.',
+      },
+    ),
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
   async regenerateApiKey(@CurrentUser() user: any) {
     const rawKey = await this.userService.regenerateApiKey(user.id);
     return {
-      apiKey: rawKey,
-      message: 'Store this key securely — it will not be shown again.',
+      success: true,
+      message: 'New API key generated successfully. Store this key securely — it will not be shown again.',
+      data: {
+        apiKey: rawKey,
+      },
     };
   }
 }

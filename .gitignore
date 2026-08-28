@@ -16,3 +16,10 @@ graphify-out/
 *.pem
 
 /generated/prisma
+
+superpowers
+.DS_Store
+.agents/plans
+.agents/rules
+.agents/settings.json
+test.env

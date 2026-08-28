@@ -11,6 +11,7 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiResponse,
   ApiTags,
@@ -25,6 +26,27 @@ import {
   type PrReviewRedisMessage,
 } from '../streaming/types/pr-review-progress.types';
 import { ReviewRunsService } from './review-runs.service';
+import { apiEnvelopeSchema } from '../common/utils/swagger.util';
+
+const ReviewRunSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    repoFullName: { type: 'string', example: 'octocat/hello-world' },
+    prNumber: { type: 'number', example: 42 },
+    headSha: { type: 'string', example: '6dcb09b5b57875f334f61aebed695e2e4193db5e' },
+    baseSha: { type: 'string', example: '9a0a1a01174092b3a0f7f329de4b1a4a4d693fbe' },
+    status: { type: 'string', enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'], example: 'COMPLETED' },
+    triggeredBy: { type: 'string', enum: ['WEBHOOK', 'MANUAL'], example: 'MANUAL' },
+    summaryText: { type: 'string', nullable: true, example: 'Code review completed with 2 findings.' },
+    githubReviewId: { type: 'string', nullable: true, example: '123456789' },
+    error: { type: 'string', nullable: true, example: null },
+    currentStep: { type: 'string', nullable: true, example: 'postReview' },
+    currentStepMessage: { type: 'string', nullable: true, example: 'Review posted to GitHub PR' },
+    createdAt: { type: 'string', format: 'date-time' },
+    completedAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
 
 const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED']);
 
@@ -50,53 +72,112 @@ export class ReviewRunsController {
   @ApiQuery({ name: 'prNumber', required: true, type: Number })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'perPage', required: false, type: Number })
-  listByPullRequest(
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of review runs',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: ReviewRunSchema },
+          total: { type: 'number', example: 1 },
+          page: { type: 'number', example: 1 },
+          perPage: { type: 'number', example: 20 },
+        },
+      },
+      { message: 'Review runs retrieved successfully' },
+    ),
+  })
+  async listByPullRequest(
     @CurrentUser() user: { id: string },
     @Query('repoFullName') repoFullName: string,
     @Query('prNumber', ParseIntPipe) prNumber: number,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
   ) {
-    return this.reviewRuns.findByPullRequest(
+    const runs = await this.reviewRuns.findByPullRequest(
       user.id,
       repoFullName,
       prNumber,
       page ? Number(page) : 1,
       perPage ? Number(perPage) : 20,
     );
+    return {
+      success: true,
+      message: 'Review runs retrieved successfully',
+      data: runs,
+    };
   }
 
   @Post('repositories/:repoId/pull-requests/:prNumber')
   @ApiOperation({ summary: 'Trigger a CodeLens review for a pull request' })
+  @ApiParam({ name: 'repoId', type: String, description: 'Repository ID' })
+  @ApiParam({ name: 'prNumber', type: Number, description: 'Pull request number' })
   @ApiResponse({
     status: 201,
-    schema: {
-      properties: {
-        reviewRunId: { type: 'string', format: 'uuid' },
+    description: 'PR review enqueued',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          reviewRunId: { type: 'string', format: 'uuid', example: '01952f4a-71bc-7000-8f1d-91b427b03a7a' },
+        },
       },
-    },
+      { message: 'PR review triggered successfully' },
+    ),
   })
-  triggerReview(
+  async triggerReview(
     @CurrentUser() user: { id: string },
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    return this.reviewRuns.triggerReview(user.id, repoId, prNumber);
+    const result = await this.reviewRuns.triggerReview(user.id, repoId, prNumber);
+    return {
+      success: true,
+      message: 'PR review triggered successfully',
+      data: result,
+    };
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a review run by id' })
-  @ApiResponse({ status: 200, description: 'Review run' })
-  findById(
+  @ApiParam({ name: 'id', type: String, description: 'Review run UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review run details',
+    schema: apiEnvelopeSchema(ReviewRunSchema, {
+      message: 'Review run retrieved successfully',
+    }),
+  })
+  @ApiResponse({ status: 404, description: 'Review run not found' })
+  async findById(
     @CurrentUser() user: { id: string },
     @Param('id') id: string,
   ) {
-    return this.reviewRuns.findById(user.id, id);
+    const run = await this.reviewRuns.findById(user.id, id);
+    return {
+      success: true,
+      message: 'Review run retrieved successfully',
+      data: run,
+    };
   }
 
   @Get(':id/stream')
   @ApiOperation({
     summary: 'Stream review run progress (snapshot, steps, done)',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'Review run UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of review run events (snapshot, step, done)',
+    content: {
+      'text/event-stream': {
+        schema: {
+          type: 'string',
+          example: 'event: snapshot\ndata: {"id":"01952f4a-71bc-7000-8f1d-91b427b03a7a","status":"RUNNING"}\n\n',
+        },
+      },
+    },
   })
   async streamStatus(
     @CurrentUser() user: { id: string },

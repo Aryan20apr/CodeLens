@@ -30,6 +30,9 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { RegisterSchema, type RegisterDto } from './dto/register.dto';
+import { LoginSchema, type LoginDto } from './dto/login.dto';
+import { OnboardInstallationSchema } from './dto/onboard-installation.dto';
+import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { APP_CONFIG } from '../config/config.constants';
 import type { AppConfig } from '../config/app-config.types';
 import {
@@ -37,6 +40,7 @@ import {
   setRefreshTokenCookie,
 } from './refresh-cookie';
 import { GithubOnboardingService } from '../github/github-onboarding.service';
+import { apiEnvelopeSchema } from '../common/utils/swagger.util';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -55,42 +59,31 @@ export class AuthController {
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   @ApiOperation({ summary: 'Register with email + password' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password'],
-      properties: {
-        email: { type: 'string', format: 'email', example: 'user@example.com' },
-        password: {
-          type: 'string',
-          minLength: 8,
-          example: 'Secret123',
-          description: 'At least 8 characters, one uppercase letter, one number',
-        },
-        name: { type: 'string', maxLength: 100, example: 'Jane Doe' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(RegisterSchema) })
   @ApiResponse({
     status: 201,
     description:
       'User created — returns access token + user; refresh token is set as httpOnly cookie',
-    schema: {
-      properties: {
-        accessToken: { type: 'string' },
-        apiKey: { type: 'string' },
-        user: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            email: { type: 'string' },
-            name: { type: 'string', nullable: true },
-            avatarUrl: { type: 'string', nullable: true },
-            role: { type: 'string', example: 'USER' },
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          apiKey: { type: 'string' },
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              email: { type: 'string' },
+              name: { type: 'string', nullable: true },
+              avatarUrl: { type: 'string', nullable: true },
+              role: { type: 'string', example: 'USER' },
+            },
           },
         },
       },
-    },
+      { message: 'User registered successfully' },
+    ),
   })
   @ApiResponse({ status: 409, description: 'Email already in use' })
   @ApiResponse({ status: 422, description: 'Validation failed' })
@@ -100,7 +93,11 @@ export class AuthController {
   ) {
     const { refreshToken, ...body } = await this.authService.register(dto);
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'User registered successfully',
+      data: body,
+    };
   }
 
   @Public()
@@ -112,43 +109,42 @@ export class AuthController {
     description:
       'Returns access token + user in JSON; refresh token is set as an httpOnly cookie.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password'],
-      properties: {
-        email: { type: 'string', format: 'email', example: 'user@example.com' },
-        password: { type: 'string', example: 'Secret123' },
-      },
-    },
-  })
+  @ApiBody({ schema: zodToOpenApi(LoginSchema) })
   @ApiResponse({
     status: 200,
     description: 'Login successful',
-    schema: {
-      properties: {
-        accessToken: { type: 'string' },
-        user: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            email: { type: 'string' },
-            name: { type: 'string', nullable: true },
-            avatarUrl: { type: 'string', nullable: true },
-            role: { type: 'string', example: 'USER' },
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              email: { type: 'string' },
+              name: { type: 'string', nullable: true },
+              avatarUrl: { type: 'string', nullable: true },
+              role: { type: 'string', example: 'USER' },
+            },
           },
         },
       },
-    },
+      { message: 'Login successful' },
+    ),
   })
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
   async login(
-    @Req() req: { user: any },
+    @CurrentUser() user: any,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
-    const { refreshToken, ...body } = await this.authService.login(req.user);
+    const { refreshToken, ...body } = await this.authService.login(user);
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'Login successful',
+      data: body,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -168,11 +164,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'New access token; new refresh token in httpOnly cookie',
-    schema: {
-      properties: {
-        accessToken: { type: 'string' },
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+        },
       },
-    },
+      { message: 'Access token refreshed successfully' },
+    ),
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async refresh(
@@ -184,18 +184,26 @@ export class AuthController {
       req.user.tokenId,
     );
     setRefreshTokenCookie(res, refreshToken, this.appConfig);
-    return body;
+    return {
+      success: true,
+      message: 'Access token refreshed successfully',
+      data: body,
+    };
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtRefreshAuthGuard)
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
     summary: 'Revoke the current refresh token',
     description: 'Uses the refresh httpOnly cookie; clears the cookie on success.',
   })
-  @ApiResponse({ status: 204, description: 'Refresh token revoked' })
+  @ApiResponse({
+    status: 200,
+    description: 'Refresh token revoked',
+    schema: apiEnvelopeSchema(null, { message: 'Logged out successfully' }),
+  })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async logout(
     @Req() req: { user: { tokenId: string } },
@@ -203,6 +211,11 @@ export class AuthController {
   ) {
     await this.authService.logout(req.user.tokenId);
     clearRefreshTokenCookie(res, this.appConfig);
+    return {
+      success: true,
+      message: 'Logged out successfully',
+      data: null,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -222,16 +235,24 @@ export class AuthController {
   @ApiOperation({ summary: 'GitHub App installation URL for connecting repositories' })
   @ApiResponse({
     status: 200,
-    schema: {
-      type: 'object',
-      required: ['installUrl'],
-      properties: {
-        installUrl: { type: 'string', example: 'https://github.com/apps/codelens/installations/new' },
+    description: 'GitHub installation URL',
+    schema: apiEnvelopeSchema(
+      {
+        type: 'object',
+        required: ['installUrl'],
+        properties: {
+          installUrl: { type: 'string', example: 'https://github.com/apps/codelens/installations/new' },
+        },
       },
-    },
+      { message: 'GitHub installation URL retrieved successfully' },
+    ),
   })
   githubInstallUrl() {
-    return { installUrl: this.appConfig.githubApp.appInstallUrl };
+    return {
+      success: true,
+      message: 'GitHub installation URL retrieved successfully',
+      data: { installUrl: this.appConfig.githubApp.appInstallUrl },
+    };
   }
 
   @Public()
@@ -254,24 +275,27 @@ export class AuthController {
   @Post('github/installations')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Onboard a GitHub App installation for the current user' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['installationId'],
-      properties: {
-        installationId: { type: 'number', example: 135116734 },
-      },
-    },
+  @ApiBody({ schema: zodToOpenApi(OnboardInstallationSchema) })
+  @ApiResponse({
+    status: 200,
+    description: 'Installation linked and repositories seeded.',
+    schema: apiEnvelopeSchema(null, {
+      message: 'GitHub installation onboarded successfully',
+    }),
   })
-  @ApiResponse({ status: 204, description: 'Installation linked and repositories seeded.' })
   @ApiResponse({ status: 401, description: 'Not authenticated.' })
   async onboardInstallation(
     @CurrentUser() user: { id: string },
-    @Body() body: { installationId: number },
+    @Body(new ZodValidationPipe(OnboardInstallationSchema)) body: { installationId: number },
   ) {
     await this.onboarding.onboardInstallation(body.installationId, user.id);
+    return {
+      success: true,
+      message: 'GitHub installation onboarded successfully',
+      data: null,
+    };
   }
 
   // ---------------------------------------------------------------------------

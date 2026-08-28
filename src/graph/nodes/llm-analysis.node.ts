@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
 
 import type { LlmService } from 'src/llm/llm.service';
 import type { GraphEvent, SnippetGraphStateType } from '../state.annotation';
@@ -38,7 +39,7 @@ type NodeUpdate = Partial<
 >;
 
 export function createLlmAnalysisNode(llm: LlmService) {
-    return async (state: SnippetGraphStateType): Promise<NodeUpdate> => {
+    return async (state: SnippetGraphStateType, config?: RunnableConfig): Promise<NodeUpdate> => {
         const now = () => new Date().toISOString();
 
         if (!state.source) {
@@ -69,7 +70,8 @@ export function createLlmAnalysisNode(llm: LlmService) {
           ];
       
           try {
-            const chat = llm.getChatModel();
+            const userLlmKey = config?.configurable?.userLlmKey;
+            const chat = llm.getChatModel(userLlmKey);
       
             const system = new SystemMessage(
               [

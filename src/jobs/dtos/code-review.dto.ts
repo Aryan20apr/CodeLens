@@ -12,4 +12,5 @@ export type EnqueueCodeReviewDto = z.infer<typeof EnqueCodeReviewDtoSchema>;
 export type CodeReviewJobPayload = {
     threadId: string;
     source: SnippetSource;
+    userId: string;
   };

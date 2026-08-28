@@ -26,6 +26,13 @@ enum OAuthProvider {
   GITHUB
   GOOGLE
 }
+
+enum LlmProvider {
+  GEMINI
+  OPENAI
+  GROQ
+  NVIDIA
+}
 // ---------------------------------------------------------------------------
 // User
 // ---------------------------------------------------------------------------
@@ -55,6 +62,7 @@ model User {
   refreshTokens RefreshToken[]
 
   preferences UserPreferences?
+  llmApiKeys  LlmApiKey[]
 
   githubInstallations GitHubInstallation[]
   prReviews           PrReview[]
@@ -117,8 +125,27 @@ model UserPreferences {
   defaultLanguage        String?
   notificationsEnabled   Boolean @default(true)
 
+  activeProvider LlmProvider?
+  activeModel    String?
+
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String @unique
+}
+
+model LlmApiKey {
+  id             String      @id @default(uuid(7))
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       LlmProvider
+  encryptedKey   String
+  maskedKey      String
+  baseUrl        String?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

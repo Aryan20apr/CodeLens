@@ -9,6 +9,7 @@ import { CODE_REVIEW_QUEUE } from './constants';
 import type { CodeReviewJobPayload } from './dtos/code-review.dto';
 import { LanguageDetectService } from 'src/graph/lib/language-detect.service';
 import { RedisPubSubService } from 'src/streaming/redis-pub-sub.service';
+import { LlmProviderService } from '../llm-provider/llm-provider.service';
 import { channel } from 'diagnostics_channel';
 @Processor(CODE_REVIEW_QUEUE)
 export class CodeReviewProcessor extends WorkerHost {
@@ -19,13 +20,14 @@ export class CodeReviewProcessor extends WorkerHost {
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     private readonly pubSubService: RedisPubSubService,
     private readonly graphFactory: GraphFactory,
+    private readonly llmProvider: LlmProviderService,
   ) {
     super();
     this.logger = logger.child({ context: LanguageDetectService.name });
   }
 
   async process(job: Job<CodeReviewJobPayload>) {
-    const { threadId, source } = job.data;
+    const { threadId, source, userId } = job.data;
     const channel = `snippet:${threadId}`
     this.logger.info(
       ` [${CodeReviewProcessor.CLASS}] [process] :: Starting snippet evaluation job=${job.id} threadId=${threadId}`,
@@ -34,7 +36,8 @@ export class CodeReviewProcessor extends WorkerHost {
     // BullMQ progress updates
     await job.updateProgress({ step: 'running-graph', pct: 0.1 });
 
-    const out = await this.graphFactory.invokeSnippet(source, threadId);
+    const userLlmKey = userId ? await this.llmProvider.getRawKey(userId) : null;
+    const out = await this.graphFactory.invokeSnippet(source, threadId, { userLlmKey: userLlmKey ?? undefined });
 
     for (const ev of out.events ?? []) {
       await this.pubSubService.publish(channel, { type: 'graph', threadId, event: ev });

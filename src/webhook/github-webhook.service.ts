@@ -227,6 +227,7 @@ export class GithubWebhookService {
       prNumber: number,
       headSha,
       baseSha,
+      userId: eligibility.userId,
     });
 
     const { jobId } = await this.producer.enqueue({

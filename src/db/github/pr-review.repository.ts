@@ -26,6 +26,7 @@ export class PrReviewRepository {
     prNumber: number;
     headSha: string;
     baseSha: string;
+    userId?: string | null;
     bullmqJobId?: string;
   }) {
     const className = PrReviewRepository.name;

@@ -162,8 +162,8 @@ type TriageUpdate = Partial<
 export function createTriageAnalysisNode(
   llm: LlmService,
   progress: PrReviewProgressPublisher,
-): (state: PrReviewGraphStateType) => Promise<TriageUpdate> {
-  return async (state) => {
+): (state: PrReviewGraphStateType, config?: any) => Promise<TriageUpdate> {
+  return async (state, config) => {
     const { reviewRunId } = state;
 
     if (state.chunks.length === 0) {
@@ -185,7 +185,8 @@ export function createTriageAnalysisNode(
             ),
           },
           fn: async () => {
-            const model = llm.getChatModel();
+            const userLlmKey = config?.configurable?.userLlmKey;
+            const model = llm.getChatModel(userLlmKey);
             const response = await model.invoke([
               new SystemMessage(TRIAGE_SYSTEM),
               new HumanMessage(buildTriageDigest(state)),

@@ -5,7 +5,9 @@ import type { AppConfig } from '../config/app-config.types';
 import { APP_CONFIG } from '../config/config.constants';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatGroq } from '@langchain/groq';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import type { UserLlmKey } from '../llm-provider/llm-provider.service';
 
 @Injectable()
 export class LlmService {
@@ -20,7 +22,38 @@ export class LlmService {
         this.config = config.llm;
     }
 
-    getChatModel(): BaseChatModel {
+    getChatModel(userKey?: UserLlmKey): BaseChatModel {
+        if (userKey) {
+            this.logger.debug(`[LlmService] [getChatModel] :: using user-provided key for ${userKey.provider}`, {
+                model: userKey.model,
+            });
+
+            switch (userKey.provider) {
+                case 'GEMINI':
+                    return new ChatGoogleGenerativeAI({
+                        apiKey: userKey.rawKey,
+                        model: userKey.model || this.config.geminiModel,
+                    });
+                case 'OPENAI':
+                    return new ChatOpenAI({
+                        apiKey: userKey.rawKey,
+                        model: userKey.model || 'gpt-4o',
+                        configuration: userKey.baseUrl ? { baseURL: userKey.baseUrl } : undefined,
+                    });
+                case 'GROQ':
+                    return new ChatGroq({
+                        apiKey: userKey.rawKey,
+                        model: userKey.model || 'llama3-70b-8192',
+                    });
+                case 'NVIDIA':
+                    return new ChatOpenAI({
+                        apiKey: userKey.rawKey,
+                        model: userKey.model || this.config.nvidiaModel,
+                        configuration: userKey.baseUrl ? { baseURL: userKey.baseUrl } : undefined,
+                    });
+            }
+        }
+
         const provider = this.config.provider;
 
         if (provider === 'nvidia') {

@@ -20,8 +20,8 @@ export function createSimpleAnalyzeNode(
   promptService: PrReviewPromptService,
   analyzeAgent: PrAnalyzeAgentFactory,
   progress: PrReviewProgressPublisher,
-): (state: PrReviewGraphStateType) => Promise<SimpleAnalyzeUpdate> {
-  return async (state) => {
+): (state: PrReviewGraphStateType, config?: any) => Promise<SimpleAnalyzeUpdate> {
+  return async (state, config) => {
     if (!state.parsed || state.chunks.length === 0) {
       return {
         status: 'failed',
@@ -70,6 +70,7 @@ export function createSimpleAnalyzeNode(
             const llmAnalysis = await analyzeAgent.invokeDirect(
               prompt.systemPrompt,
               prompt.userContent,
+              config?.configurable?.userLlmKey,
             );
             return { llmAnalysis, crossFileHints: [], searchToolCallCount: 0 };
           }
@@ -90,6 +91,7 @@ export function createSimpleAnalyzeNode(
                 { toolName, symbol, modulePath },
               );
             },
+            userLlmKey: config?.configurable?.userLlmKey,
           });
         },
       },

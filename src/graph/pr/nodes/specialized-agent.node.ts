@@ -31,8 +31,8 @@ export function createSpecializedAgentNode(
   promptService: PrReviewPromptService,
   analyzeAgent: PrAnalyzeAgentFactory,
   progress: PrReviewProgressPublisher,
-): (state: PrReviewGraphStateType) => Promise<SpecializedAgentUpdate> {
-  return async (state) => {
+): (state: PrReviewGraphStateType, config?: any) => Promise<SpecializedAgentUpdate> {
+  return async (state, config) => {
     if (!state.parsed || state.chunks.length === 0) {
       return {
         status: 'failed',
@@ -86,6 +86,7 @@ export function createSpecializedAgentNode(
               const llmAnalysis = await analyzeAgent.invokeDirect(
                 systemPrompt,
                 prompt.userContent,
+                config?.configurable?.userLlmKey,
               );
               return {
                 llmAnalysis,
@@ -102,6 +103,7 @@ export function createSpecializedAgentNode(
               installationId: BigInt(installationId),
               repoFullName,
               headSha,
+              userLlmKey: config?.configurable?.userLlmKey,
               onSearchToolCall: ({ toolName, symbol, modulePath }) => {
                 void progress.stepStarted(
                   reviewRunId,

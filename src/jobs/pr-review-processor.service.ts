@@ -13,6 +13,7 @@ import { PrReviewProgressPublisher } from '../streaming/pr-review-progress-publi
 import type { PrReviewStep } from '../streaming/types/pr-review-progress.types';
 import { PR_REVIEW_QUEUE } from './constants';
 import type { PrReviewJobPayload } from './dtos/pr-review-job.dto';
+import { LlmProviderService } from '../llm-provider/llm-provider.service';
 
 @Processor(PR_REVIEW_QUEUE)
 export class PrReviewProcessorService extends WorkerHost {
@@ -25,6 +26,7 @@ export class PrReviewProcessorService extends WorkerHost {
     private readonly installations: GitHubInstallationRepository,
     private readonly progress: PrReviewProgressPublisher,
     private readonly prGraph: PrReviewGraphFactory,
+    private readonly llmProvider: LlmProviderService,
   ) {
     super();
     this.logger = logger.child({ context: PrReviewProcessorService.name });
@@ -107,8 +109,10 @@ export class PrReviewProcessorService extends WorkerHost {
 
       await this.runs.markRunning(reviewRunId);
 
+      const userLlmKey = run.userId ? await this.llmProvider.getRawKey(run.userId) : null;
+
       const { summaryMarkdown, githubReviewId } =
-        await this.prGraph.invokePrReview(job.data);
+        await this.prGraph.invokePrReview(job.data, { userLlmKey: userLlmKey ?? undefined });
 
       await this.runs.markCompleted(
         reviewRunId,

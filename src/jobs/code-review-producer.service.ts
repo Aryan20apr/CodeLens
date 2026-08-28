@@ -15,12 +15,13 @@ export class CodeReviewProducer {
         @InjectQueue(CODE_REVIEW_QUEUE) private readonly queue: Queue<CodeReviewJobPayload>
     ){}
 
-    async enqueue(source: SnippetSource) {
+    async enqueue(source: SnippetSource, userId: string) {
         const threadId = uuidv7();
     
         const payload: CodeReviewJobPayload = {
           threadId,
           source,
+          userId,
         };
     
         const job = await this.queue.add(CODE_REVIEW_JOB, payload, {

@@ -19,10 +19,15 @@ export class HealthController {
   @ApiOperation({ summary: 'Dependency health (Postgres, Redis)' })
   @ApiResponse({ status: 200, description: 'All checks passed' })
   @ApiResponse({ status: 503, description: 'One or more checks failed' })
-  check() {
-    return this.health.check([
+  async check() {
+    const result = await this.health.check([
       () => this.postgresHealth.isHealthy('postgres'),
       () => this.redisHealth.isHealthy('redis'),
     ]);
+    return {
+      success: true,
+      message: 'Health check completed successfully',
+      data: result,
+    };
   }
 }
