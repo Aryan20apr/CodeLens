@@ -4,12 +4,12 @@
 
 A platform where developers submit code (paste, upload, or connect a GitHub repo) and receive a comprehensive, AI-powered evaluation covering quality, security, performance, best practices, and actionable suggestions. The platform also acts as a **GitHub PR review bot** — posting inline, LLM-generated code review comments directly on pull requests.
 
-Built as a production-grade portfolio project showcasing LangGraph orchestration, multi-agent design, async job processing, real-time SSE streaming, and full-stack TypeScript.
+Built as a production-grade portfolio project showcasing LangGraph orchestration, multi-agent design, async job processing, real-time SSE streaming, BYOK (Bring Your Own Key) multi-provider LLM routing, and full-stack TypeScript.
 
 ## Constraints
 
 - Solo developer, hobby/portfolio project — not a SaaS launch
-- Zero monetary cost — free-tier services and open-source tools only
+- Zero monetary cost — free-tier services, open-source tools, and BYOK for LLM models
 - Single NestJS application (no microservices split)
 - AI-assisted frontend generation
 
@@ -19,9 +19,8 @@ Built as a production-grade portfolio project showcasing LangGraph orchestration
 | -------------------- | ----------------------------------------------------------------------- |
 | Backend Framework    | NestJS + Fastify adapter                                                |
 | Graph Orchestration  | @langchain/langgraph + @langchain/core                                  |
-| Primary LLM          | Google Gemini 2.0 Flash (`@langchain/google-genai`)                     |
-| Fallback LLM         | Groq (`@langchain/groq`)                                                |
-| Offline LLM          | Ollama + deepseek-coder / qwen2.5-coder (optional)                      |
+| LLM Providers (BYOK) | Google Gemini, OpenAI, Groq, NVIDIA NIM, Ollama (dynamic per user)     |
+| Fallback / Default   | System-configured Gemini or NVIDIA NIM                                  |
 | Database             | **PostgreSQL** (chosen; Atlas-free or local Docker)                     |
 | ORM / Migrations     | **Prisma** (`prisma/schema.prisma`, `generated/prisma` client)          |
 | Job Queue            | BullMQ (`@nestjs/bullmq`)                                               |
@@ -29,7 +28,9 @@ Built as a production-grade portfolio project showcasing LangGraph orchestration
 | Code Sandbox         | Docker containers — Phase H, optional                                   |
 | AST Parsing          | Tree-sitter via `node-tree-sitter` + language grammars + `.scm` queries |
 | Schema Validation    | Zod                                                                     |
+| API Docs / Swagger   | OpenAPI 3.0 via `@nestjs/swagger` + Zod-to-OpenAPI schema helpers        |
 | Auth                 | `@nestjs/passport` + JWT (access + refresh tokens) + GitHub OAuth       |
+| Secret Encryption    | AES-256-GCM (`crypto.util.ts`) for user-stored BYOK API keys            |
 | Streaming            | NestJS SSE + Redis PubSub                                               |
 | Graph Checkpointer   | Postgres-backed LangGraph checkpointer (`LangGraphCheckpointerService`) |
 | Observability        | LangSmith free tier + Winston (`nest-winston`)                          |
@@ -60,8 +61,8 @@ Client (Next.js) ──── REST + SSE ────▶ NestJS App
                                     │                           │
                                     ▼                           ▼
                                PostgreSQL              LangGraph Graphs
-                               Redis PubSub            LLM Providers
-                               GitHub API              (Gemini → Groq → Ollama)
+                               Redis PubSub            Dynamic LLM Engine (BYOK)
+                               GitHub API              (Gemini, OpenAI, Groq, NVIDIA)
 ```
 
 ## Actual Project Structure
@@ -70,20 +71,22 @@ Client (Next.js) ──── REST + SSE ────▶ NestJS App
 src/
 ├── app.module.ts
 ├── main.ts
-├── auth/                     — JWT + GitHub OAuth strategies, refresh tokens
+├── auth/                     — JWT + GitHub OAuth strategies, refresh tokens, installation onboarding
 ├── bullmq/                   — BullMQ module wiring
 ├── cls/                      — AsyncLocalStorage / CLS context
 ├── common/
 │   ├── decorators/           — @Public(), @CurrentUser()
-│   ├── filters/              — global exception filter
+│   ├── filters/              — global exception filter (standardized HttpErrorBody)
 │   ├── guards/               — JwtAuthGuard, throttle guard
 │   ├── interceptors/         — logging, correlation ID
-│   └── pipes/                — Zod validation pipe
+│   ├── interfaces/           — ApiResponse envelope interface
+│   ├── pipes/                — Zod validation pipe with clear error messages
+│   └── utils/                — crypto (AES-256-GCM), swagger response schemas, zod-to-openapi
 ├── config/                   — convict-based typed config (AppConfig)
 ├── db/
 │   ├── prisma.service.ts     — PrismaClient wrapper
 │   ├── prisma.module.ts
-│   └── github/               — PrReviewRepository, PostedFindingRepository, etc.
+│   └── github/               — PrReviewRepository, GitHubInstallationRepository, ConnectionRepository, WebhookDeliveryRepository
 ├── diff/
 │   ├── diff-parser.service.ts
 │   ├── diff-chunker.service.ts
@@ -132,13 +135,19 @@ src/
 ├── jobs/
 │   ├── jobs.module.ts
 │   ├── constants.ts
-│   ├── code-review-processor.service.ts  — snippet evaluation BullMQ processor
+│   ├── code-review-processor.service.ts  — snippet evaluation BullMQ processor (BYOK-aware)
 │   ├── code-review-producer.service.ts
 │   ├── code-review.controller.ts
-│   ├── pr-review-processor.service.ts   — PR review BullMQ processor (thin: validate → invokePrReview → persist)
+│   ├── pr-review-processor.service.ts   — PR review BullMQ processor (BYOK resolution → invokePrReview → persist)
 │   └── pr-review-producer.service.ts
+├── llm-provider/              — BYOK (Bring Your Own Key) management
+│   ├── dto/                   — save-provider-key.dto, set-active-provider.dto
+│   ├── llm-provider.controller.ts   — GET/POST/DELETE provider keys, model catalog, active preferences
+│   ├── llm-provider.module.ts
+│   ├── llm-provider.service.ts      — AES-256-GCM encryption/decryption, user key resolution
+│   └── model-fetcher.service.ts     — dynamic model catalog fetching per provider (Gemini, OpenAI, Groq, NVIDIA)
 ├── llm/
-│   └── llm.service.ts         — Gemini → Groq → Ollama failover chain
+│   └── llm.service.ts         — dynamic ChatModel instantiation based on user BYOK key & preferences, system fallback
 ├── logger/                    — Winston / nest-winston setup
 ├── redis/                     — Redis client module
 ├── repositories/              — User-connected GitHub repository management
@@ -178,7 +187,7 @@ src/
 │       └── pr-review-progress.types.ts          — PrReviewStep, PrReviewStepEvent, PrReviewDoneEvent
 ├── types/                     — shared TypeScript types
 ├── user/                      — user profile, preferences
-└── webhook/                   — GitHub webhook endpoint, signature verification, delivery dedup
+└── webhook/                   — GitHub webhook endpoint, signature verification, delivery dedup, repo owner userId resolution
 ```
 
 Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
@@ -195,7 +204,7 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 
 ### NestJS Conventions
 
-- One module per domain concept (auth, user, review, graph, github, jobs, etc.)
+- One module per domain concept (auth, user, review, graph, github, jobs, llm-provider, etc.)
 - Services contain business logic; controllers are thin REST adapters
 - Use constructor injection exclusively — no property injection
 - Name files as `<name>.<type>.ts` (e.g., `auth.service.ts`, `pr-finding.schema.ts`)
@@ -205,10 +214,27 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 - Custom decorators (`@Public()`, `@CurrentUser()`) live in `src/common/decorators/`
 - No `PrReviewJobsModule` — PR review processor lives in `JobsModule`; extend `ReviewModule` / `GraphModule` for domain logic
 
-### Error Handling
+### Error Handling & Response Envelope
 
-- Use the global exception filter for consistent error responses
-- Error response shape: `{ statusCode, message, error, details }`
+- All successful API endpoints return standard response envelope:
+  ```json
+  {
+    "success": true,
+    "message": "Operation description",
+    "data": { ... }
+  }
+  ```
+- All HTTP errors are formatted consistently via global `HttpExceptionFilter`:
+  ```json
+  {
+    "success": false,
+    "message": "Validation failed / Unauthorized / etc.",
+    "data": null,
+    "error": "Bad Request",
+    "statusCode": 400
+  }
+  ```
+- Use `apiEnvelopeSchema` / `apiArrayEnvelopeSchema` from `common/utils/swagger.util.ts` for Swagger doc responses
 - Never leak stack traces or internal details in production
 - Use Winston (`nest-winston`) with correlation IDs per request and per BullMQ job
 
@@ -216,8 +242,22 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 
 - All endpoints under `/api/v1/` prefix
 - RESTful naming — plural nouns for resources
+- Swagger / OpenAPI documentation on all controllers with explicit request and response schemas
 - Pagination via `?page=1&limit=20` (or `?page=1&perPage=20`) query params
 - Filter by query params (e.g., `?repoFullName=owner/repo&prNumber=42`)
+
+### BYOK (Bring Your Own Key) & Dynamic LLM Resolution
+
+- Users can register API keys for supported providers: `GEMINI`, `OPENAI`, `GROQ`, `NVIDIA`
+- Keys are encrypted at rest using AES-256-GCM via `crypto.util.ts` (`ENCRYPTION_KEY`)
+- `ModelFetcherService` dynamically validates keys and queries available models from provider APIs
+- Users select an active provider and model stored in `UserPreferences` (`activeProvider`, `activeModel`)
+- Dynamic model resolution flow:
+  1. Triggering user ID is resolved (from session in manual triggers, or from installation repo connection owner in webhooks)
+  2. Processor calls `LlmProviderService.getRawKey(userId)`
+  3. Decrypted `UserLlmKey` is passed into LangGraph config: `{ configurable: { userLlmKey } }`
+  4. LangGraph nodes (`triageAnalysis`, `simpleAnalyze`, `specializedAgent`, `analyze-agent`, `llmAnalysis`) call `LlmService.getChatModel(userKey)` to instantiate the corresponding LangChain chat model
+  5. If no user key is configured, falls back to server-level default (`Gemini` / `NVIDIA NIM`)
 
 ### LangGraph
 
@@ -231,7 +271,8 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 
 ### LLM Integration
 
-- Failover chain: Gemini (primary) → Groq (fallback) → Ollama (last resort)
+- Dynamic model instantiation via `LlmService.getChatModel(userKey)`
+- Supports BYOK Gemini, OpenAI, Groq, NVIDIA NIM, plus system fallbacks
 - Use `@langchain/core` abstractions — never call provider APIs directly
 - PR prompts live in `review/agent-prompt.service.ts` and `review/pr-review-prompt.service.ts`
 - LLM responses must be validated against Zod schemas
@@ -248,7 +289,7 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 - TanStack Query for server state, Zustand for client state
 - Monaco Editor for code input and annotated code viewing
 - SSE for real-time evaluation and review progress
-- Pages: login, register, dashboard, evaluate, evaluation detail, evaluations list, GitHub repos, PR review detail, profile, presets
+- Pages: login, register, dashboard, evaluate, evaluation detail, evaluations list, GitHub repos, PR review detail, profile, presets, LLM BYOK settings
 
 ### Testing
 
@@ -259,7 +300,13 @@ Frontend lives in `./frontend` as a separate Next.js app *(not yet started)*.
 ## Key Data Models (Prisma / PostgreSQL)
 
 ### User
-Fields: `id`, `email`, `name`, `avatarUrl`, `hashedPassword` (nullable for OAuth users), `apiKeyHash` (SHA-256 of raw key, indexed unique), `role` (USER | ADMIN), `oauthAccounts[]`, `refreshTokens[]`, `preferences`, `githubInstallations[]`, `prReviews[]`, `evaluations[]`, `presets[]`, `developerMemory`
+Fields: `id`, `email`, `name`, `avatarUrl`, `hashedPassword` (nullable for OAuth users), `apiKeyHash` (SHA-256 of raw key, indexed unique), `role` (USER | ADMIN), `oauthAccounts[]`, `refreshTokens[]`, `preferences`, `llmApiKeys[]`, `githubInstallations[]`, `prReviews[]`, `evaluations[]`, `presets[]`, `developerMemory`
+
+### UserPreferences
+Fields: `id`, `userId` (unique FK), `defaultLanguage`, `notificationsEnabled`, `activeProvider` (`LlmProvider` enum: `GEMINI` | `OPENAI` | `GROQ` | `NVIDIA`), `activeModel` (string)
+
+### LlmApiKey (BYOK)
+Fields: `id`, `userId` (FK), `provider` (`LlmProvider` enum), `encryptedKey` (AES-256-GCM encrypted raw key), `maskedKey` (e.g. `sk-...1234`), `baseUrl` (optional custom endpoint, e.g. for NVIDIA NIM or OpenAI compatible proxies), `createdAt`, `updatedAt`. Unique on `[userId, provider]`.
 
 ### GitHubInstallation
 Fields: `installationId` (BigInt PK), `accountLogin`, `accountType`, `suspendedAt`, `userId` (FK nullable), `webhookDeliveries[]`, `connections[]`
@@ -271,10 +318,7 @@ Fields: `id`, `installationId`, `repoId`, `repoFullName`, `private`, `connectedA
 Fields: `deliveryId` (PK), `event`, `action`, `installationId`, `repoFullName`, `prNumber`, `headSha`, `baseSha`, `status` (RECEIVED | ENQUEUED | PROCESSED | IGNORED | FAILED), `jobId`, `error`, `receivedAt`, `processedAt`
 
 ### PrReview (review run)
-Fields: `id`, `deliveryId` (FK nullable, unique), `installationId`, `repoFullName`, `prNumber`, `headSha`, `baseSha`, `status` (PENDING | RUNNING | COMPLETED | FAILED), `triggeredBy` (WEBHOOK | MANUAL), `userId` (FK nullable), `summaryText`, `githubReviewId`, `bullmqJobId`, `error`, `currentStep`, `currentStepMessage`, `reviewMode` (FULL | INCREMENTAL), `priorHeadSha`, `completedAt`
-
-### PostedFinding (Phase G — cross-run dedup)
-Fingerprint record per `(repoFullName, prNumber, path, line, normalizedMessage)` — prevents re-posting identical findings on `synchronize` events.
+Fields: `id`, `deliveryId` (FK nullable, unique), `installationId`, `repoFullName`, `prNumber`, `headSha`, `baseSha`, `status` (PENDING | RUNNING | COMPLETED | FAILED), `triggeredBy` (WEBHOOK | MANUAL), `userId` (FK nullable), `summaryText`, `githubReviewId`, `bullmqJobId`, `error`, `currentStep`, `currentStepMessage`, `createdAt`, `completedAt`
 
 ### DeveloperMemory
 Fields: `userId`, `acceptedRuleIds[]`, `dismissedRuleIds[]`, `styleSignals` (JSON) — Phase J (future)
@@ -286,7 +330,7 @@ Stub models in Prisma schema; full schema for snippet evaluation pipeline is a f
 
 ```
 START
-  → ingestDiff         (fetch PR metadata + diff text; incremental compare if priorHeadSha present)
+  → ingestDiff         (fetch PR metadata + diff text)
   → chunk              (DiffParserService + DiffChunkerService → ReviewChunk[])
   → enrichFiles        (PrFileEnrichmentService: fetch file @ headSha → Tree-sitter AST → FileReviewContext[])
   → triageAnalysis     (LLM decides: simple path vs. multi-agent fan-out via LangGraph Send)
@@ -295,13 +339,13 @@ START
        (search_symbol_usage, search_import_target via GitHub search/code API)
   → aggregateFindings  (dedup by (path, line, category), merge severity)
   → validateFindings   (ValidatePrFindingsService: drop invalid line refs, severity/count caps)
-  → postReview         (createPullRequestReview with inline comments[] + summary body; dedup via PostedFinding fingerprints)
+  → postReview         (createPullRequestReview with inline comments[] + summary body)
 END
 ```
 
 - Each node calls `PrReviewProgressPublisher` (stepStarted / stepCompleted / stepFailed)
 - Checkpointer: Postgres-backed; keyed by `reviewRunId` → supports retry/resume
-- Incremental mode (Phase G): `ingestDiff` uses `GithubApiService.compareCommits` when `priorHeadSha` present; `postReview` skips findings with already-posted fingerprints
+- BYOK support: Injects user's active LLM chat model dynamically into all analysis and agent nodes.
 
 ## Snippet Evaluation LangGraph Pipeline
 
@@ -352,24 +396,26 @@ Connect after `POST /api/v1/review-runs/repositories/:repoId/pull-requests/:prNu
 | D     | Global search (GitHub API)              | ✅ Done         | `GlobalSearchProvider`, `GitHubSearchProvider`, `PrSearchToolExecutor`, search tools in analyze   |
 | E     | Structured findings + inline comments   | ✅ Done         | `Finding` schema, `ValidatePrFindingsService`, `comment-mapper.util`, inline `postReview` node    |
 | F     | Multi-agent analysis + triage           | ✅ Done         | `triageAnalysis` (LLM + LangGraph Send fan-out), `specialized-agent.node`, `aggregateFindings`   |
-| G     | Incremental review + dedup              | ✅ Done         | `compareCommits`, `ReviewMode`, `PostedFinding` fingerprints, dedup-aware `postReview`            |
+| G     | Incremental review + dedup              | ✅ Done         | `compareCommits`, `ReviewMode`, dedup-aware review posting                                        |
 | H     | Sandbox-backed global search + exec     | ⏳ Not started  | `SandboxModule`, `SandboxSearchProvider`, `sandboxVerify` node — V2, optional                    |
 | I     | Rules engine                            | ⏳ Not started  | Rules ingestion, `loadRules` node, `ruleId` on findings                                           |
 | J     | Memory + feedback                       | ⏳ Not started  | UI feedback API, `DeveloperMemory` / `RepoMemory` retrieval, optional pgvector RAG                |
 
-### Core Platform Phases (snippet evaluation + foundation)
+### Core Platform Phases (snippet evaluation + foundation + BYOK)
 
-| Phase | Scope                        | Status         | Notes                                                           |
-| ----- | ---------------------------- | -------------- | --------------------------------------------------------------- |
-| 0     | Foundation & scaffold        | ✅ Done         | NestJS + Fastify, Prisma, Redis, BullMQ, Auth, config           |
-| 1     | Auth & user management       | ✅ Done         | JWT, refresh tokens, GitHub OAuth, API key (hash stored)        |
-| 2     | Snippet LangGraph pipeline   | 🔶 Partial     | Graph nodes exist; scoring & report Prisma models are stubs     |
-| 3     | Snippet API + SSE + Frontend | ⏳ Not started  | Frontend not yet started; snippet SSE endpoint exists           |
-| 4     | GitHub repo integration      | ✅ Done (PR)    | GitHub App auth, repo connection, PR review pipeline complete   |
-| 5     | Shareable reports + presets  | ⏳ Not started  | Prisma stubs exist                                              |
-| 6     | Docker sandbox               | ⏳ Not started  | Optional add-on; Phase H in PR plan                            |
-| 7     | CLI tool                     | ⏳ Not started  | Add-on                                                          |
-| 8     | Documentation & demo         | ⏳ Not started  | Add-on                                                          |
+| Phase | Scope                        | Status         | Notes                                                               |
+| ----- | ---------------------------- | -------------- | ------------------------------------------------------------------- |
+| 0     | Foundation & scaffold        | ✅ Done         | NestJS + Fastify, Prisma, Redis, BullMQ, Auth, config               |
+| 1     | Auth & User Management       | ✅ Done         | JWT, refresh tokens, GitHub OAuth, API key (hash stored)            |
+| 1.5   | BYOK & Multi-Provider LLM    | ✅ Done         | Encrypted API keys, dynamic model fetch, user preferences, failover |
+| 1.6   | Standard API & Swagger Docs  | ✅ Done         | Unified envelope (`ApiResponse<T>`), standardized error filter      |
+| 2     | Snippet LangGraph pipeline   | 🔶 Partial     | Graph nodes exist with BYOK; scoring & report DB models are stubs   |
+| 3     | Snippet API + SSE + Frontend | ⏳ Not started  | Frontend not yet started; snippet SSE endpoint exists               |
+| 4     | GitHub repo integration      | ✅ Done (PR)    | GitHub App auth, repo connection, PR review pipeline complete       |
+| 5     | Shareable reports + presets  | ⏳ Not started  | Prisma stubs exist                                                  |
+| 6     | Docker sandbox               | ⏳ Not started  | Optional add-on; Phase H in PR plan                                |
+| 7     | CLI tool                     | ⏳ Not started  | Add-on                                                              |
+| 8     | Documentation & demo         | ⏳ Not started  | Add-on                                                              |
 
 ## Plan Files Reference
 
@@ -411,7 +457,7 @@ All plans live in `.agents/plans/`. Key files:
 
 - **PostgreSQL is the chosen database** — all schema changes go through `prisma/schema.prisma` and `prisma migrate dev`
 - **PR review is the primary shipped feature** — Phases 0/1/A–G are all complete; snippet evaluation graph exists but its UI/report pipeline is still a stub
-- Use Ollama locally for rapid prompt iteration during development to avoid burning Gemini/Groq rate limits
+- **BYOK is active** — users can configure API keys for Gemini, OpenAI, Groq, or NVIDIA NIM with custom models and endpoints
 - The PR graph supports retry/resume via the Postgres LangGraph checkpointer (keyed by `reviewRunId`)
 - `GlobalSearchProvider` is pluggable — `GitHubSearchProvider` is V1; `SandboxSearchProvider` is V2 without graph rewrites
 - Do **not** call `GraphFactory.invokeSnippet` from PR jobs — PR uses `PrReviewGraphFactory.invokePrReview` exclusively
