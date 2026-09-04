@@ -3,6 +3,7 @@ import { Global, Module } from '@nestjs/common';
 import { AppConfigModule } from '../config/config.module';
 import { GitHubInstallationRepository } from './github/github-installation.repository';
 import { ConnectionRepository } from './github/connection.repository';
+import { PostedFindingRepository } from './github/posted-finding.repository';
 import { PrReviewRepository } from './github/pr-review.repository';
 import { WebhookDeliveryRepository } from './github/webhook.repository';
 import { PrismaService } from './prisma.service';
@@ -20,6 +21,7 @@ import { PrismaService } from './prisma.service';
     ConnectionRepository,
     WebhookDeliveryRepository,
     PrReviewRepository,
+    PostedFindingRepository,
   ],
   exports: [
     PrismaService,
@@ -27,6 +29,7 @@ import { PrismaService } from './prisma.service';
     ConnectionRepository,
     WebhookDeliveryRepository,
     PrReviewRepository,
+    PostedFindingRepository,
   ],
 })
 export class PrismaModule {}

@@ -12,7 +12,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "prisma:migrate-dev": "pnpm dlx prisma migrate dev --name init",
+    "prisma:migrate-dev": "pnpm prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
     "start:prod": "node dist/main",
