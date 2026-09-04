@@ -12,6 +12,7 @@ export const PR_REVIEW_STEPS = [
   'analyzing_performance',
   'analyzing_best_practices',
   'aggregating_findings',
+  'synthesizing_overview',
   'validating_findings',
   'posting_review',
 ] as const;

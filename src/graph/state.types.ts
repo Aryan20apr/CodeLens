@@ -73,6 +73,12 @@ export type Finding = {
   suggestedFix?: string;
 
   /**
+   * SHA-1 of normalized evidenceSnippet (or title+filePath fallback). Used for
+   * resilient cross-review delta matching when line numbers shift.
+   */
+  fingerprint?: string;
+
+  /**
    * Useful when skipping static analysis.
    */
   confidence: 'high' | 'medium' | 'low';
