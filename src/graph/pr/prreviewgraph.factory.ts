@@ -21,6 +21,7 @@ import type { AppConfig } from '../../config/app-config.types';
 import { APP_CONFIG } from '../../config/config.constants';
 import { ValidatePrFindingsService } from '../../review/findings/validator.service';
 import { createValidateFindingsNode } from './nodes/validate-findings.node';
+import { createSynthesizeOverviewNode } from './nodes/synthesize-overview.node';
 import { LlmService } from '../../llm/llm.service';
 import { createTriageAnalysisNode, routeAfterTriage } from './nodes/triage-analysis.node';
 import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
@@ -29,8 +30,17 @@ import type {
   PrReviewGraphInvokeResult,
 } from './pr-review-graph.types';
 import { PrReviewGraphState } from './pr-review.state.annotation';
+import { PostedFindingRepository } from '../../db/github/posted-finding.repository';
 import { LangGraphCheckpointerService } from '../checkpointer/langgraph-checkpointer.service';
 import type { UserLlmKey } from '../../llm-provider/llm-provider.service';
+
+export function routeAfterAggregate(
+  state: typeof PrReviewGraphState.State,
+): string {
+  return state.analysisRoute === 'specialized' && !state.isIncrementalReview
+    ? 'synthesizeOverview'
+    : 'validateFindings';
+}
 
 @Injectable()
 export class PrReviewGraphFactory implements OnModuleInit {
@@ -51,6 +61,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly llm: LlmService,
     private readonly findingsValidator: ValidatePrFindingsService,
     private readonly checkpointerService: LangGraphCheckpointerService,
+    private readonly postedFindings: PostedFindingRepository,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -58,7 +69,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> triageAnalysis -> {simpleAnalyze | [securityAgent ‖ perfAgent ‖ bpAgent]} -> aggregateFindings -> validateFindings -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> triageAnalysis -> {simpleAnalyze | [securityAgent ‖ perfAgent ‖ bpAgent]} -> aggregateFindings -> {synthesizeOverview | validateFindings} -> validateFindings -> postReview -> END',
     );
   }
 
@@ -102,6 +113,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
           prNumber: input.prNumber,
           headSha: input.headSha,
           baseSha: input.baseSha,
+          previousReview: input.previousReview ?? null,
+          isIncrementalReview: input.isIncrementalReview ?? false,
           prTitle: null,
           prBody: null,
           diffText: null,
@@ -167,6 +180,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       summaryMarkdown: result.summaryMarkdown,
       githubReviewId: result.githubReviewId,
       events: result.events,
+      validatedFindings: result.validatedFindings,
     };
   }
 
@@ -206,7 +220,14 @@ export class PrReviewGraphFactory implements OnModuleInit {
       this.progress,
     );
 
-    const aggregateFindings = createAggregateFindingsNode(this.progress);
+    const aggregateFindings = createAggregateFindingsNode(
+      this.progress,
+      this.appConfig.prReview.findings.mergeSimilarityThreshold,
+    );
+    const synthesizeOverview = createSynthesizeOverviewNode(
+      this.llm,
+      this.progress,
+    );
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
       this.progress,
@@ -214,6 +235,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const postReview = createPostReviewNode(
       this.github,
       this.progress,
+      this.postedFindings,
       this.appConfig.prReview.findings.maxCommentBodyChars,
     );
 
@@ -227,6 +249,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addNode('perfAgent', perfAgent)
       .addNode('bpAgent', bpAgent)
       .addNode('aggregateFindings', aggregateFindings)
+      .addNode('synthesizeOverview', synthesizeOverview)
       .addNode('validateFindings', validateFindings)
       .addNode('postReview', postReview)
       .addEdge(START, 'ingestDiff')
@@ -248,7 +271,11 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addEdge('securityAgent', 'aggregateFindings')
       .addEdge('perfAgent', 'aggregateFindings')
       .addEdge('bpAgent', 'aggregateFindings')
-      .addEdge('aggregateFindings', 'validateFindings')
+      .addConditionalEdges('aggregateFindings', routeAfterAggregate, [
+        'synthesizeOverview',
+        'validateFindings',
+      ])
+      .addEdge('synthesizeOverview', 'validateFindings')
       .addEdge('validateFindings', 'postReview')
       .addEdge('postReview', END)
       .compile({ checkpointer });

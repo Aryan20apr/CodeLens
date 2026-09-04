@@ -1,4 +1,5 @@
 import { GithubApiService } from '../../../github/github-api.service';
+import { PostedFindingRepository } from '../../../db/github/posted-finding.repository';
 import { mapFindingsToGithubComments } from '../../../review/findings/comment-mapper.util';
 import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-progress-publisher.service';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
@@ -14,6 +15,7 @@ type PostUpdate = Partial<
 export function createPostReviewNode(
   github: GithubApiService,
   progress: PrReviewProgressPublisher,
+  postedFindings: PostedFindingRepository,
   maxCommentBodyChars: number,
 ): (state: PrReviewGraphStateType) => Promise<PostUpdate> {
   return async (state) => {
@@ -57,10 +59,19 @@ export function createPostReviewNode(
       validatedFindings,
     } = state;
 
-    const comments = mapFindingsToGithubComments(
-      validatedFindings,
-      maxCommentBodyChars,
+    const knownFingerprints = await postedFindings.findFingerprints(
+      repoFullName,
+      prNumber,
     );
+
+    const newFindings = validatedFindings.filter(
+      (finding) => !finding.fingerprint || !knownFingerprints.has(finding.fingerprint),
+    );
+
+    const comments =
+      newFindings.length > 0
+        ? mapFindingsToGithubComments(newFindings, maxCommentBodyChars)
+        : [];
 
     const { result: githubReviewId, events } = await runPrSteps(
       reviewRunId,
@@ -69,7 +80,10 @@ export function createPostReviewNode(
         {
           step: 'posting_review',
           graphNode: 'postReview',
-          meta: { inlineCommentCount: comments.length },
+          meta: {
+            inlineCommentCount: comments.length,
+            dedupedCount: validatedFindings.length - newFindings.length,
+          },
           fn: () =>
             github.createPullRequestReview(
               installationId,
@@ -85,8 +99,26 @@ export function createPostReviewNode(
       ],
     );
 
+    if (newFindings.length > 0) {
+      await postedFindings.insertMany(
+        newFindings
+          .filter((f) => f.fingerprint)
+          .map((finding) => ({
+            repoFullName,
+            prNumber,
+            fingerprint: finding.fingerprint!,
+            reviewRunId,
+            filePath: finding.filePath ?? null,
+            category: finding.category,
+            headSha,
+            githubReviewId,
+          })),
+      );
+    }
+
     await progress.stepCompleted(reviewRunId, 'posting_review', {
       inlineCommentCount: comments.length,
+      dedupedCount: validatedFindings.length - newFindings.length,
       githubReviewId: String(githubReviewId),
     });
 
