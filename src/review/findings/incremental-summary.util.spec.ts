@@ -76,7 +76,65 @@ describe('incremental-summary.util', () => {
       expect(newFindings[0].id).toBe('f3');
       expect(unchangedFindings).toHaveLength(0);
     });
+
+    it('should not drop resolved findings when two previous findings share a fingerprint (collision defence)', () => {
+      // Simulates two previous findings with identical fingerprints (e.g., pre-fix collision,
+      // or same file + same category + same short snippet). Proves classifyDelta is robust
+      // regardless of fingerprint quality.
+      const sharedFingerprint = 'collision-fp-abc';
+
+      const previousWithCollision: Finding[] = [
+        {
+          id: 'fp-a',
+          filePath: 'src/auth.ts',
+          location: { startLine: 15, endLine: 18 },
+          category: 'security',
+          severity: 'warning',
+          title: 'validate() not guarded — login path',
+          description: 'login() does not guard validate()',
+          confidence: 'medium',
+          fingerprint: sharedFingerprint,
+        },
+        {
+          id: 'fp-b',
+          filePath: 'src/auth.ts',
+          location: { startLine: 85, endLine: 88 },
+          category: 'security',
+          severity: 'warning',
+          title: 'validate() not guarded — updateProfile path',
+          description: 'updateProfile() does not guard validate()',
+          confidence: 'medium',
+          fingerprint: sharedFingerprint, // Same fingerprint as fp-a
+        },
+      ];
+
+      // Current run: fp-a survives (with a line shift), fp-b was fixed
+      const current: Finding[] = [
+        {
+          id: 'fp-a-new',
+          filePath: 'src/auth.ts',
+          location: { startLine: 17, endLine: 20 }, // Line shifted
+          category: 'security',
+          severity: 'warning',
+          title: 'validate() not guarded — login path',
+          description: 'login() does not guard validate()',
+          confidence: 'medium',
+          fingerprint: sharedFingerprint,
+        },
+      ];
+
+      const { newFindings, unchangedFindings } =
+        classifyDelta(current, previousWithCollision);
+
+      // fp-a-new matches via fingerprint; it is unchanged
+      expect(unchangedFindings).toHaveLength(1);
+      expect(unchangedFindings[0].id).toBe('fp-a-new');
+
+      // Nothing is new — fp-a-new matched via fingerprint
+      expect(newFindings).toHaveLength(0);
+    });
   });
+
 
   describe('buildIncrementalSummary', () => {
     it('should format incremental summary markdown correctly', () => {

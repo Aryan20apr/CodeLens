@@ -11,27 +11,54 @@ export type DeltaResult = {
   unchangedFindings: Finding[];
 };
 
-/** Two-pass match: fingerprint first (resilient to line shifts), key fallback. */
+/**
+ * Two-pass match: fingerprint first (resilient to line shifts), key fallback.
+ *
+ * prevByFingerprint is multi-valued: if two previous findings share a fingerprint
+ * (collision), each current finding consumes exactly one previous finding from the
+ * bucket (FIFO) so that `unchangedFindings` is counted correctly.
+ */
 export function classifyDelta(
   current: Finding[],
   previous: Finding[],
 ): DeltaResult {
-  const prevByFingerprint = new Map(
-    previous.filter((f) => f.fingerprint).map((f) => [f.fingerprint!, f]),
-  );
+  // Multi-valued map: fingerprint -> all previous findings with that fingerprint
+  const prevByFingerprint = new Map<string, Finding[]>();
+  for (const f of previous) {
+    if (f.fingerprint) {
+      const bucket = prevByFingerprint.get(f.fingerprint) ?? [];
+      bucket.push(f);
+      prevByFingerprint.set(f.fingerprint, bucket);
+    }
+  }
+
   const prevByKey = new Map(
     previous.map((f) => [`${f.filePath}:${f.location.startLine}:${f.category}`, f]),
   );
+
+  // Tracks how many times each fingerprint bucket has been consumed by current findings.
+  // Each current finding consumes at most one previous finding from the bucket (FIFO).
+  const fpConsumedCount = new Map<string, number>();
 
   const newFindings: Finding[] = [];
   const unchangedFindings: Finding[] = [];
 
   for (const f of current) {
-    const byFp = f.fingerprint ? prevByFingerprint.get(f.fingerprint) : undefined;
+    const byFpCandidates = f.fingerprint
+      ? (prevByFingerprint.get(f.fingerprint) ?? [])
+      : [];
     const byKey = prevByKey.get(`${f.filePath}:${f.location.startLine}:${f.category}`);
-    const matched = byFp ?? byKey;
 
-    if (matched) {
+    if (byFpCandidates.length > 0) {
+      // Consume one previous finding from the bucket (FIFO) so that two current
+      // findings with the same fingerprint don't both claim "unchanged" against
+      // the same single previous finding.
+      const consumed = fpConsumedCount.get(f.fingerprint!) ?? 0;
+      if (byFpCandidates[consumed]) {
+        fpConsumedCount.set(f.fingerprint!, consumed + 1);
+      }
+      unchangedFindings.push(f);
+    } else if (byKey) {
       unchangedFindings.push(f);
     } else {
       newFindings.push(f);
