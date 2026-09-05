@@ -112,7 +112,7 @@ describe('incremental-summary.util', () => {
       expect(summary).toContain('`def4567`');
       expect(summary).toContain('### New Findings (1)');
       expect(summary).toContain('Unindexed query');
-      expect(summary).toContain('### Resolved / No Longer in Diff (2)');
+      expect(summary).not.toContain('### Resolved / No Longer in Diff');
       expect(summary).toContain('1 inline review comment on this PR.');
     });
   });

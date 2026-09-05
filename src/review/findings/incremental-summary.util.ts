@@ -88,17 +88,6 @@ export function buildIncrementalSummary(
     sections.push('### New Findings (0)', '_No new findings._', '');
   }
 
-  if (resolvedFindings.length > 0) {
-    sections.push(`### Resolved / No Longer in Diff (${resolvedFindings.length})`);
-    sections.push(
-      ...resolvedFindings.map(
-        (f) =>
-          `- ~~${f.filePath ? `\`${f.filePath}:${f.location.startLine}\`` : f.title} — ${f.title}~~ *(no longer in diff)*`,
-      ),
-    );
-    sections.push('');
-  }
-
   if (unchangedFindings.length > 0) {
     sections.push(
       `### Unchanged Findings Still Present (${unchangedFindings.length})`,
