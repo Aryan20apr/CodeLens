@@ -73,8 +73,9 @@ export type Finding = {
   suggestedFix?: string;
 
   /**
-   * SHA-1 of normalized evidenceSnippet (or title+filePath fallback). Used for
-   * resilient cross-review delta matching when line numbers shift.
+   * SHA-1 of `normalize(filePath) + "::" + category + "::" + normalize(evidenceSnippet ?? title)`.
+   * Unique per file × category × code content — resilient to line-number shifts because
+   * no position data is included. Set by `stampFingerprints()` in the aggregateFindings node.
    */
   fingerprint?: string;
 
