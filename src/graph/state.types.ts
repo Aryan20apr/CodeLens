@@ -73,6 +73,13 @@ export type Finding = {
   suggestedFix?: string;
 
   /**
+   * SHA-1 of `normalize(filePath) + "::" + category + "::" + normalize(evidenceSnippet ?? title)`.
+   * Unique per file × category × code content — resilient to line-number shifts because
+   * no position data is included. Set by `stampFingerprints()` in the aggregateFindings node.
+   */
+  fingerprint?: string;
+
+  /**
    * Useful when skipping static analysis.
    */
   confidence: 'high' | 'medium' | 'low';

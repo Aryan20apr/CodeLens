@@ -71,6 +71,20 @@ export const PrReviewGraphState = Annotation.Root({
     default: () => '',
   }),
 
+  previousReview: Annotation<{
+    reviewRunId: string;
+    headSha: string;
+    baseSha: string;
+    findings: Finding[];
+  } | null>({
+    reducer: lastWins,
+    default: () => null,
+  }),
+  isIncrementalReview: Annotation<boolean>({
+    reducer: lastWins,
+    default: () => false,
+  }),
+
   prTitle: Annotation<string | null>({
     reducer: lastWins,
     default: () => null,

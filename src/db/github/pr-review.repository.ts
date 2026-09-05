@@ -166,7 +166,12 @@ export class PrReviewRepository {
     }
   }
 
-  async markCompleted(id: string, summaryText: string, githubReviewId: bigint) {
+  async markCompleted(
+    id: string,
+    summaryText: string,
+    githubReviewId: bigint,
+    findingsJson?: unknown,
+  ) {
     const className = PrReviewRepository.name;
     const methodName = 'markCompleted';
 
@@ -183,6 +188,7 @@ export class PrReviewRepository {
           status: PrReviewStatus.COMPLETED,
           summaryText,
           githubReviewId,
+          findingsJson: (findingsJson ?? undefined) as any,
           completedAt: new Date(),
           error: null,
         },
@@ -264,6 +270,22 @@ export class PrReviewRepository {
     }
   }
 
+  async findLastCompletedForPr(
+    repoFullName: string,
+    prNumber: number,
+  ): Promise<{
+    id: string;
+    headSha: string;
+    baseSha: string;
+    findingsJson: unknown;
+  } | null> {
+    return this.prisma.prReview.findFirst({
+      where: { repoFullName, prNumber, status: PrReviewStatus.COMPLETED },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, headSha: true, baseSha: true, findingsJson: true },
+    });
+  }
+
   async findByIdWithDelivery(id: string) {
     return this.prisma.prReview.findUnique({
       where: { id },
@@ -320,5 +342,35 @@ export class PrReviewRepository {
       this.prisma.prReview.count({ where }),
     ]);
     return { items, total, page, perPage };
+  }
+
+  async findLatestCompletedWithReview(
+    repoFullName: string,
+    prNumber: number,
+  ): Promise<{ id: string; headSha: string } | null> {
+    return this.prisma.prReview.findFirst({
+      where: {
+        repoFullName,
+        prNumber,
+        status: PrReviewStatus.COMPLETED,
+        githubReviewId: { not: null },
+      },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, headSha: true },
+    });
+  }
+
+  async findInFlight(
+    repoFullName: string,
+    prNumber: number,
+  ): Promise<{ id: string } | null> {
+    return this.prisma.prReview.findFirst({
+      where: {
+        repoFullName,
+        prNumber,
+        status: { in: [PrReviewStatus.PENDING, PrReviewStatus.RUNNING] },
+      },
+      select: { id: true },
+    });
   }
 }

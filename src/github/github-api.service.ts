@@ -4,6 +4,13 @@ import type { Logger } from 'winston';
 import type { GithubReviewCommentInput } from '../review/types/pr-findings.types';
 import { GithubAppAuthService } from './github-app-auth.service';
 
+export function isDiffTruncated(diffText: string): boolean {
+  return (
+    diffText.includes(`[Diff truncated at ${MAX_DIFF_CHARS}`) ||
+    diffText.length >= MAX_DIFF_CHARS
+  );
+}
+
 export const MAX_DIFF_CHARS = 200_000;
 export const MAX_FILE_CONTENT_BYTES = 512_000;
 
@@ -168,6 +175,67 @@ export class GithubApiService {
     });
 
     return text;
+  }
+
+  async compareCommits(
+    installationId: bigint,
+    repoFullName: string,
+    baseSha: string,
+    headSha: string,
+  ): Promise<string> {
+    const className = GithubApiService.name;
+    const methodName = 'compareCommits';
+
+    this.logger.info(`[${className}] [${methodName}] :: Comparing commits`, {
+      installationId: String(installationId),
+      repoFullName,
+      baseSha,
+      headSha,
+    });
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+
+    const compare = await octokit.request({
+      method: 'GET',
+      url: '/repos/{owner}/{repo}/compare/{basehead}',
+      owner,
+      repo,
+      basehead: `${baseSha}...${headSha}`,
+      headers: { accept: 'application/vnd.github.v3.diff' },
+    });
+
+    if (typeof compare.data !== 'string') {
+      throw new Error(
+        'Compare API did not return diff text (expected unified diff media type)',
+      );
+    }
+
+    let text = compare.data;
+    if (text.length > MAX_DIFF_CHARS) {
+      text =
+        text.slice(0, MAX_DIFF_CHARS) +
+        `\n\n[Diff truncated at ${MAX_DIFF_CHARS} chars]`;
+    }
+
+    return text;
+  }
+
+  async getCompareChangedFileCount(
+    installationId: bigint,
+    repoFullName: string,
+    baseSha: string,
+    headSha: string,
+  ): Promise<number> {
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+    const { data } = await octokit.repos.compareCommits({
+      owner,
+      repo,
+      base: baseSha,
+      head: headSha,
+    });
+    return data.files?.length ?? 0;
   }
 
   async createPullRequestReview(

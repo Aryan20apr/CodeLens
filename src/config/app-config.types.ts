@@ -80,6 +80,11 @@ export interface AppConfig {
       minConfidence: 'low' | 'medium' | 'high';
       allowedSeverities: import('../graph/state.types').FindingSeverity[];
       maxCommentBodyChars: number;
+      mergeSimilarityThreshold: number;
+    };
+    incremental: {
+      enabled: boolean;
+      skipIfInFlight: boolean;
     };
   };
 }

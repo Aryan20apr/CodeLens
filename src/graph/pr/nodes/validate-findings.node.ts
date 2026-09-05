@@ -1,4 +1,5 @@
-import { formatReviewBody } from '../../../review/findings/format-review-body.util';
+import { formatStructuredOverview } from '../../../review/findings/format-review-body.util';
+import { buildIncrementalSummary } from '../../../review/findings/incremental-summary.util';
 import { ValidatePrFindingsService } from '../../../review/findings/validator.service';
 import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-progress-publisher.service';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
@@ -53,10 +54,19 @@ export function createValidateFindingsNode(
             config: validator.getDefaultConfig(),
           });
 
-          const summaryMarkdown = formatReviewBody(
-            state.analysisSummary!,
-            validatedFindings.length,
-          );
+          const summaryMarkdown =
+            state.isIncrementalReview && state.previousReview
+              ? buildIncrementalSummary(
+                validatedFindings,
+                state.headSha,
+                state.previousReview,
+                validatedFindings.length,
+              )
+              : formatStructuredOverview(
+                state.analysisSummary!,
+                validatedFindings,
+                validatedFindings.length,
+              );
 
           return { validatedFindings, validationStats, summaryMarkdown };
         },

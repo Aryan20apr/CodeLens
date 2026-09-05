@@ -10,7 +10,7 @@ import type { CodeReviewJobPayload } from './dtos/code-review.dto';
 import { LanguageDetectService } from 'src/graph/lib/language-detect.service';
 import { RedisPubSubService } from 'src/streaming/redis-pub-sub.service';
 import { LlmProviderService } from '../llm-provider/llm-provider.service';
-import { channel } from 'diagnostics_channel';
+
 @Processor(CODE_REVIEW_QUEUE)
 export class CodeReviewProcessor extends WorkerHost {
   private readonly logger: Logger;

@@ -275,6 +275,7 @@ model PrReview {
   userId          String?
   user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   summaryText     String?
+  findingsJson    Json?
   githubReviewId  BigInt?
   bullmqJobId     String?
   error               String?
@@ -286,4 +287,20 @@ model PrReview {
   @@index([repoFullName, prNumber])
   @@index([repoFullName, prNumber, headSha])
   @@index([userId])
+}
+
+model PrReviewPostedFinding {
+  id             String   @id @default(uuid(7))
+  repoFullName   String
+  prNumber       Int
+  fingerprint    String
+  reviewRunId    String
+  filePath       String?
+  category       String
+  headSha        String
+  githubReviewId BigInt?
+  createdAt      DateTime @default(now())
+
+  @@unique([repoFullName, prNumber, fingerprint])
+  @@index([repoFullName, prNumber])
 }

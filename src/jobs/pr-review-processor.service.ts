@@ -14,6 +14,7 @@ import type { PrReviewStep } from '../streaming/types/pr-review-progress.types';
 import { PR_REVIEW_QUEUE } from './constants';
 import type { PrReviewJobPayload } from './dtos/pr-review-job.dto';
 import { LlmProviderService } from '../llm-provider/llm-provider.service';
+import type { Finding } from '../graph/state.types';
 
 @Processor(PR_REVIEW_QUEUE)
 export class PrReviewProcessorService extends WorkerHost {
@@ -111,13 +112,51 @@ export class PrReviewProcessorService extends WorkerHost {
 
       const userLlmKey = run.userId ? await this.llmProvider.getRawKey(run.userId) : null;
 
-      const { summaryMarkdown, githubReviewId } =
-        await this.prGraph.invokePrReview(job.data, { userLlmKey: userLlmKey ?? undefined });
+      const previousRun = await this.runs.findLastCompletedForPr(
+        repoFullName,
+        prNumber,
+      );
+      const isIncremental =
+        previousRun != null &&
+        previousRun.headSha !== run.headSha &&
+        previousRun.findingsJson != null;
+
+      const previousReview =
+        isIncremental && previousRun
+          ? {
+              reviewRunId: previousRun.id,
+              headSha: previousRun.headSha,
+              baseSha: previousRun.baseSha,
+              findings: previousRun.findingsJson as Finding[],
+            }
+          : null;
+
+      this.logger.info(`[${className}] [${methodName}] :: Review mode resolved`, {
+        reviewRunId,
+        isIncremental,
+        previousReviewRunId: previousRun?.id,
+        previousHeadSha: previousRun?.headSha,
+        currentHeadSha: run.headSha,
+        previousFindingsCount: Array.isArray(previousRun?.findingsJson)
+          ? previousRun?.findingsJson.length
+          : null,
+      });
+
+      const { summaryMarkdown, githubReviewId, validatedFindings } =
+        await this.prGraph.invokePrReview(
+          {
+            ...job.data,
+            previousReview,
+            isIncrementalReview: isIncremental,
+          },
+          { userLlmKey: userLlmKey ?? undefined },
+        );
 
       await this.runs.markCompleted(
         reviewRunId,
         summaryMarkdown,
         BigInt(githubReviewId),
+        validatedFindings,
       );
       if (deliveryId) {
         await this.deliveries.markProcessed(deliveryId);
