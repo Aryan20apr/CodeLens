@@ -8,7 +8,6 @@ export type PreviousReviewContext = {
 
 export type DeltaResult = {
   newFindings: Finding[];
-  resolvedFindings: Finding[];
   unchangedFindings: Finding[];
 };
 
@@ -24,8 +23,6 @@ export function classifyDelta(
     previous.map((f) => [`${f.filePath}:${f.location.startLine}:${f.category}`, f]),
   );
 
-  const matchedPrevIds = new Set<string>();
-
   const newFindings: Finding[] = [];
   const unchangedFindings: Finding[] = [];
 
@@ -35,16 +32,13 @@ export function classifyDelta(
     const matched = byFp ?? byKey;
 
     if (matched) {
-      matchedPrevIds.add(matched.id);
       unchangedFindings.push(f);
     } else {
       newFindings.push(f);
     }
   }
 
-  const resolvedFindings = previous.filter((f) => !matchedPrevIds.has(f.id));
-
-  return { newFindings, resolvedFindings, unchangedFindings };
+  return { newFindings, unchangedFindings };
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
@@ -66,7 +60,7 @@ export function buildIncrementalSummary(
   previous: PreviousReviewContext,
   inlineCommentCount: number,
 ): string {
-  const { newFindings, resolvedFindings, unchangedFindings } = classifyDelta(
+  const { newFindings, unchangedFindings } = classifyDelta(
     current,
     previous.findings,
   );

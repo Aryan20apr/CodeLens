@@ -46,17 +46,15 @@ describe('incremental-summary.util', () => {
         },
       ];
 
-      const { newFindings, resolvedFindings, unchangedFindings } =
+      const { newFindings, unchangedFindings } =
         classifyDelta(currentFindings, previousFindings);
 
       expect(unchangedFindings).toHaveLength(1);
       expect(unchangedFindings[0].id).toBe('f1-new');
-      expect(resolvedFindings).toHaveLength(1);
-      expect(resolvedFindings[0].id).toBe('f2'); // f2 was resolved
       expect(newFindings).toHaveLength(0);
     });
 
-    it('should identify new findings and resolved findings', () => {
+    it('should identify new findings', () => {
       const currentFindings: Finding[] = [
         {
           id: 'f3',
@@ -71,12 +69,11 @@ describe('incremental-summary.util', () => {
         },
       ];
 
-      const { newFindings, resolvedFindings, unchangedFindings } =
+      const { newFindings, unchangedFindings } =
         classifyDelta(currentFindings, previousFindings);
 
       expect(newFindings).toHaveLength(1);
       expect(newFindings[0].id).toBe('f3');
-      expect(resolvedFindings).toHaveLength(2); // f1 and f2 both resolved
       expect(unchangedFindings).toHaveLength(0);
     });
   });
