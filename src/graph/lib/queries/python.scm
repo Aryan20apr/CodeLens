@@ -1,15 +1,12 @@
 ;--- functions
-(function_definition name: (identifier) @function.name)
+(function_definition name: (identifier) @function.name) @function.def
 
 ;--- classes
-(class_definition name: (identifier) @class.name)
+(class_definition name: (identifier) @class.name) @class.def
 
 ;--- imports
 (import_statement name: (dotted_name) @import.source)
 (import_from_statement module_name: (dotted_name) @import.source)
 
 ;--- entry_points
-(if_statement
-  condition: (comparison_operator
-    left: (identifier) @entry
-    right: (string) @entry))
+(function_definition name: (identifier) @entry (#eq? @entry "main"))
