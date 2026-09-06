@@ -58,9 +58,10 @@ export class QueryLoaderService {
     if (l === 'ts' || l === 'tsx') return 'typescript';
     if (l === 'js' || l === 'jsx') return 'javascript';
     if (l === 'py') return 'python';
-    if (l === 'golang') return 'go';
-    if (l === 'rs') return 'rust';
-    if (l === 'c#') return 'csharp';
+    if (l === 'golang' || l === 'go') return 'go';
+    if (l === 'rs' || l === 'rust') return 'rust';
+    if (l === 'c#' || l === 'csharp' || l === 'cs') return 'csharp';
+    if (l === 'kt' || l === 'kotlin') return 'kotlin';
     return l || 'unknown';
   }
 
@@ -96,16 +97,15 @@ export class QueryLoaderService {
     const imports = toText('imports');
     const entryPoints = toText('entry_points');
 
-    if (!functions || !classes || !imports) {
-      // entry_points can be empty
+    if (!functions || !imports) {
       throw new Error(
-        'Invalid .scm format. Ensure blocks exist: ;--- functions, ;--- classes, ;--- imports (entry_points optional)',
+        'Invalid .scm format. Ensure blocks exist: ;--- functions, ;--- imports (classes and entry_points optional)',
       );
     }
 
     return {
       functions,
-      classes,
+      classes: classes || '',
       imports,
       entryPoints: entryPoints || '',
     };

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import path from 'path';
 import type { Logger } from 'winston';
@@ -14,8 +14,9 @@ export type CodeSymbol = {
 };
 
 @Injectable()
-export class AstExtractService {
+export class AstExtractService implements OnModuleDestroy {
   private readonly logger: Logger;
+  private readonly queryCache = new Map<string, Query>();
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
@@ -23,6 +24,17 @@ export class AstExtractService {
     private readonly queries: QueryLoaderService,
   ) {
     this.logger = logger.child({ context: AstExtractService.name });
+  }
+
+  onModuleDestroy() {
+    for (const q of this.queryCache.values()) {
+      try {
+        q.delete();
+      } catch {
+        // ignore cleanup error
+      }
+    }
+    this.queryCache.clear();
   }
 
   async buildMetadata(code: string, languageId: string): Promise<CodeMetadata> {
@@ -43,26 +55,26 @@ export class AstExtractService {
       return this.emptyMetadata(linesOfCode);
     }
 
-    let bundle: ReturnType<QueryLoaderService['getQueries']>;
     try {
-      this.logger.debug(`[${className}.${methodName}] Loading queries for languageId=${languageId}`);
-      bundle = this.queries.getQueries(languageId);
-    } catch (e) {
-      this.logger.warn(
-        `[${className}.${methodName}] Missing/invalid query file for ${languageId}: ${e instanceof Error ? e.message : String(e)}`
-      );
-      return this.emptyMetadata(linesOfCode);
-    }
+      let bundle: ReturnType<QueryLoaderService['getQueries']>;
+      try {
+        this.logger.debug(`[${className}.${methodName}] Loading queries for languageId=${languageId}`);
+        bundle = this.queries.getQueries(languageId);
+      } catch (e) {
+        this.logger.warn(
+          `[${className}.${methodName}] Missing/invalid query file for ${languageId}: ${e instanceof Error ? e.message : String(e)}`
+        );
+        return this.emptyMetadata(linesOfCode);
+      }
 
-    this.logger.debug(`[${className}.${methodName}] Retrieving language from TreeSitterService`);
-    const lang = await this.treeSitter.getLanguage(languageId);
-    if (!lang) {
-      this.logger.warn(`[${className}.${methodName}] Language not found for languageId=${languageId}, returning empty metadata`);
-      return this.emptyMetadata(linesOfCode);
-    }
+      this.logger.debug(`[${className}.${methodName}] Retrieving language from TreeSitterService`);
+      const lang = await this.treeSitter.getLanguage(languageId);
+      if (!lang) {
+        this.logger.warn(`[${className}.${methodName}] Language not found for languageId=${languageId}, returning empty metadata`);
+        return this.emptyMetadata(linesOfCode);
+      }
 
-    try {
-      return this.extractMetadataFromTree(lang, tree, bundle, linesOfCode);
+      return this.extractMetadataFromTree(languageId, lang, tree, bundle, linesOfCode);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       const errorStack = err instanceof Error ? err.stack : undefined;
@@ -72,12 +84,15 @@ export class AstExtractService {
         errorStack,
       });
       throw err;
+    } finally {
+      tree.delete();
     }
   }
 
   // ---------------- helpers ----------------
 
   private extractMetadataFromTree(
+    languageId: string,
     lang: Language,
     tree: Tree,
     bundle: ReturnType<QueryLoaderService['getQueries']>,
@@ -87,18 +102,49 @@ export class AstExtractService {
     const methodName = "buildMetadata";
 
     this.logger.debug(`[${className}.${methodName}] Extracting function symbols`);
-    const functions = this.extractSymbols(lang, tree, bundle.functions, 'function.name');
+    const functions = this.extractSymbols(
+      languageId,
+      lang,
+      tree,
+      'functions',
+      bundle.functions,
+      'function.name',
+    );
+
     this.logger.debug(`[${className}.${methodName}] Extracting class symbols`);
-    const classes = this.extractSymbols(lang, tree, bundle.classes, 'class.name');
+    const classes = bundle.classes
+      ? this.extractSymbols(
+          languageId,
+          lang,
+          tree,
+          'classes',
+          bundle.classes,
+          'class.name',
+        )
+      : [];
 
     this.logger.debug(`[${className}.${methodName}] Extracting imports`);
-    const imports = this.extractStrings(lang, tree, bundle.imports, 'import.source')
+    const imports = this.extractStrings(
+      languageId,
+      lang,
+      tree,
+      'imports',
+      bundle.imports,
+      'import.source',
+    )
       .map((s) => this.stripQuotes(s))
       .filter(Boolean);
 
     this.logger.debug(`[${className}.${methodName}] Extracting entry points`);
     const entryPoints = bundle.entryPoints
-      ? this.extractStrings(lang, tree, bundle.entryPoints, 'entry')
+      ? this.extractStrings(
+          languageId,
+          lang,
+          tree,
+          'entry_points',
+          bundle.entryPoints,
+          'entry',
+        )
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
@@ -124,8 +170,8 @@ export class AstExtractService {
       classCount: classes.length,
       importCount: uniq(imports).length,
 
-      maxCyclomaticComplexity: null, // TODO: Determine this
-      averageCyclomaticComplexity: null // TODO: DETERMINE THIS
+      maxCyclomaticComplexity: null,
+      averageCyclomaticComplexity: null,
     };
   }
 
@@ -147,18 +193,37 @@ export class AstExtractService {
     };
   }
 
-  private runQuery(language: Language, queryText: string, tree: Tree): QueryMatch[] {
-    const q = new Query(language, queryText);
-    try {
-      return q.matches(tree.rootNode);
-    } finally {
-      q.delete();
+  private getCompiledQuery(
+    languageId: string,
+    language: Language,
+    queryType: string,
+    queryText: string,
+  ): Query {
+    const key = `${languageId}:${queryType}`;
+    let q = this.queryCache.get(key);
+    if (!q) {
+      q = new Query(language, queryText);
+      this.queryCache.set(key, q);
     }
+    return q;
+  }
+
+  private runQuery(
+    languageId: string,
+    language: Language,
+    queryType: string,
+    queryText: string,
+    tree: Tree,
+  ): QueryMatch[] {
+    const q = this.getCompiledQuery(languageId, language, queryType, queryText);
+    return q.matches(tree.rootNode);
   }
 
   private extractSymbols(
+    languageId: string,
     language: Language,
     tree: Tree,
+    queryType: string,
     queryText: string,
     captureName: string,
   ): CodeSymbol[] {
@@ -169,29 +234,35 @@ export class AstExtractService {
       queryTextShort: queryText?.slice(0, 30)
     });
 
-    const matches = this.runQuery(language, queryText, tree);
+    const matches = this.runQuery(languageId, language, queryType, queryText, tree);
+    const defCaptureName = captureName.replace('.name', '.def');
 
     const out: CodeSymbol[] = [];
     for (const m of matches) {
-      for (const c of m.captures) {
-        if (c.name !== captureName) continue;
-        const node = c.node as Node;
-        const name = node.text?.trim();
-        if (!name) continue;
-        out.push({
-          name,
-          startLine: (node.startPosition?.row ?? 0) + 1,
-          endLine: (node.endPosition?.row ?? 0) + 1,
-        });
-      }
+      const nameCap = m.captures.find((c) => c.name === captureName);
+      if (!nameCap) continue;
+      const node = nameCap.node as Node;
+      const name = node.text?.trim();
+      if (!name) continue;
+
+      const defCap = m.captures.find((c) => c.name === defCaptureName);
+      const spanNode = (defCap?.node ?? node.parent ?? node) as Node;
+
+      out.push({
+        name,
+        startLine: (spanNode.startPosition?.row ?? 0) + 1,
+        endLine: (spanNode.endPosition?.row ?? 0) + 1,
+      });
     }
     this.logger.debug(`[${className}.${methodName}] Extracted ${out.length} symbols for ${captureName}`);
     return out;
   }
 
   private extractStrings(
+    languageId: string,
     language: Language,
     tree: Tree,
+    queryType: string,
     queryText: string,
     captureName: string,
   ): string[] {
@@ -202,7 +273,7 @@ export class AstExtractService {
       queryTextShort: queryText?.slice(0, 30)
     });
 
-    const matches = this.runQuery(language, queryText, tree);
+    const matches = this.runQuery(languageId, language, queryType, queryText, tree);
 
     const out: string[] = [];
     for (const m of matches) {
