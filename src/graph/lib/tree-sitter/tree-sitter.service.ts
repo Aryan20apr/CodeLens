@@ -12,6 +12,7 @@ const requireFn = createRequire(__filename);
 
 export type SupportedLangId =
   | 'typescript'
+  | 'tsx'
   | 'javascript'
   | 'python'
   | 'go'
@@ -96,11 +97,20 @@ export class TreeSitterService {
   /**
    * Parse code and return Tree-sitter syntax tree.
    * Returns null if grammar unavailable.
+   *
+   * Uses an isolated Parser per call to ensure safe concurrent parsing in async batch jobs.
    */
   async parse(languageId: SupportedLangId, code: string): Promise<Tree | null> {
-    const parser = await this.getParser(languageId);
-    if (!parser) return null;
-    return parser.parse(code);
+    const lang = await this.getLanguage(languageId);
+    if (!lang) return null;
+
+    const parser = new Parser();
+    try {
+      parser.setLanguage(lang);
+      return parser.parse(code);
+    } finally {
+      parser.delete();
+    }
   }
 
   // ----------------- helpers -----------------
@@ -109,12 +119,14 @@ export class TreeSitterService {
     const l = (languageId || '').toLowerCase().trim();
 
     // normalize common variants
-    if (l === 'ts' || l === 'typescript' || l === 'tsx') return 'typescript';
+    if (l === 'tsx') return 'tsx';
+    if (l === 'ts' || l === 'typescript') return 'typescript';
     if (l === 'js' || l === 'javascript' || l === 'jsx') return 'javascript';
     if (l === 'py' || l === 'python') return 'python';
     if (l === 'golang' || l === 'go') return 'go';
     if (l === 'rs' || l === 'rust') return 'rust';
-    if (l === 'c#' || l === 'csharp') return 'csharp';
+    if (l === 'c#' || l === 'csharp' || l === 'cs') return 'csharp';
+    if (l === 'kt' || l === 'kotlin') return 'kotlin';
 
     if (!l) return 'unknown';
     return l;
@@ -190,6 +202,7 @@ export class TreeSitterService {
     const wasmBaseByLang: Record<string, string> = {
       // Matches files under `node_modules/tree-sitter-wasms/out/`
       typescript: 'tree-sitter-typescript',
+      tsx: 'tree-sitter-tsx',
       javascript: 'tree-sitter-javascript',
       python: 'tree-sitter-python',
       go: 'tree-sitter-go',

@@ -5,7 +5,7 @@ import type { Logger } from 'winston';
 
 const extMap: Record<string, string> = {
   '.ts': 'typescript',
-  '.tsx': 'typescript',
+  '.tsx': 'tsx',
   '.mts': 'typescript',
   '.cts': 'typescript',
   '.js': 'javascript',
@@ -21,6 +21,12 @@ const extMap: Record<string, string> = {
   '.php': 'php',
   '.rb': 'ruby',
   '.swift': 'swift',
+  '.c': 'c',
+  '.cpp': 'cpp',
+  '.cc': 'cpp',
+  '.cxx': 'cpp',
+  '.h': 'c',
+  '.hpp': 'cpp',
 };
 
 @Injectable()
@@ -71,6 +77,12 @@ export class LanguageDetectService {
       `[${LanguageDetectService.CLASS}.${METHOD}] Normalizing hint: ${hint}`
     );
     const h = hint.toLowerCase();
+    if (h === 'tsx') {
+      this.logger.debug(
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched TSX`
+      );
+      return 'tsx';
+    }
     if (h === 'ts' || h === 'typescript') {
       this.logger.debug(
         `[${LanguageDetectService.CLASS}.${METHOD}] Matched TypeScript`
