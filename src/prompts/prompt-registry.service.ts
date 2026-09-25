@@ -23,22 +23,29 @@ export class PromptRegistryService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get<T = any>(id: PromptId, version?: string): PromptDefinition<T> {
     if (version) {
       const match = this.catalog.get(`${id}@${version}`);
       if (!match) {
-        throw new Error(`Prompt with id '${id}' and version '${version}' not found`);
+        throw new Error(
+          `Prompt with id '${id}' and version '${version}' not found`,
+        );
       }
       return match as PromptDefinition<T>;
     }
 
     // Default to the highest registered semver version for this id
-    const matches = Array.from(this.catalog.values()).filter((p) => p.id === id);
+    const matches = Array.from(this.catalog.values()).filter(
+      (p) => p.id === id,
+    );
     if (matches.length === 0) {
       throw new Error(`Prompt with id '${id}' not found`);
     }
 
-    matches.sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+    matches.sort((a, b) =>
+      b.version.localeCompare(a.version, undefined, { numeric: true }),
+    );
     return matches[0] as PromptDefinition<T>;
   }
 

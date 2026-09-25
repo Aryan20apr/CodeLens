@@ -6,6 +6,7 @@ import { z } from 'zod';
  */
 export function formatZodSchemaForPrompt(schema: z.ZodTypeAny): string {
   const jsonSchema = z.toJSONSchema(schema) as Record<string, unknown>;
-  const { $schema, ...cleanSchema } = jsonSchema;
+  const cleanSchema = { ...jsonSchema };
+  delete cleanSchema['$schema'];
   return JSON.stringify(cleanSchema, null, 2);
 }

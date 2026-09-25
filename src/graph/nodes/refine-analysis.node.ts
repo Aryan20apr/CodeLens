@@ -2,22 +2,15 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 
 import type { LlmService } from 'src/llm/llm.service';
-import { parseLlmAnalysis } from "../utils/parse-llm-analysis.util";
+import { parseLlmAnalysis } from '../utils/parse-llm-analysis.util';
 import type { PromptRegistryService } from '../../prompts/prompt-registry.service';
 
-import type {
-  GraphEvent,
-  SnippetGraphStateType,
-} from '../state.annotation';
+import type { SnippetGraphStateType } from '../state.annotation';
 
 type NodeUpdate = Partial<
   Pick<
     SnippetGraphStateType,
-    | 'llmAnalysis'
-    | 'iteration'
-    | 'events'
-    | 'status'
-    | 'error'
+    'llmAnalysis' | 'iteration' | 'events' | 'status' | 'error'
   >
 >;
 
@@ -81,21 +74,15 @@ Return ONLY valid JSON.
           }),
         );
 
-        res = await chat.invoke([
-          system,
-          human,
-        ]);
+        res = await chat.invoke([system, human]);
       }
 
       const raw =
         typeof res.content === 'string'
           ? res.content
           : JSON.stringify(res.content);
-          console.debug?.(
-            "[LLM RAW OUTPUT]",
-            raw,
-          );
-         const refined = parseLlmAnalysis(raw);
+      console.debug?.('[LLM RAW OUTPUT]', raw);
+      const refined = parseLlmAnalysis(raw);
 
       return {
         llmAnalysis: refined,
@@ -114,18 +101,12 @@ Return ONLY valid JSON.
     } catch (e) {
       return {
         status: 'failed',
-        error:
-          e instanceof Error
-            ? e.message
-            : String(e),
+        error: e instanceof Error ? e.message : String(e),
         events: [
           {
             node: 'refine-analysis',
             status: 'failed',
-            message:
-              e instanceof Error
-                ? e.message
-                : String(e),
+            message: e instanceof Error ? e.message : String(e),
             at: now(),
           },
         ],

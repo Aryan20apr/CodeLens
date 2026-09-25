@@ -18,7 +18,8 @@ Return ONLY valid JSON.`;
 export const snippetRefinePrompt: PromptDefinition<SnippetRefinePromptVars> = {
   id: 'snippet.refine',
   version: '1.0.0',
-  description: 'Refines previous snippet code review to eliminate low confidence items',
+  description:
+    'Refines previous snippet code review to eliminate low confidence items',
   tags: ['snippet', 'refinement'],
   render: (vars) => ({
     systemPrompt: REFINE_SYSTEM,

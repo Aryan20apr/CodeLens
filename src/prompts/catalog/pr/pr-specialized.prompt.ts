@@ -63,14 +63,17 @@ function buildSpecializedPrompt(
 ): { systemPrompt: string } {
   const header = ROLE_HEADERS[vars.role];
   const toolAddendum = vars.skipSearchTools ? '' : SEARCH_TOOL_ADDENDUM;
-  const parts = [header, SHARED_CONSTRAINTS, toolAddendum, extraNotice].filter(Boolean);
+  const parts = [header, SHARED_CONSTRAINTS, toolAddendum, extraNotice].filter(
+    Boolean,
+  );
   return { systemPrompt: parts.join('\n\n') };
 }
 
 export const prSpecializedPrompt: PromptDefinition<SpecializedPromptVars> = {
   id: 'pr-review.specialized',
   version: '1.0.0',
-  description: 'Specialized PR review agent prompt for Security, Performance, and Best Practices',
+  description:
+    'Specialized PR review agent prompt for Security, Performance, and Best Practices',
   tags: ['pr-review', 'specialized-agent'],
   render: (vars) => buildSpecializedPrompt(vars),
   providerOverrides: {

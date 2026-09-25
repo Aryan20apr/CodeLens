@@ -23,7 +23,9 @@ describe('Prompt Catalog', () => {
   });
 
   it('should render specialized prompts with role-specific constraints', () => {
-    const specialized = PROMPT_CATALOG.find((p) => p.id === 'pr-review.specialized');
+    const specialized = PROMPT_CATALOG.find(
+      (p) => p.id === 'pr-review.specialized',
+    );
     expect(specialized).toBeDefined();
 
     const rendered = specialized!.render({
@@ -31,13 +33,19 @@ describe('Prompt Catalog', () => {
       skipSearchTools: false,
     });
 
-    expect(rendered.systemPrompt).toContain('senior application security engineer');
-    expect(rendered.systemPrompt).toContain('findings[].category MUST be "security"');
+    expect(rendered.systemPrompt).toContain(
+      'senior application security engineer',
+    );
+    expect(rendered.systemPrompt).toContain(
+      'findings[].category MUST be "security"',
+    );
     expect(rendered.systemPrompt).toContain('search_symbol_usage');
   });
 
   it('should apply GROQ anti-fencing provider overrides when rendering', () => {
-    const specialized = PROMPT_CATALOG.find((p) => p.id === 'pr-review.specialized');
+    const specialized = PROMPT_CATALOG.find(
+      (p) => p.id === 'pr-review.specialized',
+    );
     expect(specialized?.providerOverrides?.GROQ).toBeDefined();
 
     const rendered = specialized!.providerOverrides!.GROQ!({
@@ -45,7 +53,11 @@ describe('Prompt Catalog', () => {
       skipSearchTools: true,
     });
 
-    expect(rendered.systemPrompt).toContain('Do not wrap in triple backticks or markdown');
-    expect(rendered.systemPrompt).toContain('findings[].category MUST be "performance"');
+    expect(rendered.systemPrompt).toContain(
+      'Do not wrap in triple backticks or markdown',
+    );
+    expect(rendered.systemPrompt).toContain(
+      'findings[].category MUST be "performance"',
+    );
   });
 });

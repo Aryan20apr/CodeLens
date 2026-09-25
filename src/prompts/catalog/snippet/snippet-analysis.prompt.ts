@@ -24,32 +24,34 @@ Hard requirements:
 JSON schema:
 ${formatZodSchemaForPrompt(LlmAnalysisSchema)}`;
 
-export const snippetAnalysisPrompt: PromptDefinition<SnippetAnalysisPromptVars> = {
-  id: 'snippet.analysis',
-  version: '1.0.0',
-  description: 'Analyzes standalone code snippets and generates structured findings',
-  tags: ['snippet', 'analysis'],
-  render: (vars) => ({
-    systemPrompt: SNIPPET_SYSTEM,
-    userPrompt: [
-      `Language: ${vars.language}`,
-      '',
-      'Metadata (may be null):',
-      JSON.stringify(vars.metadata ?? null),
-      '',
-      'Snippet (line numbers start at 1):',
-      vars.code,
-    ].join('\n'),
-  }),
-  providerOverrides: {
-    GROQ: (vars) => ({
-      systemPrompt: `${SNIPPET_SYSTEM}\n\nIMPORTANT: Return ONLY valid JSON starting with '{'. No markdown formatting.`,
+export const snippetAnalysisPrompt: PromptDefinition<SnippetAnalysisPromptVars> =
+  {
+    id: 'snippet.analysis',
+    version: '1.0.0',
+    description:
+      'Analyzes standalone code snippets and generates structured findings',
+    tags: ['snippet', 'analysis'],
+    render: (vars) => ({
+      systemPrompt: SNIPPET_SYSTEM,
       userPrompt: [
         `Language: ${vars.language}`,
+        '',
+        'Metadata (may be null):',
+        JSON.stringify(vars.metadata ?? null),
         '',
         'Snippet (line numbers start at 1):',
         vars.code,
       ].join('\n'),
     }),
-  },
-};
+    providerOverrides: {
+      GROQ: (vars) => ({
+        systemPrompt: `${SNIPPET_SYSTEM}\n\nIMPORTANT: Return ONLY valid JSON starting with '{'. No markdown formatting.`,
+        userPrompt: [
+          `Language: ${vars.language}`,
+          '',
+          'Snippet (line numbers start at 1):',
+          vars.code,
+        ].join('\n'),
+      }),
+    },
+  };

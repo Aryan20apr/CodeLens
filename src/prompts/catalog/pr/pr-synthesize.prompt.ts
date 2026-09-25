@@ -20,7 +20,8 @@ Only include subsections for categories that have actual findings. Keep each to 
 export const prSynthesizePrompt: PromptDefinition<void> = {
   id: 'pr-review.synthesize',
   version: '1.0.0',
-  description: 'Synthesizes multi-agent findings and summaries into an overall markdown report',
+  description:
+    'Synthesizes multi-agent findings and summaries into an overall markdown report',
   tags: ['pr-review', 'synthesis', 'markdown'],
   render: () => ({ systemPrompt: SYNTHESIZE_SYSTEM }),
 };

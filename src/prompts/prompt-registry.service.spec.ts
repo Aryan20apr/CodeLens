@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { PromptRegistryService } from './prompt-registry.service';
+import type { PromptId } from './types/prompt.types';
 
 const mockLogger = {
   child: jest.fn().mockReturnThis(),
@@ -32,7 +33,7 @@ describe('PromptRegistryService', () => {
   });
 
   it('should throw an error for unknown prompt IDs', () => {
-    expect(() => service.get('unknown.id' as any)).toThrow(
+    expect(() => service.get('unknown.id' as unknown as PromptId)).toThrow(
       /Prompt with id 'unknown.id' not found/,
     );
   });
@@ -44,11 +45,17 @@ describe('PromptRegistryService', () => {
       { provider: 'OPENAI' },
     );
 
-    expect(rendered.systemPrompt).toContain('senior application security engineer');
-    expect(rendered.langchainMetadata.tags).toContain('prompt:pr-review.specialized');
+    expect(rendered.systemPrompt).toContain(
+      'senior application security engineer',
+    );
+    expect(rendered.langchainMetadata.tags).toContain(
+      'prompt:pr-review.specialized',
+    );
     expect(rendered.langchainMetadata.tags).toContain('v:1.0.0');
     expect(rendered.langchainMetadata.tags).toContain('provider:OPENAI');
-    expect(rendered.langchainMetadata.metadata.promptId).toBe('pr-review.specialized');
+    expect(rendered.langchainMetadata.metadata.promptId).toBe(
+      'pr-review.specialized',
+    );
     expect(rendered.langchainMetadata.metadata.promptVersion).toBe('1.0.0');
     expect(rendered.langchainMetadata.metadata.provider).toBe('OPENAI');
   });
@@ -60,7 +67,9 @@ describe('PromptRegistryService', () => {
       { provider: 'GROQ' },
     );
 
-    expect(rendered.systemPrompt).toContain('Do not wrap in triple backticks or markdown');
+    expect(rendered.systemPrompt).toContain(
+      'Do not wrap in triple backticks or markdown',
+    );
     expect(rendered.langchainMetadata.tags).toContain('provider:GROQ');
   });
 
