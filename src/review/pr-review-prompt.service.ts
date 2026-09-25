@@ -9,6 +9,8 @@ import type { ParsedDiff } from '../diff/types/parsed-diff.types';
 import type { FileIndexEntry, ReviewChunk } from '../diff/types/review-chunk.types';
 import { formatFileContextsForPrompt } from './enrichment/format-file-context.util';
 import type { PrFileContext } from './types/pr-file-enrichment.types';
+import { PromptRegistryService } from '../prompts/prompt-registry.service';
+import type { LlmProviderName } from '../prompts/types/prompt.types';
 
 export type PrReviewPromptInput = {
   repoFullName: string;
@@ -25,6 +27,7 @@ export type PrReviewPromptInput = {
   fileContexts?: PrFileContext[];
   searchEnabled?: boolean;
   enrichedFileCount?: number;
+  provider?: LlmProviderName;
 };
 
 export type PrReviewPromptBundle = {
@@ -32,43 +35,6 @@ export type PrReviewPromptBundle = {
   userContent: string;
   skipSearchTools: boolean;
 };
-
-const PR_JSON_SCHEMA_EXAMPLE = `{
-  "summary": string,
-  "findings": [{
-    "filePath": string,
-    "category": "security"|"correctness"|"performance"|"best_practices"|"maintainability",
-    "severity": "critical"|"warning"|"info",
-    "title": string,
-    "description": string,
-    "location": { "startLine": number, "endLine": number },
-    "evidenceSnippet"?: string,
-    "suggestedFix"?: string,
-    "confidence": "high"|"medium"|"low"
-  }]
-}`;
-
-const SYSTEM_PROMPT_BASE = `You are CodeLens, a precise pull-request review assistant.
-Return ONLY valid JSON. No markdown. No code fences.
-Review ONLY the provided diff chunk blocks below. Do not invent files or line numbers.
-
-Hard requirements:
-- Each finding MUST include filePath and location.startLine from "Added lines" in diff chunks (format L{n} in chunks).
-- Comment only on added lines shown in the chunks. Do not cite deleted-only lines.
-- If uncertain about a finding, omit it rather than guess.
-- Structural context describes the full file at PR head; still cite findings only on Added lines in diff chunks.
-- Do not cite line numbers from structural context unless they appear in chunk added lines.
-- Keep findings focused; prefer fewer high-confidence items.
-- summary: 2-4 sentences on the PR as a whole.
-
-JSON schema:
-${PR_JSON_SCHEMA_EXAMPLE}`;
-
-const SEARCH_TOOLS_PROMPT = `
-Cross-file context: You may call search_symbol_usage or search_import_target when the diff suggests API/export/import impact.
-Use search sparingly (small PRs often need none). Findings must still cite only Added lines in diff chunks for line numbers.
-Cross-file search results are hints only; you may reference hinted file paths in filePath when search supports a cross-file concern.
-When done searching, respond with ONLY the final JSON object (no markdown).`;
 
 @Injectable()
 export class PrReviewPromptService {
@@ -79,6 +45,7 @@ export class PrReviewPromptService {
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
     @Inject(APP_CONFIG) config: AppConfig,
     private readonly serializer: DiffChunkSerializerService,
+    private readonly promptRegistry: PromptRegistryService,
   ) {
     this.logger = logger.child({ context: PrReviewPromptService.name });
     this.searchConfig = config.prReview.search;
@@ -177,9 +144,12 @@ export class PrReviewPromptService {
       .filter(Boolean)
       .join('\n\n');
 
-    const systemPrompt = skipSearchTools
-      ? SYSTEM_PROMPT_BASE
-      : `${SYSTEM_PROMPT_BASE}\n${SEARCH_TOOLS_PROMPT}`;
+    const rendered = this.promptRegistry.render(
+      'pr-review.single',
+      { skipSearchTools },
+      { provider: input.provider },
+    );
+    const systemPrompt = rendered.systemPrompt;
 
     return { systemPrompt, userContent, skipSearchTools };
   }

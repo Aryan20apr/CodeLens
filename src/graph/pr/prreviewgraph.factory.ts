@@ -24,6 +24,7 @@ import { createValidateFindingsNode } from './nodes/validate-findings.node';
 import { createSynthesizeOverviewNode } from './nodes/synthesize-overview.node';
 import { LlmService } from '../../llm/llm.service';
 import { createTriageAnalysisNode, routeAfterTriage } from './nodes/triage-analysis.node';
+import type { PromptRegistryService } from '../../prompts/prompt-registry.service';
 import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
 import type {
   PrReviewGraphInvokeInput,
@@ -62,6 +63,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly findingsValidator: ValidatePrFindingsService,
     private readonly checkpointerService: LangGraphCheckpointerService,
     private readonly postedFindings: PostedFindingRepository,
+    private readonly promptRegistry: PromptRegistryService,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -191,7 +193,11 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
 
-    const triageAnalysis = createTriageAnalysisNode(this.llm, this.progress);
+    const triageAnalysis = createTriageAnalysisNode(
+      this.llm,
+      this.progress,
+      this.promptRegistry,
+    );
     const simpleAnalyze = createSimpleAnalyzeNode(
       this.promptService,
       this.analyzeAgent,
@@ -227,6 +233,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const synthesizeOverview = createSynthesizeOverviewNode(
       this.llm,
       this.progress,
+      this.promptRegistry,
     );
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,

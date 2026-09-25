@@ -12,6 +12,7 @@ import {
   AGENT_ROLES,
   type AgentRole,
 } from '../../../review/types/agent-prompt.types';
+import type { PromptRegistryService } from '../../../prompts/prompt-registry.service';
 
 const AGENT_NODE: Record<AgentRole, string> = {
   security: 'securityAgent',
@@ -162,6 +163,7 @@ type TriageUpdate = Partial<
 export function createTriageAnalysisNode(
   llm: LlmService,
   progress: PrReviewProgressPublisher,
+  promptRegistry?: PromptRegistryService,
 ): (state: PrReviewGraphStateType, config?: any) => Promise<TriageUpdate> {
   return async (state, config) => {
     const { reviewRunId } = state;
@@ -187,6 +189,25 @@ export function createTriageAnalysisNode(
           fn: async () => {
             const userLlmKey = config?.configurable?.userLlmKey;
             const model = llm.getChatModel(userLlmKey);
+
+            if (promptRegistry) {
+              const rendered = promptRegistry.render('pr-review.triage', undefined, {
+                provider: userLlmKey?.provider,
+              });
+              const response = await model.invoke(
+                [
+                  new SystemMessage(rendered.systemPrompt),
+                  new HumanMessage(buildTriageDigest(state)),
+                ],
+                {
+                  tags: rendered.langchainMetadata.tags,
+                  metadata: rendered.langchainMetadata.metadata,
+                },
+              );
+              const raw = extractTextFromLlmContent(response.content);
+              return parseTriageDecision(raw);
+            }
+
             const response = await model.invoke([
               new SystemMessage(TRIAGE_SYSTEM),
               new HumanMessage(buildTriageDigest(state)),

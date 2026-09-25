@@ -23,9 +23,11 @@ import { RepositoriesModule } from './repositories/repositories.module';
 import { ReviewRunsModule } from './review-runs/review-runs.module';
 import { StreamingModule } from './streaming/streaming.module';
 import { LlmProviderModule } from './llm-provider/llm-provider.module';
+import { PromptModule } from './prompts/prompt.module';
 
 @Module({
   imports: [
+    PromptModule,
     AppConfigModule,
     ClsIntegrationModule,
     LoggerModule,
