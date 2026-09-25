@@ -3,6 +3,7 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 
 import type { LlmService } from 'src/llm/llm.service';
 import { parseLlmAnalysis } from "../utils/parse-llm-analysis.util";
+import type { PromptRegistryService } from '../../prompts/prompt-registry.service';
 
 import type {
   GraphEvent,
@@ -22,6 +23,7 @@ type NodeUpdate = Partial<
 
 export function createRefineAnalysisNode(
   llm: LlmService,
+  promptRegistry?: PromptRegistryService,
 ) {
   return async (
     state: SnippetGraphStateType,
@@ -42,7 +44,25 @@ export function createRefineAnalysisNode(
       const userLlmKey = config?.configurable?.userLlmKey;
       const chat = llm.getChatModel(userLlmKey);
 
-      const system = new SystemMessage(`
+      let res;
+      if (promptRegistry) {
+        const rendered = promptRegistry.render(
+          'snippet.refine',
+          { previousAnalysis: analysis, code: state.source.code },
+          { provider: userLlmKey?.provider },
+        );
+        res = await chat.invoke(
+          [
+            new SystemMessage(rendered.systemPrompt),
+            new HumanMessage(rendered.userPrompt!),
+          ],
+          {
+            tags: rendered.langchainMetadata.tags,
+            metadata: rendered.langchainMetadata.metadata,
+          },
+        );
+      } else {
+        const system = new SystemMessage(`
 You are refining a previous code review.
 
 Your task:
@@ -54,17 +74,18 @@ Your task:
 Return ONLY valid JSON.
 `);
 
-      const human = new HumanMessage(
-        JSON.stringify({
-          previousAnalysis: analysis,
-          code: state.source.code,
-        }),
-      );
+        const human = new HumanMessage(
+          JSON.stringify({
+            previousAnalysis: analysis,
+            code: state.source.code,
+          }),
+        );
 
-      const res = await chat.invoke([
-        system,
-        human,
-      ]);
+        res = await chat.invoke([
+          system,
+          human,
+        ]);
+      }
 
       const raw =
         typeof res.content === 'string'

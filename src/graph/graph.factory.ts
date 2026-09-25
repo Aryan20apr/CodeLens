@@ -21,6 +21,7 @@ import { LlmService } from "src/llm/llm.service";
 import { createQualityGateNode } from './nodes/quality-gate.node';
 import { createRefineAnalysisNode } from './nodes/refine-analysis.node';
 import type { UserLlmKey } from '../llm-provider/llm-provider.service';
+import type { PromptRegistryService } from '../prompts/prompt-registry.service';
 
 @Injectable()
 export class GraphFactory implements OnModuleInit {
@@ -33,6 +34,7 @@ export class GraphFactory implements OnModuleInit {
     private readonly language: LanguageDetectService,
     private readonly ast: AstExtractService,
     private readonly llm: LlmService,
+    private readonly promptRegistry: PromptRegistryService,
   ) {
     this.logger = logger.child({
       context: GraphFactory.name,
@@ -126,10 +128,10 @@ export class GraphFactory implements OnModuleInit {
       `[${className}.${methodName}] Building snippet graph pipeline`,
     );
     const parse = createParseNode(this.language, this.ast);
-    const llmAnalysis = createLlmAnalysisNode(this.llm);
+    const llmAnalysis = createLlmAnalysisNode(this.llm, this.promptRegistry);
     const scoreReport = createScoreReportNode();
     const qualityGate = createQualityGateNode();
-    const refineAnalysis = createRefineAnalysisNode(this.llm);
+    const refineAnalysis = createRefineAnalysisNode(this.llm, this.promptRegistry);
 
     return new StateGraph(SnippetGraphState)
       .addNode('parse', parse)
