@@ -29,53 +29,89 @@ export type FindingDedupOptions = {
   similarityThreshold: number;
 };
 
-function normalizeText(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, ' ').trim();
+function normalizeCodeAnchorKey(snippet: string): string {
+  // Strip non-alphanumeric punctuation and collapse whitespace so that variations like
+  // '.antMatchers' vs 'antMatchers' or '+ methodCall()' produce the exact same key.
+  return snippet
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function comparableText(finding: Finding): string {
-  return normalizeText(
-    [finding.title, finding.description, finding.evidenceSnippet]
-      .filter(Boolean)
-      .join(' '),
-  );
+function extractWordTokens(text: string): Set<string> {
+  return new Set(text.toLowerCase().split(/\W+/).filter(Boolean));
 }
 
 function locationsOverlap(a: CodeLocation, b: CodeLocation): boolean {
   return a.startLine <= b.endLine && b.startLine <= a.endLine;
 }
 
-function tokenJaccard(a: string, b: string): number {
-  const tokensA = new Set(
-    normalizeText(a).split(/\W+/).filter(Boolean),
-  );
-
-  const tokensB = new Set(
-    normalizeText(b).split(/\W+/).filter(Boolean),
-  );
-
-  const intersection = [...tokensA].filter((token) => tokensB.has(token)).length;
-
-  const union = new Set([...tokensA, ...tokensB]).size;
-
+function setJaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 1;
+  if (a.size === 0 || b.size === 0) return 0;
+  let intersection = 0;
+  for (const token of a) {
+    if (b.has(token)) intersection++;
+  }
+  const union = new Set([...a, ...b]).size;
   return union === 0 ? 1 : intersection / union;
 }
 
-function areSimilar(
-  a: Finding,
-  b: Finding,
-  threshold: number,
+function isTokenSubset(
+  a: Set<string>,
+  b: Set<string>,
+  minRatio = 0.75,
 ): boolean {
+  if (a.size === 0 || b.size === 0) return false;
+  const [smaller, larger] = a.size <= b.size ? [a, b] : [b, a];
+  let inCommon = 0;
+  for (const token of smaller) {
+    if (larger.has(token)) inCommon++;
+  }
+  return inCommon / smaller.size >= minRatio;
+}
+
+function areSimilar(a: Finding, b: Finding, threshold: number): boolean {
   const pathA = a.filePath?.trim();
   const pathB = b.filePath?.trim();
   if (!pathA || !pathB || pathA !== pathB) return false;
   if (!locationsOverlap(a.location, b.location)) return false;
 
-  const textA = comparableText(a);
-  const textB = comparableText(b);
-  if (!textA || !textB) return false;
+  // Signal 1: High code snippet similarity or subset match on overlapping lines
+  const snipA = a.evidenceSnippet ? extractWordTokens(a.evidenceSnippet) : null;
+  const snipB = b.evidenceSnippet ? extractWordTokens(b.evidenceSnippet) : null;
+  if (snipA && snipB && snipA.size > 0 && snipB.size > 0) {
+    if (setJaccard(snipA, snipB) >= 0.5 || isTokenSubset(snipA, snipB, 0.75)) {
+      return true;
+    }
+  }
 
-  return tokenJaccard(textA, textB) >= threshold;
+  // Signal 2: Title similarity on overlapping lines (concise summary match)
+  const titleA = extractWordTokens(a.title);
+  const titleB = extractWordTokens(b.title);
+  if (setJaccard(titleA, titleB) >= 0.35) {
+    return true;
+  }
+
+  // Signal 3: Exact same line range with moderate topic overlap
+  const sameExactLines =
+    a.location.startLine === b.location.startLine &&
+    a.location.endLine === b.location.endLine;
+
+  const allA = extractWordTokens(
+    `${a.title} ${a.description} ${a.evidenceSnippet ?? ''}`,
+  );
+  const allB = extractWordTokens(
+    `${b.title} ${b.description} ${b.evidenceSnippet ?? ''}`,
+  );
+
+  if (sameExactLines && setJaccard(allA, allB) >= 0.2) {
+    return true;
+  }
+
+  // Signal 4: General text overlap threshold
+  return setJaccard(allA, allB) >= threshold;
 }
 
 class UnionFind {
@@ -129,7 +165,7 @@ function deduplicateByCodeAnchor(findings: Finding[]): Finding[] {
       noAnchor.push(f);
       continue;
     }
-    const key = `${f.filePath!.trim()}::${normalizeText(snippet)}`;
+    const key = `${f.filePath!.trim()}::${normalizeCodeAnchorKey(snippet)}`;
     const bucket = buckets.get(key) ?? [];
     bucket.push(f);
     buckets.set(key, bucket);
@@ -143,10 +179,7 @@ function deduplicateByCodeAnchor(findings: Finding[]): Finding[] {
   return [...merged, ...noAnchor];
 }
 
-function buildClusters(
-  findings: Finding[],
-  threshold: number,
-): Finding[][] {
+function buildClusters(findings: Finding[], threshold: number): Finding[][] {
   if (findings.length === 0) return [];
 
   const uf = new UnionFind(findings.length);
