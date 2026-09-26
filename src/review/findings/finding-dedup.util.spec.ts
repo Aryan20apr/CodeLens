@@ -72,4 +72,124 @@ describe('clusterAndMergeFindings', () => {
     const result = clusterAndMergeFindings([finding1, finding2], { similarityThreshold: 0.4 });
     expect(result).toHaveLength(2);
   });
+
+  // ─── Code-anchor pre-pass tests ─────────────────────────────────────────────
+
+  describe('code-anchor dedup pre-pass', () => {
+    it('merges cross-category findings with identical evidenceSnippet in the same file', () => {
+      // Simulates: security agent + best_practices agent both flagging the same code line
+      const securityFinding = makeFinding({
+        id: 'f-security',
+        category: 'security',
+        severity: 'critical',
+        title: 'All GET Requests Permitted Without Authentication',
+        description: 'SecurityConfig line 79-80 adds .antMatchers(HttpMethod.GET).permitAll() which allows unauthenticated access to ALL GET endpoints.',
+        evidenceSnippet: '.antMatchers(HttpMethod.GET)\n .permitAll()',
+        filePath: 'src/SecurityConfig.java',
+        location: { startLine: 79, endLine: 80 },
+      });
+      const correctnessFinding = makeFinding({
+        id: 'f-correctness',
+        category: 'correctness',
+        severity: 'critical',
+        title: 'All GET endpoints publicly accessible without authentication',
+        description: 'The security configuration permits all GET requests unconditionally bypassing JWT authentication for every GET endpoint.',
+        evidenceSnippet: '.antMatchers(HttpMethod.GET)\n .permitAll()', // same snippet (whitespace may vary)
+        filePath: 'src/SecurityConfig.java',
+        location: { startLine: 79, endLine: 80 },
+      });
+
+      const result = clusterAndMergeFindings(
+        [securityFinding, correctnessFinding],
+        { similarityThreshold: 0.4 },
+      );
+
+      expect(result).toHaveLength(1);
+      // security outranks correctness in CATEGORY_RANK — canonical should be the security finding
+      expect(result[0].category).toBe('security');
+      expect(result[0].severity).toBe('critical');
+    });
+
+    it('merges findings where evidenceSnippet differs only in whitespace', () => {
+      const f1 = makeFinding({
+        id: 'f1',
+        category: 'security',
+        evidenceSnippet: ' .antMatchers(HttpMethod.GET)\n                 .permitAll()',
+        filePath: 'src/SecurityConfig.java',
+        location: { startLine: 79, endLine: 80 },
+      });
+      const f2 = makeFinding({
+        id: 'f2',
+        category: 'maintainability',
+        evidenceSnippet: '.antMatchers(HttpMethod.GET)\n .permitAll()',
+        filePath: 'src/SecurityConfig.java',
+        location: { startLine: 79, endLine: 80 },
+      });
+
+      const result = clusterAndMergeFindings([f1, f2], { similarityThreshold: 0.4 });
+      expect(result).toHaveLength(1);
+    });
+
+    it('does NOT merge findings with same snippet in different files', () => {
+      const f1 = makeFinding({
+        id: 'f1',
+        category: 'security',
+        evidenceSnippet: 'permitAll()',
+        filePath: 'src/SecurityConfig.java',
+      });
+      const f2 = makeFinding({
+        id: 'f2',
+        category: 'correctness',
+        evidenceSnippet: 'permitAll()',
+        filePath: 'src/OtherConfig.java',
+      });
+
+      const result = clusterAndMergeFindings([f1, f2], { similarityThreshold: 0.4 });
+      expect(result).toHaveLength(2);
+    });
+
+    it('passes findings without evidenceSnippet through to Jaccard phase', () => {
+      const f1 = makeFinding({
+        id: 'f1',
+        title: 'Missing null check',
+        description: 'Object might be null',
+        evidenceSnippet: undefined,
+        location: { startLine: 10, endLine: 15 },
+      });
+      const f2 = makeFinding({
+        id: 'f2',
+        title: 'Null dereference',
+        description: 'Object might be null',
+        evidenceSnippet: undefined,
+        location: { startLine: 10, endLine: 15 },
+      });
+
+      // High similarity via Jaccard on title+description should still merge these
+      const result = clusterAndMergeFindings([f1, f2], { similarityThreshold: 0.4 });
+      expect(result).toHaveLength(1);
+    });
+
+    it('selects canonical by severity when merging via code-anchor', () => {
+      const low = makeFinding({
+        id: 'low',
+        severity: 'info',
+        category: 'maintainability',
+        evidenceSnippet: 'springfox-boot-starter',
+        filePath: 'pom.xml',
+      });
+      const high = makeFinding({
+        id: 'high',
+        severity: 'warning',
+        category: 'security',
+        evidenceSnippet: 'springfox-boot-starter',
+        filePath: 'pom.xml',
+      });
+
+      const result = clusterAndMergeFindings([low, high], { similarityThreshold: 0.4 });
+      expect(result).toHaveLength(1);
+      expect(result[0].severity).toBe('warning');
+      expect(result[0].category).toBe('security');
+    });
+  });
 });
+

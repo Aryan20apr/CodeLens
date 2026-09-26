@@ -113,6 +113,36 @@ class UnionFind {
   }
 }
 
+/**
+ * Pre-pass: group findings by (filePath, normalizedEvidenceSnippet).
+ * Findings that reference the exact same code block are unconditionally merged,
+ * regardless of category. Picks canonical via compareCanonical.
+ * Findings without an evidenceSnippet pass through unchanged.
+ */
+function deduplicateByCodeAnchor(findings: Finding[]): Finding[] {
+  const buckets = new Map<string, Finding[]>();
+  const noAnchor: Finding[] = [];
+
+  for (const f of findings) {
+    const snippet = f.evidenceSnippet?.trim();
+    if (!snippet) {
+      noAnchor.push(f);
+      continue;
+    }
+    const key = `${f.filePath!.trim()}::${normalizeText(snippet)}`;
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(f);
+    buckets.set(key, bucket);
+  }
+
+  const merged: Finding[] = [];
+  for (const bucket of buckets.values()) {
+    merged.push(mergeCluster(bucket));
+  }
+
+  return [...merged, ...noAnchor];
+}
+
 function buildClusters(
   findings: Finding[],
   threshold: number,
@@ -190,7 +220,11 @@ export function clusterAndMergeFindings(
   const withPath = findings.filter((f) => f.filePath?.trim());
   const withoutPath = findings.filter((f) => !f.filePath?.trim());
 
-  const clusters = buildClusters(withPath, options.similarityThreshold);
+  // Pre-pass: deterministic code-anchor dedup (same snippet = same issue, any category)
+  const afterAnchor = deduplicateByCodeAnchor(withPath);
+
+  // Jaccard cluster pass: handles same-location, different-snippet-window findings
+  const clusters = buildClusters(afterAnchor, options.similarityThreshold);
   const merged = clusters.map(mergeCluster);
 
   return [...merged, ...withoutPath];
