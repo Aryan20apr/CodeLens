@@ -6,8 +6,7 @@ import type { LlmService } from '../../../llm/llm.service';
 import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-progress-publisher.service';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
-import { extractTextFromLlmContent } from '../../../review/context/llm-content.util';
-import { extractJson } from '../../utils/extract-json.util';
+import { invokeWithStructuredOutput } from '../../utils/structured-output.util';
 import {
   AGENT_ROLES,
   type AgentRole,
@@ -130,15 +129,6 @@ function buildTriageDigest(state: PrReviewGraphStateType): string {
     .join('\n');
 }
 
-function parseTriageDecision(raw: string): TriageDecision {
-  try {
-    const parsed = JSON.parse(extractJson(raw));
-    return TriageDecisionSchema.parse(parsed);
-  } catch {
-    return { route: 'specialized', agents: [...AGENT_ROLES] };
-  }
-}
-
 // ─── Routing function ───────────────
 
 export function routeAfterTriage(state: PrReviewGraphStateType): Send[] {
@@ -194,26 +184,36 @@ export function createTriageAnalysisNode(
               const rendered = promptRegistry.render('pr-review.triage', undefined, {
                 provider: userLlmKey?.provider,
               });
-              const response = await model.invoke(
+              const { parsed } = await invokeWithStructuredOutput(
+                model,
+                TriageDecisionSchema,
                 [
                   new SystemMessage(rendered.systemPrompt),
                   new HumanMessage(buildTriageDigest(state)),
                 ],
                 {
-                  tags: rendered.langchainMetadata.tags,
-                  metadata: rendered.langchainMetadata.metadata,
+                  name: 'triage_pr_decision',
+                  callOptions: {
+                    tags: rendered.langchainMetadata.tags,
+                    metadata: rendered.langchainMetadata.metadata,
+                  },
                 },
               );
-              const raw = extractTextFromLlmContent(response.content);
-              return parseTriageDecision(raw);
+              return parsed;
             }
 
-            const response = await model.invoke([
-              new SystemMessage(TRIAGE_SYSTEM),
-              new HumanMessage(buildTriageDigest(state)),
-            ]);
-            const raw = extractTextFromLlmContent(response.content);
-            return parseTriageDecision(raw);
+            const { parsed } = await invokeWithStructuredOutput(
+              model,
+              TriageDecisionSchema,
+              [
+                new SystemMessage(TRIAGE_SYSTEM),
+                new HumanMessage(buildTriageDigest(state)),
+              ],
+              {
+                name: 'triage_pr_decision',
+              },
+            );
+            return parsed;
           },
         },
       ],
