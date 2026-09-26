@@ -1,9 +1,12 @@
+import { randomUUID } from 'crypto';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 
 import type { LlmService } from 'src/llm/llm.service';
 import type { GraphEvent, SnippetGraphStateType } from '../state.annotation';
-import { parseLlmAnalysis } from '../utils/parse-llm-analysis.util';
+import type { LlmAnalysis } from '../state.types';
+import { LlmAnalysisSchema } from '../utils/parse-llm-analysis.util';
+import { invokeWithStructuredOutput } from '../utils/structured-output.util';
 import type { PromptRegistryService } from '../../prompts/prompt-registry.service';
 
 type NodeUpdate = Partial<
@@ -51,28 +54,33 @@ export function createLlmAnalysisNode(
       const userLlmKey = config?.configurable?.userLlmKey;
       const chat = llm.getChatModel(userLlmKey);
 
-      let res;
+      let parsedAnalysis;
       if (promptRegistry) {
         const rendered = promptRegistry.render(
           'snippet.analysis',
           { language, code, metadata },
           { provider: userLlmKey?.provider },
         );
-        res = await chat.invoke(
+        const { parsed } = await invokeWithStructuredOutput(
+          chat,
+          LlmAnalysisSchema,
           [
             new SystemMessage(rendered.systemPrompt),
             new HumanMessage(rendered.userPrompt!),
           ],
           {
-            tags: rendered.langchainMetadata.tags,
-            metadata: rendered.langchainMetadata.metadata,
+            name: 'snippet_analysis',
+            callOptions: {
+              tags: rendered.langchainMetadata.tags,
+              metadata: rendered.langchainMetadata.metadata,
+            },
           },
         );
+        parsedAnalysis = parsed;
       } else {
         const system = new SystemMessage(
           [
             'You are CodeLens, a precise code review assistant.',
-            'Return ONLY valid JSON. No markdown. No code fences.',
             'You MUST be grounded in the provided snippet. Do not invent files, functions, or dependencies.',
             '',
             'Task:',
@@ -83,21 +91,6 @@ export function createLlmAnalysisNode(
             "- If uncertain, set confidence='low'.",
             '- Evidence must quote exact snippet text when possible.',
             '- Keep findings <= 25 and focus on highest impact.',
-            '',
-            'JSON schema:',
-            `{
-          "summary": string,
-          "findings": [{
-            "category": "security"|"correctness"|"performance"|"best_practices"|"maintainability",
-            "severity": "critical"|"warning"|"info",
-            "title": string,
-            "description": string,
-            "location": { "startLine": number, "endLine": number },
-            "evidenceSnippet"?: string,
-            "suggestedFix"?: string,
-            "confidence": "high"|"medium"|"low"
-          }]
-        }`,
           ].join('\n'),
         );
 
@@ -113,16 +106,24 @@ export function createLlmAnalysisNode(
           ].join('\n'),
         );
 
-        res = await chat.invoke([system, human]);
+        const { parsed } = await invokeWithStructuredOutput(
+          chat,
+          LlmAnalysisSchema,
+          [system, human],
+          {
+            name: 'snippet_analysis',
+          },
+        );
+        parsedAnalysis = parsed;
       }
 
-      const raw =
-        typeof res.content === 'string'
-          ? res.content
-          : JSON.stringify(res.content);
-      console.log('Raw response: ' + raw);
-      // Strict JSON parse + validate
-      const llmAnalysis = parseLlmAnalysis(raw);
+      const llmAnalysis: LlmAnalysis = {
+        summary: parsedAnalysis.summary,
+        findings: parsedAnalysis.findings.map((finding) => ({
+          id: randomUUID(),
+          ...finding,
+        })),
+      };
 
       return {
         llmAnalysis,
