@@ -49,6 +49,11 @@ export const FindingSchema = z.object({
 });
 
 export const LlmAnalysisSchema = z.object({
+  thoughtProcess: z
+    .string()
+    .optional()
+    .describe('Internal step-by-step reasoning evaluating the code before finalizing findings'),
+
   summary: z.string().min(10),
 
   findings: z.array(FindingSchema)

@@ -10,6 +10,10 @@ export const PrFindingSchema = FindingSchema.extend({
   });
   
   export const PrLlmAnalysisSchema = z.object({
+    thoughtProcess: z
+      .string()
+      .optional()
+      .describe('Internal step-by-step reasoning evaluating the PR diff before finalizing findings'),
     summary: z.string().min(10),
     findings: z.array(PrFindingSchema).max(30),
   });
@@ -35,28 +39,4 @@ export const PrFindingSchema = FindingSchema.extend({
         ...finding,
       })),
     };
-  }
-
-  const JSON_REPAIR_HUMAN =
-  'Your previous response was not valid JSON for the required schema. Return ONLY valid JSON. No markdown. No code fences. Fix the JSON to match the schema exactly.';
-  
-/**
- * Parse LLM output; on failure run one repair invoke via supplied callback.
- */
-export async function parsePrLlmAnalysisWithRepair(
-    raw: string,
-    repairInvoke: (repairHint: string) => Promise<string>,
-  ): Promise<LlmAnalysis> {
-    try {
-      return parsePrLlmAnalysis(raw);
-    } catch (firstErr) {
-      const repairedRaw = await repairInvoke(JSON_REPAIR_HUMAN);
-      try {
-        return parsePrLlmAnalysis(repairedRaw);
-      } catch {
-        throw new Error(
-          `LLM analysis JSON invalid after repair: ${firstErr instanceof Error ? firstErr.message : String(firstErr)}`,
-        );
-      }
-    }
-  }
+  }
