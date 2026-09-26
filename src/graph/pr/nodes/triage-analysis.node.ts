@@ -20,11 +20,23 @@ const AGENT_NODE: Record<AgentRole, string> = {
 };
 
 const TriageDecisionSchema = z.object({
-  route: z.enum(['simple', 'specialized']),
+  route: z
+    .enum(['simple', 'specialized'])
+    .describe(
+      "Routing strategy: 'simple' for single-file, small, or low-risk PRs; 'specialized' for complex, multi-file, or risk-critical PRs requiring specialized agents"
+    ),
   agents: z
     .array(z.enum(['security', 'performance', 'best_practices']))
-    .optional(),
-  reasoning: z.string().optional(),
+    .optional()
+    .describe(
+      "List of specialized agent roles to dispatch when route is 'specialized'. Select one or more: 'security', 'performance', 'best_practices'"
+    ),
+  reasoning: z
+    .string()
+    .optional()
+    .describe(
+      'Brief technical justification for the chosen route and selected agents based on the PR diff digest'
+    ),
 });
 
 type TriageDecision = z.infer<typeof TriageDecisionSchema>;
