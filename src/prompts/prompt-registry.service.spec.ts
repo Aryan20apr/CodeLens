@@ -51,12 +51,12 @@ describe('PromptRegistryService', () => {
     expect(rendered.langchainMetadata.tags).toContain(
       'prompt:pr-review.specialized',
     );
-    expect(rendered.langchainMetadata.tags).toContain('v:1.0.0');
+    expect(rendered.langchainMetadata.tags).toContain('v:1.1.0');
     expect(rendered.langchainMetadata.tags).toContain('provider:OPENAI');
     expect(rendered.langchainMetadata.metadata.promptId).toBe(
       'pr-review.specialized',
     );
-    expect(rendered.langchainMetadata.metadata.promptVersion).toBe('1.0.0');
+    expect(rendered.langchainMetadata.metadata.promptVersion).toBe('1.1.0');
     expect(rendered.langchainMetadata.metadata.provider).toBe('OPENAI');
   });
 
