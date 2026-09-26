@@ -24,7 +24,7 @@ import { createValidateFindingsNode } from './nodes/validate-findings.node';
 import { createSynthesizeOverviewNode } from './nodes/synthesize-overview.node';
 import { LlmService } from '../../llm/llm.service';
 import { createTriageAnalysisNode, routeAfterTriage } from './nodes/triage-analysis.node';
-import type { PromptRegistryService } from '../../prompts/prompt-registry.service';
+import { PromptRegistryService } from '../../prompts/prompt-registry.service';
 import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
 import type {
   PrReviewGraphInvokeInput,

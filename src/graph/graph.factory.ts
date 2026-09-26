@@ -21,7 +21,7 @@ import { LlmService } from "src/llm/llm.service";
 import { createQualityGateNode } from './nodes/quality-gate.node';
 import { createRefineAnalysisNode } from './nodes/refine-analysis.node';
 import type { UserLlmKey } from '../llm-provider/llm-provider.service';
-import type { PromptRegistryService } from '../prompts/prompt-registry.service';
+import { PromptRegistryService } from '../prompts/prompt-registry.service';
 
 @Injectable()
 export class GraphFactory implements OnModuleInit {

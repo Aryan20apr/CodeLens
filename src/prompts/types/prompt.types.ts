@@ -29,14 +29,13 @@ export interface RenderedPrompt {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface PromptDefinition<TVariables = any> {
+export interface PromptDefinition<T = any> {
   id: PromptId;
   version: string;
   description: string;
   tags: string[];
   render: (
-    variables: TVariables,
+    variables: T,
     provider?: LlmProviderName,
   ) => {
     systemPrompt: string;
@@ -45,7 +44,7 @@ export interface PromptDefinition<TVariables = any> {
   providerOverrides?: Partial<
     Record<
       LlmProviderName,
-      (variables: TVariables) => {
+      (variables: T) => {
         systemPrompt: string;
         userPrompt?: string;
       }
