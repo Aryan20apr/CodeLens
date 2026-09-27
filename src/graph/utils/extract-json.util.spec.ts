@@ -1,4 +1,4 @@
-import { extractJson, sanitizeJsonString } from './extract-json.util';
+import { extractJson } from './extract-json.util';
 
 describe('extractJson', () => {
   it('extracts plain JSON object', () => {
@@ -59,6 +59,30 @@ describe('extractJson', () => {
     const parsed = JSON.parse(result);
     expect(parsed.findings[0].description).toBe(
       'Has "escaped quotes" and \\backslashes\\',
+    );
+  });
+
+  it('sanitizes unescaped internal double quotes inside code snippets in pretty-printed JSON', () => {
+    const input = [
+      '{',
+      '  "findings": [',
+      '    {',
+      '      "evidenceSnippet": "    public static final String[] PUBLIC_URLS = {"/api/auth/login"};",',
+      '      "suggestedFix": "Uncomment Swagger: `{"/api/auth/login", "/v3/api-docs/**"}`"',
+      '    }',
+      '  ]',
+      '}',
+    ].join('\n');
+
+    expect(() => JSON.parse(input)).toThrow();
+
+    const result = extractJson(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.findings[0].evidenceSnippet).toBe(
+      '    public static final String[] PUBLIC_URLS = {"/api/auth/login"};',
+    );
+    expect(parsed.findings[0].suggestedFix).toBe(
+      'Uncomment Swagger: `{"/api/auth/login", "/v3/api-docs/**"}`',
     );
   });
 

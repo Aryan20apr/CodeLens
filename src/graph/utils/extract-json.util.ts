@@ -7,13 +7,65 @@
  * Models frequently emit literal tabs when copying code snippets (e.g. from XML/Java).
  */
 export function sanitizeJsonString(raw: string): string {
+  // Pass 1: Line-aware escape for unescaped internal double quotes in string property values
+  const lines = raw.split(/\r?\n/);
+  const processedLines: string[] = [];
+
+  for (const line of lines) {
+    // Matches a property key and start of string value: e.g. '  "evidenceSnippet": "'
+    const propMatch = line.match(/^(\s*"[^"]+"\s*:\s*")(.*)$/);
+    if (propMatch) {
+      const prefix = propMatch[1];
+      const rest = propMatch[2];
+
+      const endMatch = rest.match(/(")(,?\s*)$/);
+      if (endMatch && endMatch.index !== undefined) {
+        const valContent = rest.slice(0, endMatch.index);
+        const suffix = endMatch[0];
+
+        let escapedVal = '';
+        let escapeNext = false;
+        for (let i = 0; i < valContent.length; i++) {
+          const ch = valContent[i];
+          if (escapeNext) {
+            escapedVal += ch;
+            escapeNext = false;
+            continue;
+          }
+          if (ch === '\\') {
+            escapedVal += ch;
+            escapeNext = true;
+            continue;
+          }
+          if (ch === '"') {
+            escapedVal += '\\"';
+            continue;
+          }
+          if (ch === '\t') {
+            escapedVal += '\\t';
+            continue;
+          }
+          escapedVal += ch;
+        }
+
+        processedLines.push(prefix + escapedVal + suffix);
+        continue;
+      }
+    }
+
+    processedLines.push(line);
+  }
+
+  const pass1 = processedLines.join('\n');
+
+  // Pass 2: RFC 8259 Section 9 control characters sanitization for any remaining literal control characters
   let result = '';
   let inString = false;
   let escapeNext = false;
 
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i];
-    const code = raw.charCodeAt(i);
+  for (let i = 0; i < pass1.length; i++) {
+    const ch = pass1[i];
+    const code = pass1.charCodeAt(i);
 
     if (escapeNext) {
       result += ch;
