@@ -155,16 +155,16 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
     const invokeInput: Partial<AnalyzeAgentStateType> | null = existing
       ? null
       : {
-          messages: [
-            new SystemMessage(input.systemPrompt),
-            new HumanMessage(
-              `${input.userContent}\n\nYou may call search tools or get_file_content before producing findings. When done, respond with ONLY valid JSON matching the required schema.`,
-            ),
-          ],
-          crossFileHints: [],
-          searchToolCallCount: 0,
-          toolRoundCount: 0,
-        };
+        messages: [
+          new SystemMessage(input.systemPrompt),
+          new HumanMessage(
+            `${input.userContent}\n\nYou may call search tools or get_file_content before producing findings. When done, respond with ONLY valid JSON matching the required schema.`,
+          ),
+        ],
+        crossFileHints: [],
+        searchToolCallCount: 0,
+        toolRoundCount: 0,
+      };
 
     this.logger.info(`[${className}] [${methodName}] :: Invoking analyze agent`, {
       agentRole: input.agentRole,
