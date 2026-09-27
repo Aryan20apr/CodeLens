@@ -22,7 +22,9 @@ export const FindingSchema = z.object({
       "best_practices",
       "maintainability",
     ])
-    .describe("The primary category of the finding"),
+    .describe(
+      "The primary category of the finding: 'security' | 'correctness' | 'performance' | 'best_practices' | 'maintainability'",
+    ),
 
   severity: z
     .enum([
@@ -50,12 +52,12 @@ export const FindingSchema = z.object({
 
   location: z
     .object({
-      startLine: z
+      startLine: z.coerce
         .number()
         .int()
         .min(1)
         .describe("1-indexed starting line number of the issue in the target file"),
-      endLine: z
+      endLine: z.coerce
         .number()
         .int()
         .min(1)
@@ -112,7 +114,7 @@ type LlmAnalysisOut = z.infer<
 >;
 
 /**
- * Parse + validate + normalize
+ * Parse + validate
  * all LLM analysis responses.
  */
 export function parseLlmAnalysis(

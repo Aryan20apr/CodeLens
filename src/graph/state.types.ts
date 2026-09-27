@@ -61,9 +61,11 @@ export type CodeLocation = {
   endLine: number;
 };
 
+export type FindingConfidence = 'high' | 'medium' | 'low';
+
 export type Finding = {
   id: string;
-  filePath ?: string
+  filePath?: string;
   category: FindingCategory;
   severity: FindingSeverity;
   title: string;
@@ -82,7 +84,7 @@ export type Finding = {
   /**
    * Useful when skipping static analysis.
    */
-  confidence: 'high' | 'medium' | 'low';
+  confidence: FindingConfidence;
 };
 export type LlmAnalysis = {
   summary: string;
