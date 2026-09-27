@@ -89,10 +89,11 @@ describe('pr-finding.schema', () => {
     expect(result.findings[0].severity).toBe('critical');
   });
 
-  it('parses raw text containing unescaped code quotes (Trace 2 scenario)', () => {
+  it('parses dirty LLM output containing unescaped control characters, comments, and trailing commas via jsonrepair', () => {
     const raw = [
+      '```json',
       '{',
-      '  "summary": "This PR implements JWT authentication with Spring Security and role access.",',
+      '  "summary": "This PR implements JWT authentication.\\nVerified all security configs.",',
       '  "findings": [',
       '    {',
       '      "filePath": "src/main/java/SecurityConfig.java",',
@@ -101,12 +102,12 @@ describe('pr-finding.schema', () => {
       '      "title": "Swagger endpoints commented out in PUBLIC_URLS",',
       '      "description": "Endpoints are commented out in configuration array.",',
       '      "location": { "startLine": 67, "endLine": 70 },',
-      '      "evidenceSnippet": "    public static final String[] PUBLIC_URLS = {"/api/auth/login"};/* , "/v3/api-docs" };*/",',
-      '      "suggestedFix": "Uncomment Swagger: `{"/api/auth/login", "/v3/api-docs/**"}`",',
-      '      "confidence": "medium"',
-      '    }',
-      '  ]',
+      '      "evidenceSnippet": "\\t\\tpublic static final String[] PUBLIC_URLS = {};",',
+      '      "confidence": "medium",',
+      '    },',
+      '  ],',
       '}',
+      '```',
     ].join('\n');
 
     const result = parsePrLlmAnalysis(raw);

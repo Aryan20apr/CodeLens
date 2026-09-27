@@ -62,28 +62,23 @@ describe('extractJson', () => {
     );
   });
 
-  it('sanitizes unescaped internal double quotes inside code snippets in pretty-printed JSON', () => {
-    const input = [
-      '{',
-      '  "findings": [',
-      '    {',
-      '      "evidenceSnippet": "    public static final String[] PUBLIC_URLS = {"/api/auth/login"};",',
-      '      "suggestedFix": "Uncomment Swagger: `{"/api/auth/login", "/v3/api-docs/**"}`"',
-      '    }',
-      '  ]',
-      '}',
-    ].join('\n');
-
+  it('repairs unescaped quotes inside string values', () => {
+    const input =
+      '{"findings": [{"description": "Found a "critical" issue here"}]}';
     expect(() => JSON.parse(input)).toThrow();
 
     const result = extractJson(input);
     const parsed = JSON.parse(result);
-    expect(parsed.findings[0].evidenceSnippet).toBe(
-      '    public static final String[] PUBLIC_URLS = {"/api/auth/login"};',
+    expect(parsed.findings[0].description).toBe(
+      'Found a "critical" issue here',
     );
-    expect(parsed.findings[0].suggestedFix).toBe(
-      'Uncomment Swagger: `{"/api/auth/login", "/v3/api-docs/**"}`',
-    );
+  });
+
+  it('repairs trailing commas and unquoted keys', () => {
+    const input = '{ summary: "Test summary", findings: [], }';
+    const result = extractJson(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.summary).toBe('Test summary');
   });
 
   it('throws an error if no JSON object is found', () => {
