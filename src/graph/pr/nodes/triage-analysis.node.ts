@@ -6,12 +6,12 @@ import type { LlmService } from '../../../llm/llm.service';
 import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-progress-publisher.service';
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
-import { extractTextFromLlmContent } from '../../../review/context/llm-content.util';
-import { extractJson } from '../../utils/extract-json.util';
+import { invokeWithStructuredOutput } from '../../utils/structured-output.util';
 import {
   AGENT_ROLES,
   type AgentRole,
 } from '../../../review/types/agent-prompt.types';
+import type { PromptRegistryService } from '../../../prompts/prompt-registry.service';
 
 const AGENT_NODE: Record<AgentRole, string> = {
   security: 'securityAgent',
@@ -20,11 +20,23 @@ const AGENT_NODE: Record<AgentRole, string> = {
 };
 
 const TriageDecisionSchema = z.object({
-  route: z.enum(['simple', 'specialized']),
+  route: z
+    .enum(['simple', 'specialized'])
+    .describe(
+      "Routing strategy: 'simple' for single-file, small, or low-risk PRs; 'specialized' for complex, multi-file, or risk-critical PRs requiring specialized agents"
+    ),
   agents: z
     .array(z.enum(['security', 'performance', 'best_practices']))
-    .optional(),
-  reasoning: z.string().optional(),
+    .optional()
+    .describe(
+      "List of specialized agent roles to dispatch when route is 'specialized'. Select one or more: 'security', 'performance', 'best_practices'"
+    ),
+  reasoning: z
+    .string()
+    .optional()
+    .describe(
+      'Brief technical justification for the chosen route and selected agents based on the PR diff digest'
+    ),
 });
 
 type TriageDecision = z.infer<typeof TriageDecisionSchema>;
@@ -129,15 +141,6 @@ function buildTriageDigest(state: PrReviewGraphStateType): string {
     .join('\n');
 }
 
-function parseTriageDecision(raw: string): TriageDecision {
-  try {
-    const parsed = JSON.parse(extractJson(raw));
-    return TriageDecisionSchema.parse(parsed);
-  } catch {
-    return { route: 'specialized', agents: [...AGENT_ROLES] };
-  }
-}
-
 // ─── Routing function ───────────────
 
 export function routeAfterTriage(state: PrReviewGraphStateType): Send[] {
@@ -162,6 +165,7 @@ type TriageUpdate = Partial<
 export function createTriageAnalysisNode(
   llm: LlmService,
   progress: PrReviewProgressPublisher,
+  promptRegistry?: PromptRegistryService,
 ): (state: PrReviewGraphStateType, config?: any) => Promise<TriageUpdate> {
   return async (state, config) => {
     const { reviewRunId } = state;
@@ -187,12 +191,41 @@ export function createTriageAnalysisNode(
           fn: async () => {
             const userLlmKey = config?.configurable?.userLlmKey;
             const model = llm.getChatModel(userLlmKey);
-            const response = await model.invoke([
-              new SystemMessage(TRIAGE_SYSTEM),
-              new HumanMessage(buildTriageDigest(state)),
-            ]);
-            const raw = extractTextFromLlmContent(response.content);
-            return parseTriageDecision(raw);
+
+            if (promptRegistry) {
+              const rendered = promptRegistry.render('pr-review.triage', undefined, {
+                provider: userLlmKey?.provider,
+              });
+              const { parsed } = await invokeWithStructuredOutput(
+                model,
+                TriageDecisionSchema,
+                [
+                  new SystemMessage(rendered.systemPrompt),
+                  new HumanMessage(buildTriageDigest(state)),
+                ],
+                {
+                  name: 'triage_pr_decision',
+                  callOptions: {
+                    tags: rendered.langchainMetadata.tags,
+                    metadata: rendered.langchainMetadata.metadata,
+                  },
+                },
+              );
+              return parsed;
+            }
+
+            const { parsed } = await invokeWithStructuredOutput(
+              model,
+              TriageDecisionSchema,
+              [
+                new SystemMessage(TRIAGE_SYSTEM),
+                new HumanMessage(buildTriageDigest(state)),
+              ],
+              {
+                name: 'triage_pr_decision',
+              },
+            );
+            return parsed;
           },
         },
       ],

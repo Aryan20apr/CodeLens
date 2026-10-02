@@ -25,8 +25,10 @@ import {
 import { routeAfterAnalyzeLlm } from './analyze-routing.util';
 import { createAnalyzeFinalizeNode } from './nodes/analyze-finalize.node';
 import { createAnalyzeLlmNode } from './nodes/analyze-llm.node';
+import { randomUUID } from 'crypto';
 import type { LlmAnalysis } from '../../../graph/state.types';
-import { parsePrLlmAnalysisWithRepair } from '../../../review/findings/pr-finding.schema';
+import { PrLlmAnalysisSchema } from '../../../review/findings/pr-finding.schema';
+import { invokeWithStructuredOutput } from '../../utils/structured-output.util';
 import { LangGraphCheckpointerService } from '../../checkpointer/langgraph-checkpointer.service';
 
 export type AnalyzeAgentInvokeInput = {
@@ -92,26 +94,20 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
       new HumanMessage(userContent),
     ];
 
-    const response = await model.invoke(messages);
-    const text = extractTextFromLlmContent(response.content);
-    if (!text.trim()) {
-      throw new Error('LLM returned empty PR analysis');
-    }
-
-    const llmAnalysis = await parsePrLlmAnalysisWithRepair(
-      text.trim(),
-      async (repairHint) => {
-        const repairResponse = await model.invoke([
-          ...messages,
-          new HumanMessage(repairHint),
-        ]);
-        const repairText = extractTextFromLlmContent(repairResponse.content);
-        if (!repairText.trim()) {
-          throw new Error('LLM returned empty PR analysis on repair');
-        }
-        return repairText.trim();
-      },
+    const { parsed } = await invokeWithStructuredOutput(
+      model,
+      PrLlmAnalysisSchema,
+      messages,
+      { name: 'pr_review_direct' },
     );
+
+    const llmAnalysis: LlmAnalysis = {
+      summary: parsed.summary,
+      findings: parsed.findings.map((f) => ({
+        id: randomUUID(),
+        ...f,
+      })),
+    };
 
     this.logger.info(`[${className}] [${methodName}] :: Direct analyze completed`, {
       findingCount: llmAnalysis.findings.length,
@@ -159,16 +155,16 @@ export class PrAnalyzeAgentFactory implements OnModuleInit {
     const invokeInput: Partial<AnalyzeAgentStateType> | null = existing
       ? null
       : {
-          messages: [
-            new SystemMessage(input.systemPrompt),
-            new HumanMessage(
-              `${input.userContent}\n\nYou may call search tools or get_file_content before producing findings. When done, respond with ONLY valid JSON matching the required schema.`,
-            ),
-          ],
-          crossFileHints: [],
-          searchToolCallCount: 0,
-          toolRoundCount: 0,
-        };
+        messages: [
+          new SystemMessage(input.systemPrompt),
+          new HumanMessage(
+            `${input.userContent}\n\nYou may call search tools or get_file_content before producing findings. When done, respond with ONLY valid JSON matching the required schema.`,
+          ),
+        ],
+        crossFileHints: [],
+        searchToolCallCount: 0,
+        toolRoundCount: 0,
+      };
 
     this.logger.info(`[${className}] [${methodName}] :: Invoking analyze agent`, {
       agentRole: input.agentRole,

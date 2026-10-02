@@ -56,6 +56,7 @@ export function createSimpleAnalyzeNode(
       apiFileIndex: state.apiFileIndex,
       fileContexts: state.fileContexts ?? [],
       enrichedFileCount,
+      provider: config?.configurable?.userLlmKey?.provider,
     };
 
     const { result, events } = await runPrSteps(reviewRunId, progress, [

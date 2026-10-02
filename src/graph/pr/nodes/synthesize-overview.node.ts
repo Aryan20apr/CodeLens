@@ -4,6 +4,7 @@ import type { PrReviewProgressPublisher } from '../../../streaming/pr-review-pro
 import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
 import { extractTextFromLlmContent } from '../../../review/context/llm-content.util';
+import type { PromptRegistryService } from '../../../prompts/prompt-registry.service';
 
 const SYNTHESIZE_SYSTEM = `You are a senior engineer writing a concise pull-request review summary.
 You are given agent analysis summaries and structured findings.
@@ -29,6 +30,7 @@ type SynthesizeUpdate = Partial<
 export function createSynthesizeOverviewNode(
   llm: LlmService,
   progress: PrReviewProgressPublisher,
+  promptRegistry?: PromptRegistryService,
 ): (state: PrReviewGraphStateType, config?: any) => Promise<SynthesizeUpdate> {
   return async (state, config) => {
     const { reviewRunId } = state;
@@ -64,10 +66,27 @@ export function createSynthesizeOverviewNode(
               `## Findings (${state.rawFindings.length} total)\n${findingsText || '(none)'}`,
             ].join('\n\n');
 
-            const response = await model.invoke([
-              new SystemMessage(SYNTHESIZE_SYSTEM),
-              new HumanMessage(userContent),
-            ]);
+            let response;
+            if (promptRegistry) {
+              const rendered = promptRegistry.render('pr-review.synthesize', undefined, {
+                provider: userLlmKey?.provider,
+              });
+              response = await model.invoke(
+                [
+                  new SystemMessage(rendered.systemPrompt),
+                  new HumanMessage(userContent),
+                ],
+                {
+                  tags: rendered.langchainMetadata.tags,
+                  metadata: rendered.langchainMetadata.metadata,
+                },
+              );
+            } else {
+              response = await model.invoke([
+                new SystemMessage(SYNTHESIZE_SYSTEM),
+                new HumanMessage(userContent),
+              ]);
+            }
 
             const text = extractTextFromLlmContent(response.content);
             if (!text.trim()) {

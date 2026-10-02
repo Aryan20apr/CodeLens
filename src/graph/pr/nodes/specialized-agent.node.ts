@@ -67,6 +67,7 @@ export function createSpecializedAgentNode(
         apiFileIndex: state.apiFileIndex,
         fileContexts: state.fileContexts ?? [],
         enrichedFileCount,
+        provider: config?.configurable?.userLlmKey?.provider,
       };
       const step = AGENT_STEP[role];
 
@@ -80,6 +81,7 @@ export function createSpecializedAgentNode(
             const systemPrompt = agentPromptService.buildSystemPrompt(
               role,
               prompt.skipSearchTools,
+              config?.configurable?.userLlmKey?.provider,
             );
   
             if (prompt.skipSearchTools) {
