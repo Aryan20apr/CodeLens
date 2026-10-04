@@ -49,7 +49,9 @@ export class LlmService {
                     return new ChatOpenAI({
                         apiKey: userKey.rawKey,
                         model: userKey.model || this.config.nvidiaModel,
-                        configuration: userKey.baseUrl ? { baseURL: userKey.baseUrl } : undefined,
+                        configuration: {
+                            baseURL: userKey.baseUrl || this.config.nvidiaBaseUrl,
+                        },
                     });
             }
         }
