@@ -9,6 +9,8 @@ import { PrSearchToolExecutorService } from './context/pr-search-tool-executor.s
 import { PrReviewPromptService } from './pr-review-prompt.service';
 import { ValidatePrFindingsService } from './findings/validator.service';
 import { AgentPromptService } from './agent-prompt.service';
+import { AutonomousReviewAgentFactory } from './autonomous-review-agent.factory';
+
 @Module({
   imports: [AppConfigModule, LlmModule, DiffModule],
   providers: [
@@ -20,7 +22,8 @@ import { AgentPromptService } from './agent-prompt.service';
     PrSearchToolExecutorService,
     PrReviewPromptService,
     ValidatePrFindingsService,
-    AgentPromptService
+    AgentPromptService,
+    AutonomousReviewAgentFactory,
   ],
   exports: [
     PrReviewPromptService,
@@ -29,6 +32,7 @@ import { AgentPromptService } from './agent-prompt.service';
     ValidatePrFindingsService,
     GLOBAL_SEARCH_PROVIDER,
     GithubSearchProvider,
+    AutonomousReviewAgentFactory,
   ],
 })
 export class ReviewModule {}
