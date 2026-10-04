@@ -5,27 +5,20 @@ import type { Logger } from 'winston';
 
 import { DiffChunkerService } from '../../diff/diff-chunker.service';
 import { DiffParserService } from '../../diff/diff-parser.service';
+import { DiffChunkSerializerService } from '../../diff/diff-chunk-serializer.service';
 import { GithubApiService } from '../../github/github-api.service';
 import { PrFileEnrichmentService } from '../../review/enrichment/pr-file-enrichment.service';
-import { PrAnalyzeAgentFactory } from './analyze/analyze-agent.factory';
-import { PrReviewPromptService } from '../../review/pr-review-prompt.service';
-import { AgentPromptService } from '../../review/agent-prompt.service';
+import { AutonomousReviewAgentFactory } from '../../review/autonomous-review-agent.factory';
 import { PrReviewProgressPublisher } from '../../streaming/pr-review-progress-publisher.service';
-import { createSpecializedAgentNode } from './nodes/specialized-agent.node';
-import { createAggregateFindingsNode } from './nodes/aggregate-findings.node';
 import { createChunkNode } from './nodes/chunk.node';
 import { createDiffIngestionNode } from './nodes/diff-ingestion.node';
 import { createEnrichFilesNode } from './nodes/enrich-files.node';
+import { createAutonomousReviewNode } from './nodes/autonomous-review.node';
 import { createPostReviewNode } from './nodes/post-review.node';
 import type { AppConfig } from '../../config/app-config.types';
 import { APP_CONFIG } from '../../config/config.constants';
 import { ValidatePrFindingsService } from '../../review/findings/validator.service';
 import { createValidateFindingsNode } from './nodes/validate-findings.node';
-import { createSynthesizeOverviewNode } from './nodes/synthesize-overview.node';
-import { LlmService } from '../../llm/llm.service';
-import { createTriageAnalysisNode, routeAfterTriage } from './nodes/triage-analysis.node';
-import { PromptRegistryService } from '../../prompts/prompt-registry.service';
-import { createSimpleAnalyzeNode } from './nodes/simple-analyze.node';
 import type {
   PrReviewGraphInvokeInput,
   PrReviewGraphInvokeResult,
@@ -34,14 +27,7 @@ import { PrReviewGraphState } from './pr-review.state.annotation';
 import { PostedFindingRepository } from '../../db/github/posted-finding.repository';
 import { LangGraphCheckpointerService } from '../checkpointer/langgraph-checkpointer.service';
 import type { UserLlmKey } from '../../llm-provider/llm-provider.service';
-
-export function routeAfterAggregate(
-  state: typeof PrReviewGraphState.State,
-): string {
-  return state.analysisRoute === 'specialized' && !state.isIncrementalReview
-    ? 'synthesizeOverview'
-    : 'validateFindings';
-}
+import { LlmService } from '../../llm/llm.service';
 
 @Injectable()
 export class PrReviewGraphFactory implements OnModuleInit {
@@ -54,16 +40,14 @@ export class PrReviewGraphFactory implements OnModuleInit {
     private readonly github: GithubApiService,
     private readonly diffParser: DiffParserService,
     private readonly chunker: DiffChunkerService,
-    private readonly promptService: PrReviewPromptService,
-    private readonly agentPromptService: AgentPromptService,
-    private readonly analyzeAgent: PrAnalyzeAgentFactory,
+    private readonly diffSerializer: DiffChunkSerializerService,
+    private readonly autonomousAgentFactory: AutonomousReviewAgentFactory,
     private readonly enrichment: PrFileEnrichmentService,
     private readonly progress: PrReviewProgressPublisher,
-    private readonly llm: LlmService,
     private readonly findingsValidator: ValidatePrFindingsService,
     private readonly checkpointerService: LangGraphCheckpointerService,
     private readonly postedFindings: PostedFindingRepository,
-    private readonly promptRegistry: PromptRegistryService,
+    private readonly llm: LlmService,
   ) {
     this.logger = logger.child({ context: PrReviewGraphFactory.name });
   }
@@ -71,7 +55,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
   onModuleInit() {
     this.compiled = this.build();
     this.logger.info(
-      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> triageAnalysis -> {simpleAnalyze | [securityAgent ‖ perfAgent ‖ bpAgent]} -> aggregateFindings -> {synthesizeOverview | validateFindings} -> validateFindings -> postReview -> END',
+      'LangGraph (pr-review) compiled: START -> ingestDiff -> chunk -> enrichFiles -> autonomousReview -> validateFindings -> postReview -> END',
     );
   }
 
@@ -82,7 +66,7 @@ export class PrReviewGraphFactory implements OnModuleInit {
 
   async invokePrReview(
     input: PrReviewGraphInvokeInput,
-    config?: { userLlmKey?: UserLlmKey }
+    config?: { userLlmKey?: UserLlmKey },
   ): Promise<PrReviewGraphInvokeResult> {
     const className = PrReviewGraphFactory.name;
     const methodName = 'invokePrReview';
@@ -93,12 +77,15 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .getSaver()
       .getTuple(checkpointConfig);
 
-    this.logger.info(`[${className}] [${methodName}] :: Invoking PR review graph`, {
-      reviewRunId,
-      repoFullName: input.repoFullName,
-      prNumber: input.prNumber,
-      resuming: existing != null,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Invoking PR review graph`,
+      {
+        reviewRunId,
+        repoFullName: input.repoFullName,
+        prNumber: input.prNumber,
+        resuming: existing != null,
+      },
+    );
 
     const graph = this.getCompiledGraph();
 
@@ -137,6 +124,8 @@ export class PrReviewGraphFactory implements OnModuleInit {
           removedOnlyFileCount: 0,
           binaryOrEmptyFileCount: 0,
           fileContexts: [],
+          repoRules: null,
+          repoSkills: [],
           summaryMarkdown: null,
           githubReviewId: null,
           status: 'pending' as const,
@@ -160,29 +149,28 @@ export class PrReviewGraphFactory implements OnModuleInit {
       },
     });
 
-    if (result.status === 'failed' || result.error) {
-      throw new Error(result.error ?? 'PR review graph failed');
-    }
-    if (!result.analysisSummary?.trim() || !result.summaryMarkdown?.trim()) {
-      throw new Error('PR review graph finished without analysis summary');
-    }
-    if (!result.githubReviewId) {
-      throw new Error('PR review graph finished without githubReviewId');
-    }
+    const terminalStatus =
+      result.status === 'complete' || result.status === 'failed'
+        ? result.status
+        : 'complete';
 
-    this.logger.info(`[${className}] [${methodName}] :: PR review graph completed`, {
-      reviewRunId,
-      githubReviewId: result.githubReviewId,
-      agentFindingCount: result.agentFindings.length,
-      validatedFindingCount: result.validatedFindings.length,
-      eventCount: result.events.length,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: PR review graph invocation finished`,
+      {
+        reviewRunId,
+        status: terminalStatus,
+        rawCount: result.rawFindings?.length ?? 0,
+        validatedCount: result.validatedFindings?.length ?? 0,
+        hasSummary: !!result.summaryMarkdown,
+        githubReviewId: result.githubReviewId,
+      },
+    );
 
     return {
-      summaryMarkdown: result.summaryMarkdown,
-      githubReviewId: result.githubReviewId,
-      events: result.events,
-      validatedFindings: result.validatedFindings,
+      summaryMarkdown: result.summaryMarkdown ?? '',
+      githubReviewId: result.githubReviewId ?? '',
+      events: result.events ?? [],
+      validatedFindings: result.validatedFindings ?? [],
     };
   }
 
@@ -192,48 +180,11 @@ export class PrReviewGraphFactory implements OnModuleInit {
     const ingestDiff = createDiffIngestionNode(this.github, this.progress);
     const chunk = createChunkNode(this.diffParser, this.chunker, this.progress);
     const enrichFiles = createEnrichFilesNode(this.enrichment, this.progress);
-
-    const triageAnalysis = createTriageAnalysisNode(
+    const autonomousReview = createAutonomousReviewNode(
+      this.autonomousAgentFactory,
+      this.diffSerializer,
+      this.progress,
       this.llm,
-      this.progress,
-      this.promptRegistry,
-    );
-    const simpleAnalyze = createSimpleAnalyzeNode(
-      this.promptService,
-      this.analyzeAgent,
-      this.progress,
-    );
-
-    const securityAgent = createSpecializedAgentNode(
-      'security',
-      this.agentPromptService,
-      this.promptService,
-      this.analyzeAgent,
-      this.progress,
-    );
-    const perfAgent = createSpecializedAgentNode(
-      'performance',
-      this.agentPromptService,
-      this.promptService,
-      this.analyzeAgent,
-      this.progress,
-    );
-    const bpAgent = createSpecializedAgentNode(
-      'best_practices',
-      this.agentPromptService,
-      this.promptService,
-      this.analyzeAgent,
-      this.progress,
-    );
-
-    const aggregateFindings = createAggregateFindingsNode(
-      this.progress,
-      this.appConfig.prReview.findings.mergeSimilarityThreshold,
-    );
-    const synthesizeOverview = createSynthesizeOverviewNode(
-      this.llm,
-      this.progress,
-      this.promptRegistry,
     );
     const validateFindings = createValidateFindingsNode(
       this.findingsValidator,
@@ -250,39 +201,14 @@ export class PrReviewGraphFactory implements OnModuleInit {
       .addNode('ingestDiff', ingestDiff)
       .addNode('chunk', chunk)
       .addNode('enrichFiles', enrichFiles)
-      .addNode('triageAnalysis', triageAnalysis)
-      .addNode('simpleAnalyze', simpleAnalyze)
-      .addNode('securityAgent', securityAgent)
-      .addNode('perfAgent', perfAgent)
-      .addNode('bpAgent', bpAgent)
-      .addNode('aggregateFindings', aggregateFindings)
-      .addNode('synthesizeOverview', synthesizeOverview)
+      .addNode('autonomousReview', autonomousReview)
       .addNode('validateFindings', validateFindings)
       .addNode('postReview', postReview)
       .addEdge(START, 'ingestDiff')
       .addEdge('ingestDiff', 'chunk')
       .addEdge('chunk', 'enrichFiles')
-      .addEdge('enrichFiles', 'triageAnalysis')
-      // Dynamic Send-based fan-out: routeAfterTriage returns Send[] for only
-      // the agents triage selected. The path-hint array tells LangGraph which
-      // nodes are reachable (for diagram generation); it has no effect at runtime.
-      .addConditionalEdges('triageAnalysis', routeAfterTriage, [
-        'simpleAnalyze',
-        'securityAgent',
-        'perfAgent',
-        'bpAgent',
-      ])
-      // Fan-in edges: each agent points to aggregateFindings. With Send, only
-      // the dispatched agents actually run — the others' edges are never traversed.
-      .addEdge('simpleAnalyze', 'aggregateFindings')
-      .addEdge('securityAgent', 'aggregateFindings')
-      .addEdge('perfAgent', 'aggregateFindings')
-      .addEdge('bpAgent', 'aggregateFindings')
-      .addConditionalEdges('aggregateFindings', routeAfterAggregate, [
-        'synthesizeOverview',
-        'validateFindings',
-      ])
-      .addEdge('synthesizeOverview', 'validateFindings')
+      .addEdge('enrichFiles', 'autonomousReview')
+      .addEdge('autonomousReview', 'validateFindings')
       .addEdge('validateFindings', 'postReview')
       .addEdge('postReview', END)
       .compile({ checkpointer });
