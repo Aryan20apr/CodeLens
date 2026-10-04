@@ -33,7 +33,8 @@ export class PrSearchToolExecutorService {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) logger: Logger,
-    @Inject(GLOBAL_SEARCH_PROVIDER) private readonly search: GlobalSearchProvider,
+    @Inject(GLOBAL_SEARCH_PROVIDER)
+    private readonly search: GlobalSearchProvider,
     @Inject(APP_CONFIG) config: AppConfig,
     private readonly github: GithubApiService,
   ) {
@@ -41,6 +42,8 @@ export class PrSearchToolExecutorService {
     this.maxQueriesPerRun = config.prReview.search.maxQueriesPerRun;
     this.maxResultsPerQuery = config.prReview.search.maxResultsPerQuery;
   }
+
+  private readonly runContexts = new Map<string, PrSearchExecutorContext>();
 
   createContext(
     installationId: bigint,
@@ -57,6 +60,24 @@ export class PrSearchToolExecutorService {
     };
   }
 
+  getOrCreateContext(
+    reviewRunId: string,
+    installationId: bigint,
+    repoFullName: string,
+    headSha: string,
+  ): PrSearchExecutorContext {
+    let ctx = this.runContexts.get(reviewRunId);
+    if (!ctx) {
+      ctx = this.createContext(installationId, repoFullName, headSha);
+      this.runContexts.set(reviewRunId, ctx);
+    }
+    return ctx;
+  }
+
+  releaseContext(reviewRunId: string): void {
+    this.runContexts.delete(reviewRunId);
+  }
+
   async executeToolCall(
     ctx: PrSearchExecutorContext,
     toolName: string,
@@ -65,7 +86,10 @@ export class PrSearchToolExecutorService {
     const className = PrSearchToolExecutorService.name;
     const methodName = 'executeToolCall';
 
-    if (toolName === PR_SEARCH_TOOL_NAMES.fileContent) {
+    if (
+      toolName === PR_SEARCH_TOOL_NAMES.fileContent ||
+      toolName === PR_SEARCH_TOOL_NAMES.legacyFileContent
+    ) {
       return this.executeFileContentFetch(ctx, args);
     }
 
@@ -88,9 +112,13 @@ export class PrSearchToolExecutorService {
       let hint: CrossFileHint;
 
       if (toolName === PR_SEARCH_TOOL_NAMES.symbolUsage) {
-        const symbol = typeof args.symbol === 'string' ? args.symbol.trim() : '';
+        const symbol =
+          typeof args.symbol === 'string' ? args.symbol.trim() : '';
         if (!symbol) {
-          return { hint: null, toolMessage: 'Invalid tool args: symbol is required.' };
+          return {
+            hint: null,
+            toolMessage: 'Invalid tool args: symbol is required.',
+          };
         }
         hint = await this.search.searchSymbolUsage(
           ctx.installationId,
@@ -120,12 +148,15 @@ export class PrSearchToolExecutorService {
       ctx.queriesUsed += 1;
       ctx.cache.set(cacheKey, hint);
 
-      this.logger.info(`[${className}] [${methodName}] :: Search tool executed`, {
-        repoFullName: ctx.repoFullName,
-        toolName,
-        pathCount: hint.paths.length,
-        queriesUsed: ctx.queriesUsed,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Search tool executed`,
+        {
+          repoFullName: ctx.repoFullName,
+          toolName,
+          pathCount: hint.paths.length,
+          queriesUsed: ctx.queriesUsed,
+        },
+      );
 
       return { hint, toolMessage: formatHintForToolMessage(hint) };
     } catch (err) {
@@ -136,7 +167,8 @@ export class PrSearchToolExecutorService {
       });
       return {
         hint: null,
-        toolMessage: 'Code search failed for this query. Continue without cross-file hints.',
+        toolMessage:
+          'Code search failed for this query. Continue without cross-file hints.',
       };
     }
   }
@@ -148,9 +180,13 @@ export class PrSearchToolExecutorService {
     const className = PrSearchToolExecutorService.name;
     const methodName = 'executeFileContentFetch';
 
-    const filePath = typeof args.filePath === 'string' ? args.filePath.trim() : '';
+    const filePath =
+      typeof args.filePath === 'string' ? args.filePath.trim() : '';
     if (!filePath) {
-      return { hint: null, toolMessage: 'Invalid tool args: filePath is required.' };
+      return {
+        hint: null,
+        toolMessage: 'Invalid tool args: filePath is required.',
+      };
     }
 
     if (ctx.fileContentFetched >= PR_FILE_CONTENT_FETCH_CAP) {
@@ -180,24 +216,30 @@ export class PrSearchToolExecutorService {
         ? `\n[Truncated — showing first ${MAX_FILE_CONTENT_CHARS} chars of ${fetched.content.length}]`
         : '';
 
-      this.logger.info(`[${className}] [${methodName}] :: File content fetched`, {
-        repoFullName: ctx.repoFullName,
-        filePath,
-        sizeBytes: fetched.sizeBytes,
-        truncated,
-        fileContentFetched: ctx.fileContentFetched,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: File content fetched`,
+        {
+          repoFullName: ctx.repoFullName,
+          filePath,
+          sizeBytes: fetched.sizeBytes,
+          truncated,
+          fileContentFetched: ctx.fileContentFetched,
+        },
+      );
 
       return {
         hint: null,
         toolMessage: `### ${filePath}\n\`\`\`\n${content}\n\`\`\`${truncationNote}`,
       };
     } catch (err) {
-      this.logger.warn(`[${className}] [${methodName}] :: File content fetch failed`, {
-        repoFullName: ctx.repoFullName,
-        filePath,
-        error: err,
-      });
+      this.logger.warn(
+        `[${className}] [${methodName}] :: File content fetch failed`,
+        {
+          repoFullName: ctx.repoFullName,
+          filePath,
+          error: err,
+        },
+      );
       return {
         hint: null,
         toolMessage: `Failed to fetch file content for ${filePath}. Continue without it.`,
