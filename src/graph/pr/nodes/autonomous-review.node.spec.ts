@@ -71,7 +71,6 @@ describe('autonomousReviewNode', () => {
     binaryOrEmptyFileCount: 0,
     fileContexts: [],
     repoRules: 'Always follow zero trust security.',
-    repoSkills: [],
     summaryMarkdown: null,
     githubReviewId: null,
     status: 'pending',
@@ -177,7 +176,6 @@ describe('autonomousReviewNode', () => {
     expect(mockFactory.createAgent).toHaveBeenCalledWith({
       userLlmKey: config.configurable.userLlmKey,
       repoRules: 'Always follow zero trust security.',
-      repoSkills: [],
       isIncrementalReview: false,
       previousReviewFindingsCount: undefined,
       validFilePaths: ['src/auth/auth.service.ts'],

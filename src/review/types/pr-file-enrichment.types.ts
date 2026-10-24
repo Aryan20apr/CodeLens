@@ -31,17 +31,10 @@ export type PrFileEnrichmentInput = {
   chunks: ReviewChunk[];
 };
 
-export type RepoSkill = {
-  name: string;
-  path: string;
-  content: string;
-};
-
 export type PrFileEnrichmentResult = {
   fileContexts: PrFileContext[];
   enrichedCount: number;
   skippedCount: number;
   failedCount: number;
   repoRules: string | null;
-  repoSkills: RepoSkill[];
 };

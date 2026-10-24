@@ -133,7 +133,6 @@ export function createAutonomousReviewNode(
           const { agent, cleanup } = factory.createAgent({
             userLlmKey,
             repoRules: state.repoRules,
-            repoSkills: state.repoSkills,
             isIncrementalReview: state.isIncrementalReview,
             previousReviewFindingsCount: state.previousReview?.findings.length,
             validFilePaths,

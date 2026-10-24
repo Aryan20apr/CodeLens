@@ -13,7 +13,6 @@ import {
 } from '../state.annotation';
 import type {
   PrFileContext,
-  RepoSkill,
 } from '../../review/types/pr-file-enrichment.types';
 import type { PrReviewRunStatus } from '../state.types';
 import type { CrossFileHint } from '../../review/types/cross-file-hint.types';
@@ -135,10 +134,6 @@ export const PrReviewGraphState = Annotation.Root({
   repoRules: Annotation<string | null>({
     reducer: lastWins,
     default: () => null,
-  }),
-  repoSkills: Annotation<RepoSkill[]>({
-    reducer: lastWins,
-    default: () => [],
   }),
   crossFileHints: Annotation<CrossFileHint[]>({
     reducer: concatHints,

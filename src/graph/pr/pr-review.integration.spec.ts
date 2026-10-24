@@ -155,7 +155,6 @@ index 0000001..0000002 100644
         contexts: [],
         skippedFiles: [],
         repoRules: 'Always enforce secure JWT validation.',
-        repoSkills: [],
       }),
     };
 
