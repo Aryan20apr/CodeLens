@@ -1,0 +1,171 @@
+import { PrFileEnrichmentService } from './pr-file-enrichment.service';
+import type { GithubApiService } from '../../github/github-api.service';
+import type { LanguageDetectService } from '../../graph/lib/language-detect.service';
+import type { AstExtractService } from '../../graph/lib/ast-extract.service';
+import type { Logger } from 'winston';
+
+jest.mock('@octokit/auth-app', () => ({
+  createAppAuth: jest.fn(),
+}));
+jest.mock('@octokit/rest', () => ({
+  Octokit: jest.fn(),
+}));
+
+describe('PrFileEnrichmentService', () => {
+  let service: PrFileEnrichmentService;
+  let mockGithub: jest.Mocked<Partial<GithubApiService>>;
+  let mockLanguage: jest.Mocked<Partial<LanguageDetectService>>;
+  let mockAstExtract: jest.Mocked<Partial<AstExtractService>>;
+  let mockLogger: jest.Mocked<Partial<Logger>>;
+
+  beforeEach(() => {
+    mockLogger = {
+      child: jest.fn().mockReturnThis(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    } as any;
+
+    mockGithub = {
+      getFileContentAtRef: jest.fn(),
+      getDirectoryAtRef: jest.fn(),
+    };
+
+    mockLanguage = {
+      detectLanguage: jest.fn().mockReturnValue('typescript'),
+    };
+
+    mockAstExtract = {
+      buildMetadata: jest.fn().mockResolvedValue({
+        functions: [],
+        classes: [],
+        imports: [],
+        functionCount: 0,
+        classCount: 0,
+      }),
+    };
+
+    service = new PrFileEnrichmentService(
+      mockLogger as Logger,
+      mockGithub as GithubApiService,
+      mockLanguage as LanguageDetectService,
+      mockAstExtract as AstExtractService,
+    );
+  });
+
+  describe('fetchRepoRules', () => {
+    it('discovers AGENTS.md at headSha when present', async () => {
+      mockGithub.getFileContentAtRef = jest
+        .fn()
+        .mockImplementation(async (_instId, _repo, path) => {
+          if (path === 'AGENTS.md') {
+            return {
+              content: '# Repository Coding Standards\nAlways write tests.',
+              sizeBytes: 50,
+            };
+          }
+          return null;
+        });
+
+      const rules = await service.fetchRepoRules(1n, 'owner/repo', 'sha123');
+      expect(rules).toContain('# Repository Coding Standards');
+      expect(mockGithub.getFileContentAtRef).toHaveBeenCalledWith(
+        1n,
+        'owner/repo',
+        'AGENTS.md',
+        'sha123',
+      );
+    });
+
+    it('falls back to candidate files and returns null if none found', async () => {
+      mockGithub.getFileContentAtRef = jest.fn().mockResolvedValue(null);
+
+      const rules = await service.fetchRepoRules(1n, 'owner/repo', 'sha123');
+      expect(rules).toBeNull();
+    });
+  });
+
+  describe('fetchRepoSkills', () => {
+    it('discovers custom skills in .codelens/skills directory', async () => {
+      mockGithub.getDirectoryAtRef = jest
+        .fn()
+        .mockImplementation(async (_instId, _repo, path) => {
+          if (path === '.codelens/skills') {
+            return [
+              {
+                name: 'payment-audit',
+                path: '.codelens/skills/payment-audit',
+                type: 'dir',
+              },
+            ];
+          }
+          return null;
+        });
+
+      mockGithub.getFileContentAtRef = jest
+        .fn()
+        .mockImplementation(async (_instId, _repo, path) => {
+          if (path === '.codelens/skills/payment-audit/SKILL.md') {
+            return {
+              content:
+                '---\nname: payment-audit\ndescription: Audit payment flows\n---\n# Payment Audit',
+              sizeBytes: 80,
+            };
+          }
+          return null;
+        });
+
+      const skills = await service.fetchRepoSkills(1n, 'owner/repo', 'sha123');
+      expect(skills.length).toBe(1);
+      expect(skills[0].name).toBe('payment-audit');
+      expect(skills[0].path).toBe('.codelens/skills/payment-audit');
+      expect(skills[0].content).toContain('Audit payment flows');
+    });
+
+    it('returns empty array when no custom skills directories exist', async () => {
+      mockGithub.getDirectoryAtRef = jest.fn().mockResolvedValue(null);
+
+      const skills = await service.fetchRepoSkills(1n, 'owner/repo', 'sha123');
+      expect(skills).toEqual([]);
+    });
+  });
+
+  describe('enrich', () => {
+    it('enriches files, repo rules, and skills in parallel', async () => {
+      mockGithub.getFileContentAtRef = jest
+        .fn()
+        .mockImplementation(async (_instId, _repo, path) => {
+          if (path === 'AGENTS.md') {
+            return { content: '# Repo Rules', sizeBytes: 20 };
+          }
+          if (path === 'src/index.ts') {
+            return { content: 'export const a = 1;', sizeBytes: 20 };
+          }
+          return null;
+        });
+      mockGithub.getDirectoryAtRef = jest.fn().mockResolvedValue(null);
+
+      const result = await service.enrich({
+        installationId: 1n,
+        repoFullName: 'owner/repo',
+        headSha: 'head123',
+        chunks: [
+          {
+            filePath: 'src/index.ts',
+            previousPath: null,
+            fileStatus: 'modified',
+            hunkHeader: '@@ -1 +1 @@',
+            newLineRange: { start: 1, end: 1 },
+            addedLines: [{ line: 1, content: 'export const a = 1;' }],
+            deletedLineCount: 0,
+          },
+        ],
+      });
+
+      expect(result.enrichedCount).toBe(1);
+      expect(result.fileContexts[0].filePath).toBe('src/index.ts');
+      expect(result.repoRules).toBe('# Repo Rules');
+      expect(result.repoSkills).toEqual([]);
+    });
+  });
+});

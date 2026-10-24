@@ -11,13 +11,15 @@ import {
   lastWins,
   type GraphEvent,
 } from '../state.annotation';
-import type { PrFileContext } from '../../review/types/pr-file-enrichment.types';
+import type {
+  PrFileContext,
+  RepoSkill,
+} from '../../review/types/pr-file-enrichment.types';
 import type { PrReviewRunStatus } from '../state.types';
 import type { CrossFileHint } from '../../review/types/cross-file-hint.types';
 import type { Finding } from '../state.types';
 import type { ValidationStats } from '../../review/types/pr-findings.types';
 import type { AgentRole } from '../../review/types/agent-prompt.types';
-
 
 function concatFindings(
   left: Finding[],
@@ -42,8 +44,6 @@ function concatHints(
   if (!right || right.length === 0) return left;
   return [...left, ...right];
 }
-
-
 
 export const PrReviewGraphState = Annotation.Root({
   reviewRunId: Annotation<string>({
@@ -129,6 +129,14 @@ export const PrReviewGraphState = Annotation.Root({
   }),
 
   fileContexts: Annotation<PrFileContext[]>({
+    reducer: lastWins,
+    default: () => [],
+  }),
+  repoRules: Annotation<string | null>({
+    reducer: lastWins,
+    default: () => null,
+  }),
+  repoSkills: Annotation<RepoSkill[]>({
     reducer: lastWins,
     default: () => [],
   }),

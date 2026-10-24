@@ -8,13 +8,11 @@ import { Test } from '@nestjs/testing';
 import { GraphFactory } from './graph.factory';
 import { GraphMermaidExportModule } from './graph-mermaid-export.module';
 import { getGraphMermaid } from './get-graph-mermaid.util';
-import { PrAnalyzeAgentFactory } from './pr/analyze/analyze-agent.factory';
 import { PrReviewGraphFactory } from './pr/prreviewgraph.factory';
 
 const GRAPH_EXPORTS = [
   { slug: 'snippet', factory: GraphFactory },
   { slug: 'pr-review', factory: PrReviewGraphFactory },
-  { slug: 'analyze-agent', factory: PrAnalyzeAgentFactory },
 ] as const;
 
 async function main(): Promise<void> {

@@ -4,7 +4,10 @@ import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
 
 type EnrichUpdate = Partial<
-  Pick<PrReviewGraphStateType, 'fileContexts' | 'events' | 'error' | 'status'>
+  Pick<
+    PrReviewGraphStateType,
+    'fileContexts' | 'repoRules' | 'repoSkills' | 'events' | 'error' | 'status'
+  >
 >;
 
 export function createEnrichFilesNode(
@@ -48,6 +51,8 @@ export function createEnrichFilesNode(
 
     return {
       fileContexts: result.fileContexts,
+      repoRules: result.repoRules ?? null,
+      repoSkills: result.repoSkills ?? [],
       events,
     };
   };

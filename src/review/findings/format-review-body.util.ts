@@ -25,21 +25,21 @@ export function formatStructuredOverview(
     sections.push(trimmed);
   } else {
     sections.push('## Overview', trimmed, '');
+  }
 
-    // Key Findings — top 7 by severity (for simple single-agent path)
-    const topFindings = [...findings]
-      .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
-      .slice(0, 7);
+  // Key Findings — top 7 by severity (for simple single-agent or autonomous path)
+  const topFindings = [...findings]
+    .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
+    .slice(0, 7);
 
-    if (topFindings.length > 0) {
-      sections.push('## Key Findings');
-      for (const f of topFindings) {
-        const emoji = SEVERITY_EMOJI[f.severity] ?? '•';
-        const loc = f.filePath ? ` \`${f.filePath}:${f.location.startLine}\`` : '';
-        sections.push(`- ${emoji}${loc} **${f.title}** — ${f.description}`);
-      }
-      sections.push('');
+  if (topFindings.length > 0 && !trimmed.toLowerCase().includes('key finding')) {
+    sections.push('## Key Findings');
+    for (const f of topFindings) {
+      const emoji = SEVERITY_EMOJI[f.severity] ?? '•';
+      const loc = f.filePath ? ` \`${f.filePath}:${f.location.startLine}\`` : '';
+      sections.push(`- ${emoji}${loc} **${f.title}** — ${f.description}`);
     }
+    sections.push('');
   }
 
   if (inlineCommentCount > 0) {

@@ -3,6 +3,9 @@ export type PromptId =
   | 'pr-review.specialized'
   | 'pr-review.single'
   | 'pr-review.synthesize'
+  | 'pr-review.lead-agent'
+  | 'pr-review.investigator'
+  | 'pr-review.verifier'
   | 'snippet.analysis'
   | 'snippet.refine';
 

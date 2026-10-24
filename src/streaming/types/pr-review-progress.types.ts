@@ -8,6 +8,7 @@ export const PR_REVIEW_STEPS = [
   'searching_code',
   'triaging',
   'summarizing', // Not needed with multi-agent fanout
+  'analyzing_changes',
   'analyzing_security',
   'analyzing_performance',
   'analyzing_best_practices',

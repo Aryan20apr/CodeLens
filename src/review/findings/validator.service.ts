@@ -25,8 +25,6 @@ const CONFIDENCE_RANK: Record<Finding['confidence'], number> = {
   low: 1,
 };
 
-
-
 @Injectable()
 export class ValidatePrFindingsService {
   private readonly logger: Logger;
@@ -100,6 +98,7 @@ export class ValidatePrFindingsService {
         const endOk =
           finding.location.endLine === finding.location.startLine ||
           (lines?.has(finding.location.endLine) ?? false);
+
         if (!startOk || !endOk) {
           recordDrop('line_not_in_diff');
           continue;

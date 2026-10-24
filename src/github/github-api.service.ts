@@ -32,13 +32,12 @@ export type CodeSearchHit = {
   path: string;
   line: number | null;
   text: string;
-}
+};
 export type CodeSearchResult = {
   totalCount: number;
   items: CodeSearchHit[];
   incomplete: boolean;
 };
-
 
 @Injectable()
 export class GithubApiService {
@@ -70,11 +69,14 @@ export class GithubApiService {
     const className = GithubApiService.name;
     const methodName = 'getPullRequest';
 
-    this.logger.info(`[${className}] [${methodName}] :: Fetching pull request`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Fetching pull request`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+      },
+    );
 
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
@@ -101,11 +103,14 @@ export class GithubApiService {
     const className = GithubApiService.name;
     const methodName = 'getPullRequestDiff';
 
-    this.logger.info(`[${className}] [${methodName}] :: Fetching pull request diff`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Fetching pull request diff`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+      },
+    );
 
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
@@ -132,13 +137,16 @@ export class GithubApiService {
       return text;
     }
 
-    this.logger.warn(`[${className}] [${methodName}] :: Diff exceeds limit, falling back to file patches`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-      diffChars: text.length,
-      maxDiffChars: MAX_DIFF_CHARS,
-    });
+    this.logger.warn(
+      `[${className}] [${methodName}] :: Diff exceeds limit, falling back to file patches`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+        diffChars: text.length,
+        maxDiffChars: MAX_DIFF_CHARS,
+      },
+    );
 
     const files = await octokit.pulls.listFiles({
       owner,
@@ -147,32 +155,39 @@ export class GithubApiService {
       per_page: 100,
     });
     const patches = files.data
-      .map((f: { filename: string; patch?: string | null }) =>
-        `--- ${f.filename}\n${f.patch ?? ''}`,
+      .map(
+        (f: { filename: string; patch?: string | null }) =>
+          `--- ${f.filename}\n${f.patch ?? ''}`,
       )
       .join('\n\n');
     text = patches || text;
 
     if (text.length > MAX_DIFF_CHARS) {
-      this.logger.warn(`[${className}] [${methodName}] :: Truncating diff for review`, {
-        installationId: String(installationId),
-        repoFullName,
-        prNumber,
-        diffChars: text.length,
-        maxDiffChars: MAX_DIFF_CHARS,
-      });
+      this.logger.warn(
+        `[${className}] [${methodName}] :: Truncating diff for review`,
+        {
+          installationId: String(installationId),
+          repoFullName,
+          prNumber,
+          diffChars: text.length,
+          maxDiffChars: MAX_DIFF_CHARS,
+        },
+      );
       return (
         text.slice(0, MAX_DIFF_CHARS) +
         `\n\n[Diff truncated at ${MAX_DIFF_CHARS} characters for review.]`
       );
     }
 
-    this.logger.info(`[${className}] [${methodName}] :: Diff assembled from file patches`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-      diffChars: text.length,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Diff assembled from file patches`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+        diffChars: text.length,
+      },
+    );
 
     return text;
   }
@@ -252,21 +267,22 @@ export class GithubApiService {
         ? { headSha: '', body: input, comments: [] }
         : input;
 
-    this.logger.info(`[${className}] [${methodName}] :: Posting pull request review`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-      bodyChars: payload.body.length,
-      commentCount: payload.comments.length,
-      headSha: payload.headSha || '(none)',
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Posting pull request review`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+        bodyChars: payload.body.length,
+        commentCount: payload.comments.length,
+        headSha: payload.headSha || '(none)',
+      },
+    );
 
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
 
-    const reviewParams: Parameters<
-      typeof octokit.pulls.createReview
-    >[0] = {
+    const reviewParams: Parameters<typeof octokit.pulls.createReview>[0] = {
       owner,
       repo,
       pull_number: prNumber,
@@ -292,13 +308,16 @@ export class GithubApiService {
 
     const { data } = await octokit.pulls.createReview(reviewParams);
 
-    this.logger.info(`[${className}] [${methodName}] :: Pull request review posted`, {
-      installationId: String(installationId),
-      repoFullName,
-      prNumber,
-      githubReviewId: String(data.id),
-      commentCount: payload.comments.length,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Pull request review posted`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        prNumber,
+        githubReviewId: String(data.id),
+        commentCount: payload.comments.length,
+      },
+    );
 
     return BigInt(data.id);
   }
@@ -316,13 +335,16 @@ export class GithubApiService {
     const methodName = 'listPullRequests';
     const { state = 'open', page = 1, perPage = 30 } = options;
 
-    this.logger.info(`[${className}] [${methodName}] :: Listing pull requests`, {
-      installationId: String(installationId),
-      repoFullName,
-      state,
-      page,
-      perPage,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Listing pull requests`,
+      {
+        installationId: String(installationId),
+        repoFullName,
+        state,
+        page,
+        perPage,
+      },
+    );
 
     const octokit = this.auth.getInstallationOctokit(installationId);
     const { owner, repo } = this.parseRepoFullName(repoFullName);
@@ -399,7 +421,7 @@ export class GithubApiService {
     installationId: bigint,
     repoFullName: string,
     query: string,
-    opts: {perPage?: number},
+    opts: { perPage?: number },
   ): Promise<CodeSearchResult> {
     const className = GithubApiService.name;
     const methodName = 'searchCode';
@@ -416,32 +438,29 @@ export class GithubApiService {
     const { owner, repo } = this.parseRepoFullName(repoFullName);
 
     const q = query.includes(`repo:${owner}/${repo}`)
-    ? query
-    : `${query} repo:${owner}/${repo}`;
+      ? query
+      : `${query} repo:${owner}/${repo}`;
 
-  const { data } = await octokit.search.code({
-    q,
-    per_page: perPage,
-    headers: { accept: 'application/vnd.github.text-match+json' },
-  });
+    const { data } = await octokit.search.code({
+      q,
+      per_page: perPage,
+      headers: { accept: 'application/vnd.github.text-match+json' },
+    });
 
-  const items: CodeSearchHit[] = (data.items ?? []).map((item) => {
-    const fragment =
-      item.text_matches?.[0]?.fragment ??
-      item.name ??
-      '';
+    const items: CodeSearchHit[] = (data.items ?? []).map((item) => {
+      const fragment = item.text_matches?.[0]?.fragment ?? item.name ?? '';
+      return {
+        path: item.path,
+        line: null, // code search items rarely expose line; optional follow-up via getFileContentAtRef
+        text: fragment.slice(0, 400),
+      };
+    });
+
     return {
-      path: item.path,
-      line: null, // code search items rarely expose line; optional follow-up via getFileContentAtRef
-      text: fragment.slice(0, 400),
+      totalCount: data.total_count ?? 0,
+      items,
+      incomplete: data.incomplete_results ?? false,
     };
-  });
-
-  return {
-    totalCount: data.total_count ?? 0,
-    items,
-    incomplete: data.incomplete_results ?? false,
-  };
   }
 
   async listPullRequestChangedFiles(
@@ -559,13 +578,60 @@ export class GithubApiService {
 
       return { content, sizeBytes };
     } catch (err) {
-      this.logger.warn(`[${className}] [${methodName}] :: Failed to fetch file`, {
+      this.logger.warn(
+        `[${className}] [${methodName}] :: Failed to fetch file`,
+        {
+          installationId: String(installationId),
+          repoFullName,
+          path,
+          ref,
+          error: err,
+        },
+      );
+      return null;
+    }
+  }
+
+  async getDirectoryAtRef(
+    installationId: bigint,
+    repoFullName: string,
+    path: string,
+    ref: string,
+  ): Promise<Array<{ name: string; path: string; type: string }> | null> {
+    const className = GithubApiService.name;
+    const methodName = 'getDirectoryAtRef';
+
+    this.logger.debug(
+      `[${className}] [${methodName}] :: Fetching directory at ref`,
+      {
         installationId: String(installationId),
         repoFullName,
         path,
         ref,
-        error: err,
+      },
+    );
+
+    const octokit = this.auth.getInstallationOctokit(installationId);
+    const { owner, repo } = this.parseRepoFullName(repoFullName);
+
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref,
       });
+
+      if (!Array.isArray(data)) {
+        return null;
+      }
+
+      return data.map((item) => ({
+        name: item.name,
+        path: item.path,
+        type: item.type,
+      }));
+    } catch {
       return null;
     }
   }
