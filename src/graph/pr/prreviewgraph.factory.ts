@@ -124,7 +124,6 @@ export class PrReviewGraphFactory implements OnModuleInit {
           removedOnlyFileCount: 0,
           binaryOrEmptyFileCount: 0,
           fileContexts: [],
-          repoRules: null,
           summaryMarkdown: null,
           githubReviewId: null,
           status: 'pending' as const,

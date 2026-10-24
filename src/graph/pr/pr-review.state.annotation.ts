@@ -131,10 +131,6 @@ export const PrReviewGraphState = Annotation.Root({
     reducer: lastWins,
     default: () => [],
   }),
-  repoRules: Annotation<string | null>({
-    reducer: lastWins,
-    default: () => null,
-  }),
   crossFileHints: Annotation<CrossFileHint[]>({
     reducer: concatHints,
     default: () => [],

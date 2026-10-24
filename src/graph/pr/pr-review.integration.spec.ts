@@ -154,7 +154,6 @@ index 0000001..0000002 100644
       enrich: jest.fn().mockResolvedValue({
         contexts: [],
         skippedFiles: [],
-        repoRules: 'Always enforce secure JWT validation.',
       }),
     };
 

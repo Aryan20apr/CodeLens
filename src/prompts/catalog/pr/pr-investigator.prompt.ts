@@ -1,8 +1,6 @@
 import type { PromptDefinition } from '../../types/prompt.types';
 
-export interface PrInvestigatorPromptVars {
-  repoRules?: string | null;
-}
+export interface PrInvestigatorPromptVars {}
 
 const INVESTIGATOR_BASE = `You are a specialized Code Investigation Agent for CodeLens.
 Your goal is to investigate specific code changes in a Pull Request based on the task description provided by the Lead Agent.
@@ -33,13 +31,7 @@ export const prInvestigatorPrompt: PromptDefinition<PrInvestigatorPromptVars> =
     description:
       'Investigator subagent prompt for focused technical investigations',
     tags: ['pr-review', 'subagent', 'investigator'],
-    render: (vars) => {
-      const parts = [INVESTIGATOR_BASE];
-
-      if (vars.repoRules) {
-        parts.push(`## Repository Rules & Standards\n${vars.repoRules}`);
-      }
-
-      return { systemPrompt: parts.join('\n\n') };
+    render: () => {
+      return { systemPrompt: INVESTIGATOR_BASE };
     },
   };

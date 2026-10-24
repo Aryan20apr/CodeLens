@@ -3,7 +3,6 @@ import { AutonomousReviewOutputSchema } from '../../../review/findings/autonomou
 import { formatZodSchemaForPrompt } from '../../utils/prompt-schema.util';
 
 export interface PrLeadAgentPromptVars {
-  repoRules?: string | null;
   isIncrementalReview?: boolean;
   previousReviewFindingsCount?: number;
 }
@@ -49,12 +48,6 @@ export const prLeadAgentPrompt: PromptDefinition<PrLeadAgentPromptVars> = {
   tags: ['pr-review', 'autonomous', 'lead-agent'],
   render: (vars) => {
     const parts = [LEAD_AGENT_BASE];
-
-    if (vars.repoRules) {
-      parts.push(
-        `## Repository Rules & Guidelines (from repository AGENTS.md)\n${vars.repoRules}`,
-      );
-    }
 
     if (vars.isIncrementalReview) {
       parts.push(

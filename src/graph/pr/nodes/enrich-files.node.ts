@@ -6,7 +6,7 @@ import { runPrSteps } from '../pr-node-progress.util';
 type EnrichUpdate = Partial<
   Pick<
     PrReviewGraphStateType,
-    'fileContexts' | 'repoRules' | 'events' | 'error' | 'status'
+    'fileContexts' | 'events' | 'error' | 'status'
   >
 >;
 
@@ -51,7 +51,6 @@ export function createEnrichFilesNode(
 
     return {
       fileContexts: result.fileContexts,
-      repoRules: result.repoRules ?? null,
       events,
     };
   };

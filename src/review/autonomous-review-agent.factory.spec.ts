@@ -62,7 +62,6 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
 
   it('creates an autonomous review agent with forked subagents', () => {
     const { agent, cleanup } = factory.createAgent({
-      repoRules: 'Always test your code.',
       isIncrementalReview: true,
       previousReviewFindingsCount: 3,
     });
@@ -72,7 +71,6 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
     expect(mockPromptRegistry.render).toHaveBeenCalledWith(
       'pr-review.lead-agent',
       {
-        repoRules: 'Always test your code.',
         isIncrementalReview: true,
         previousReviewFindingsCount: 3,
       },
@@ -80,7 +78,7 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
     );
     expect(mockPromptRegistry.render).toHaveBeenCalledWith(
       'pr-review.investigator',
-      { repoRules: 'Always test your code.' },
+      {},
       undefined,
     );
     expect(mockPromptRegistry.render).toHaveBeenCalledWith(

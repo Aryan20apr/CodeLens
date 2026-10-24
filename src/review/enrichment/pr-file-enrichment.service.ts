@@ -20,13 +20,6 @@ export const ENRICH_CONCURRENCY = 5;
 
 @Injectable()
 export class PrFileEnrichmentService {
-  private static readonly RULE_FILE_CANDIDATES = [
-    'AGENTS.md',
-    '.agents/AGENTS.md',
-    '.codelens/AGENTS.md',
-    '.github/copilot-instructions.md',
-  ];
-
 
   private readonly logger: Logger;
 
@@ -55,12 +48,6 @@ export class PrFileEnrichmentService {
       },
     );
 
-    // Fetch repository rules
-    const rulesResult = await this.fetchRepoRules(
-      input.installationId,
-      input.repoFullName,
-      input.headSha,
-    );
 
     const fileContexts: PrFileContext[] = [];
     let enrichedCount = 0;
@@ -95,7 +82,6 @@ export class PrFileEnrichmentService {
         enrichedCount,
         skippedCount,
         failedCount,
-        hasRepoRules: !!rulesResult,
       },
     );
 
@@ -104,42 +90,9 @@ export class PrFileEnrichmentService {
       enrichedCount,
       skippedCount,
       failedCount,
-      repoRules: rulesResult,
     };
   }
 
-  async fetchRepoRules(
-    installationId: bigint,
-    repoFullName: string,
-    headSha: string,
-  ): Promise<string | null> {
-    const className = PrFileEnrichmentService.name;
-    const methodName = 'fetchRepoRules';
-
-    for (const candidate of PrFileEnrichmentService.RULE_FILE_CANDIDATES) {
-      try {
-        const file = await this.github.getFileContentAtRef(
-          installationId,
-          repoFullName,
-          candidate,
-          headSha,
-        );
-        if (file && file.content.trim()) {
-          this.logger.info(
-            `[${className}] [${methodName}] :: Found repository rules in ${candidate}`,
-            { repoFullName, headSha, candidate, sizeBytes: file.sizeBytes },
-          );
-          return file.content;
-        }
-      } catch (_err) {
-        this.logger.debug(
-          `[${className}] [${methodName}] :: Candidate rule file not found: ${candidate}`,
-        );
-      }
-    }
-
-    return null;
-  }
 
 
   private uniqueFilePaths(chunks: ReviewChunk[]): string[] {

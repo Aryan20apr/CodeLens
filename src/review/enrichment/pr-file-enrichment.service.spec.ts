@@ -53,46 +53,11 @@ describe('PrFileEnrichmentService', () => {
     );
   });
 
-  describe('fetchRepoRules', () => {
-    it('discovers AGENTS.md at headSha when present', async () => {
-      mockGithub.getFileContentAtRef = jest
-        .fn()
-        .mockImplementation(async (_instId, _repo, path) => {
-          if (path === 'AGENTS.md') {
-            return {
-              content: '# Repository Coding Standards\nAlways write tests.',
-              sizeBytes: 50,
-            };
-          }
-          return null;
-        });
-
-      const rules = await service.fetchRepoRules(1n, 'owner/repo', 'sha123');
-      expect(rules).toContain('# Repository Coding Standards');
-      expect(mockGithub.getFileContentAtRef).toHaveBeenCalledWith(
-        1n,
-        'owner/repo',
-        'AGENTS.md',
-        'sha123',
-      );
-    });
-
-    it('falls back to candidate files and returns null if none found', async () => {
-      mockGithub.getFileContentAtRef = jest.fn().mockResolvedValue(null);
-
-      const rules = await service.fetchRepoRules(1n, 'owner/repo', 'sha123');
-      expect(rules).toBeNull();
-    });
-  });
-
   describe('enrich', () => {
-    it('enriches files and repo rules', async () => {
+    it('enriches files', async () => {
       mockGithub.getFileContentAtRef = jest
         .fn()
         .mockImplementation(async (_instId, _repo, path) => {
-          if (path === 'AGENTS.md') {
-            return { content: '# Repo Rules', sizeBytes: 20 };
-          }
           if (path === 'src/index.ts') {
             return { content: 'export const a = 1;', sizeBytes: 20 };
           }
@@ -119,7 +84,6 @@ describe('PrFileEnrichmentService', () => {
 
       expect(result.enrichedCount).toBe(1);
       expect(result.fileContexts[0].filePath).toBe('src/index.ts');
-      expect(result.repoRules).toBe('# Repo Rules');
     });
   });
 });

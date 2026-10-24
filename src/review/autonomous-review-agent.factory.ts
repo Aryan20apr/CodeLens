@@ -31,7 +31,6 @@ import {
 
 export interface CreateAutonomousAgentOptions {
   userLlmKey?: UserLlmKey;
-  repoRules?: string | null;
   isIncrementalReview?: boolean;
   previousReviewFindingsCount?: number;
   validFilePaths?: string[];
@@ -66,7 +65,6 @@ export class AutonomousReviewAgentFactory {
       {
         hasUserKey: !!options.userLlmKey,
         provider: options.userLlmKey?.provider,
-        hasRepoRules: !!options.repoRules,
         isIncrementalReview: options.isIncrementalReview,
       },
     );
@@ -105,7 +103,6 @@ export class AutonomousReviewAgentFactory {
     const renderedLead = this.promptRegistry.render(
       'pr-review.lead-agent',
       {
-        repoRules: options.repoRules,
         isIncrementalReview: options.isIncrementalReview,
         previousReviewFindingsCount: options.previousReviewFindingsCount,
       },
@@ -114,7 +111,7 @@ export class AutonomousReviewAgentFactory {
 
     const renderedInvestigator = this.promptRegistry.render(
       'pr-review.investigator',
-      { repoRules: options.repoRules },
+      {},
       promptOptions,
     );
 

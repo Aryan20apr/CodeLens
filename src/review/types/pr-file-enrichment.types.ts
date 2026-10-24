@@ -36,5 +36,4 @@ export type PrFileEnrichmentResult = {
   enrichedCount: number;
   skippedCount: number;
   failedCount: number;
-  repoRules: string | null;
 };
