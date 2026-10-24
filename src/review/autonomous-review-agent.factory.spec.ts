@@ -92,7 +92,7 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
     cleanup();
   });
 
-  it('strips destructive mutation tools and provides only safe read-only filesystem tools', () => {
+  it('restricts filesystem tools strictly to read_file and equips lead agent with get_file_content_at_sha', () => {
     const { agent, cleanup } = factory.createAgent();
 
     try {
@@ -100,12 +100,13 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
       const toolNames: string[] =
         toolsNode?.bound?.tools?.map((t: any) => t.name) ?? [];
 
-      expect(toolNames).toContain('ls');
       expect(toolNames).toContain('read_file');
-      expect(toolNames).toContain('glob');
-      expect(toolNames).toContain('grep');
       expect(toolNames).toContain('task');
+      expect(toolNames).toContain('get_file_content_at_sha');
 
+      expect(toolNames).not.toContain('ls');
+      expect(toolNames).not.toContain('glob');
+      expect(toolNames).not.toContain('grep');
       expect(toolNames).not.toContain('write_file');
       expect(toolNames).not.toContain('edit_file');
       expect(toolNames).not.toContain('delete');
@@ -115,20 +116,10 @@ describe('AutonomousReviewAgentFactory (Phase 4)', () => {
     }
   });
 
-  it('mounts custom repository skills and safely cleans up temporary directory', () => {
-    const { agent, cleanup } = factory.createAgent({
-      repoSkills: [
-        {
-          name: 'custom-skill',
-          path: '.codelens/skills/custom-skill',
-          content:
-            '---\nname: custom-skill\ndescription: Custom skill\n---\n# Content',
-        },
-      ],
-    });
+  it('safely cleans up agent instance', () => {
+    const { agent, cleanup } = factory.createAgent();
 
     expect(agent).toBeDefined();
-    // Verify cleanup removes the temporary files without error
     expect(() => cleanup()).not.toThrow();
   });
 

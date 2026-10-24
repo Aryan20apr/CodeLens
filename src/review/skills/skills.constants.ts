@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { FilesystemBackend } from 'deepagents';
+import { FilesystemSkillProvider } from './filesystem-skill-provider';
+import { SkillOnlyBackend } from './skill-only-backend';
 
 /**
  * Resolves the built-in platform skills directory across development (ts-node / ts-jest),
@@ -41,35 +42,45 @@ export function resolveBuiltInSkillsDir(): string {
  */
 export const BUILT_IN_SKILLS_DIR = resolveBuiltInSkillsDir();
 
+
+
 /**
- * Creates a sandboxed read-only FilesystemBackend for built-in platform skills.
+ * Creates a virtual read-only SkillOnlyBackend for platform skills.
+ */
+export function createSkillOnlyBackend(
+  skillsDir: string = BUILT_IN_SKILLS_DIR,
+): SkillOnlyBackend {
+  const provider = new FilesystemSkillProvider(skillsDir);
+  return new SkillOnlyBackend(provider);
+}
+
+/**
+ * Backward-compatible alias for creating skill backend.
  */
 export function createSkillsBackend(
   skillsDir: string = BUILT_IN_SKILLS_DIR,
-): FilesystemBackend {
-  return new FilesystemBackend({
-    rootDir: skillsDir,
-    virtualMode: true,
-  });
+): SkillOnlyBackend {
+  return createSkillOnlyBackend(skillsDir);
 }
 
 /**
  * Safe, read-only host filesystem tools allowed for autonomous review agents.
- * Excludes destructive mutation tools (write_file, edit_file, delete, execute).
+ * Strictly limited to 'read_file' exclusively for virtual /skills/*.
+ * Excludes glob, grep, ls, and all destructive mutation tools.
  */
-export const SAFE_READONLY_FS_TOOLS = [
-  'ls',
-  'read_file',
-  'glob',
-  'grep',
-] as const;
+export const SAFE_READONLY_FS_TOOLS = ['read_file'] as const;
 
 /**
- * Tools that must be excluded when running review agents to guarantee host safety.
+ * Tools that must be excluded when running review agents to guarantee host safety
+ * and prevent hallucinated repository sweeps.
  */
 export const EXCLUDED_HOST_TOOLS = [
+  'ls',
+  'glob',
+  'grep',
   'write_file',
   'edit_file',
   'delete',
   'execute',
 ] as const;
+

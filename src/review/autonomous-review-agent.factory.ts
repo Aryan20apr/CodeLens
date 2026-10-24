@@ -1,14 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
-import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import {
   createDeepAgent,
   createFilesystemMiddleware,
-  CompositeBackend,
-  FilesystemBackend,
 } from 'deepagents';
 import { toolStrategy } from 'langchain';
 
@@ -27,15 +24,14 @@ import {
   VerificationResultSchema,
 } from './findings/autonomous-finding.schema';
 import {
-  createSkillsBackend,
+  BUILT_IN_SKILLS_DIR,
+  createSkillOnlyBackend,
   SAFE_READONLY_FS_TOOLS,
 } from './skills/skills.constants';
-import type { RepoSkill } from './types/pr-file-enrichment.types';
 
 export interface CreateAutonomousAgentOptions {
   userLlmKey?: UserLlmKey;
   repoRules?: string | null;
-  repoSkills?: RepoSkill[];
   isIncrementalReview?: boolean;
   previousReviewFindingsCount?: number;
   validFilePaths?: string[];
@@ -71,48 +67,36 @@ export class AutonomousReviewAgentFactory {
         hasUserKey: !!options.userLlmKey,
         provider: options.userLlmKey?.provider,
         hasRepoRules: !!options.repoRules,
-        repoSkillCount: options.repoSkills?.length ?? 0,
         isIncrementalReview: options.isIncrementalReview,
       },
     );
 
     const model = this.llm.getChatModel(options.userLlmKey);
 
-    const builtInBackend = createSkillsBackend();
-    let backend: FilesystemBackend | CompositeBackend = builtInBackend;
-    const skillSources: string[] = ['/'];
-
-    let tempRepoSkillsDir: string | null = null;
-    if (options.repoSkills && options.repoSkills.length > 0) {
-      try {
-        tempRepoSkillsDir = fs.mkdtempSync(
-          path.join(os.tmpdir(), 'codelens-repo-skills-'),
-        );
-        for (const skill of options.repoSkills) {
-          const dir = path.join(tempRepoSkillsDir, skill.name);
-          fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(path.join(dir, 'SKILL.md'), skill.content, 'utf8');
-        }
-        const repoSkillsBackend = new FilesystemBackend({
-          rootDir: tempRepoSkillsDir,
-          virtualMode: true,
-        });
-        backend = new CompositeBackend(builtInBackend, {
-          '/repo-skills/': repoSkillsBackend,
-        });
-        skillSources.push('/repo-skills/');
-      } catch (err) {
-        this.logger.warn(
-          `[${className}] [${methodName}] :: Failed to create repo skills backend, falling back to built-in`,
-          { error: err },
-        );
-      }
-    }
+    const backend = createSkillOnlyBackend(BUILT_IN_SKILLS_DIR);
+    const skillSources: string[] = ['/skills/'];
 
     const repoSearchTools = createAutonomousRepoTools(this.searchExecutor);
     const verifierTools = repoSearchTools.filter(
       (t) => t.name === PR_SEARCH_TOOL_NAMES.fileContent,
     );
+
+    const fsMiddleware = createFilesystemMiddleware({
+      backend,
+      tools: SAFE_READONLY_FS_TOOLS,
+      permissions: [
+        {
+          operations: ['read'],
+          paths: ['/skills/**'],
+          mode: 'allow',
+        },
+        {
+          operations: ['read', 'write'],
+          paths: ['/**'],
+          mode: 'deny',
+        },
+      ],
+    });
 
     const promptOptions = options.userLlmKey?.provider
       ? { provider: options.userLlmKey.provider }
@@ -147,6 +131,7 @@ export class AutonomousReviewAgentFactory {
       mode: 'fork' as const,
       model,
       tools: repoSearchTools,
+      middleware: [fsMiddleware],
       systemPrompt: renderedInvestigator.systemPrompt,
       responseFormat: toolStrategy(
         createScopedCandidateFindingsListSchema(options.validFilePaths),
@@ -160,6 +145,7 @@ export class AutonomousReviewAgentFactory {
       mode: 'fork' as const,
       model,
       tools: verifierTools,
+      middleware: [fsMiddleware],
       systemPrompt: renderedVerifier.systemPrompt,
       responseFormat: toolStrategy(VerificationResultSchema),
     };
@@ -171,22 +157,16 @@ export class AutonomousReviewAgentFactory {
       subagents: [investigatorSubagent, verifierSubagent],
       backend,
       skills: skillSources,
-      middleware: [
-        createFilesystemMiddleware({
-          backend,
-          tools: SAFE_READONLY_FS_TOOLS,
-          permissions: [
-            {
-              operations: ['write'],
-              paths: ['/**'],
-              mode: 'deny',
-            },
-          ],
-        }),
-      ],
+      tools: verifierTools,
+      middleware: [fsMiddleware],
       permissions: [
         {
-          operations: ['write'],
+          operations: ['read'],
+          paths: ['/skills/**'],
+          mode: 'allow',
+        },
+        {
+          operations: ['read', 'write'],
           paths: ['/**'],
           mode: 'deny',
         },
@@ -195,15 +175,7 @@ export class AutonomousReviewAgentFactory {
 
     return {
       agent,
-      cleanup: () => {
-        if (tempRepoSkillsDir) {
-          try {
-            fs.rmSync(tempRepoSkillsDir, { recursive: true, force: true });
-          } catch {
-            // ignore cleanup error
-          }
-        }
-      },
+      cleanup: () => {},
     };
   }
 }
