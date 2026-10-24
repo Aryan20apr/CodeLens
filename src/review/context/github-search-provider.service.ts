@@ -6,7 +6,10 @@ import {
   GithubApiService,
   type CodeSearchResult,
 } from '../../github/github-api.service';
-import type { CrossFileHint, CrossFileHintKind } from '../types/cross-file-hint.types';
+import type {
+  CrossFileHint,
+  CrossFileHintKind,
+} from '../types/cross-file-hint.types';
 import type {
   GlobalSearchProvider,
   SymbolSearchOpts,
@@ -83,8 +86,15 @@ export class GithubSearchProvider implements GlobalSearchProvider {
   }): Promise<CrossFileHint> {
     const className = GithubSearchProvider.name;
     const methodName = 'runSearch';
-    const { installationId, repoFullName, kind, query, symbol, modulePath, opts } =
-      params;
+    const {
+      installationId,
+      repoFullName,
+      kind,
+      query,
+      symbol,
+      modulePath,
+      opts,
+    } = params;
 
     const perPage = Math.min(opts?.maxResults ?? DEFAULT_MAX_RESULTS, 30);
 
@@ -103,13 +113,16 @@ export class GithubSearchProvider implements GlobalSearchProvider {
         modulePath,
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: Code search complete`, {
-        repoFullName,
-        kind,
-        pathCount: hint.paths.length,
-        totalCount: result.totalCount,
-        incomplete: result.incomplete,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Code search complete`,
+        {
+          repoFullName,
+          kind,
+          pathCount: hint.paths.length,
+          totalCount: result.totalCount,
+          incomplete: result.incomplete,
+        },
+      );
 
       return hint;
     } catch (err) {

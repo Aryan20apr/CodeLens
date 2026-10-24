@@ -57,7 +57,7 @@ import { PromptModule } from './prompts/prompt.module';
     },
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard
+      useClass: JwtAuthGuard,
     },
   ],
 })

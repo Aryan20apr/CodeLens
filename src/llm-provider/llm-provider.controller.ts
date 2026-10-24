@@ -1,23 +1,46 @@
-import { Controller, Get, Put, Delete, Body, Param, UseGuards, ParseEnumPipe } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  ParseEnumPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { LlmProviderService } from './llm-provider.service';
-import { SaveProviderKeyDto, SaveProviderKeySchema } from './dto/save-provider-key.dto';
-import { SetActiveProviderDto, SetActiveProviderSchema } from './dto/set-active-provider.dto';
+import {
+  SaveProviderKeyDto,
+  SaveProviderKeySchema,
+} from './dto/save-provider-key.dto';
+import {
+  SetActiveProviderDto,
+  SetActiveProviderSchema,
+} from './dto/set-active-provider.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { LlmProvider } from '../../generated/prisma/client';
-import { apiEnvelopeSchema, apiArrayEnvelopeSchema } from '../common/utils/swagger.util';
+import {
+  apiEnvelopeSchema,
+  apiArrayEnvelopeSchema,
+} from '../common/utils/swagger.util';
 
 @ApiTags('LLM Provider (BYOK)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('llm-provider')
 export class LlmProviderController {
-  constructor(
-    private readonly llmProviderService: LlmProviderService,
-  ) { }
+  constructor(private readonly llmProviderService: LlmProviderService) {}
 
   @Get('keys')
   @ApiOperation({ summary: 'List saved LLM provider keys' })
@@ -31,7 +54,11 @@ export class LlmProviderController {
           provider: { type: 'string', enum: Object.values(LlmProvider) },
           maskedKey: { type: 'string', example: 'sk-...1234' },
           updatedAt: { type: 'string', format: 'date-time' },
-          baseUrl: { type: 'string', nullable: true, example: 'https://api.groq.com/openai/v1' },
+          baseUrl: {
+            type: 'string',
+            nullable: true,
+            example: 'https://api.groq.com/openai/v1',
+          },
         },
       },
       { message: 'Stored LLM provider keys retrieved successfully' },
@@ -74,7 +101,12 @@ export class LlmProviderController {
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
     @Body(new ZodValidationPipe(SaveProviderKeySchema)) dto: SaveProviderKeyDto,
   ) {
-    const result = await this.llmProviderService.saveKey(user.id, provider, dto.apiKey, dto.baseUrl);
+    const result = await this.llmProviderService.saveKey(
+      user.id,
+      provider,
+      dto.apiKey,
+      dto.baseUrl,
+    );
     return {
       success: true,
       message: `API key for ${provider} saved successfully`,
@@ -88,7 +120,9 @@ export class LlmProviderController {
   @ApiResponse({
     status: 200,
     description: 'Key deleted',
-    schema: apiEnvelopeSchema(null, { message: 'API key for GEMINI deleted successfully' }),
+    schema: apiEnvelopeSchema(null, {
+      message: 'API key for GEMINI deleted successfully',
+    }),
   })
   async deleteKey(
     @CurrentUser() user: any,
@@ -126,7 +160,10 @@ export class LlmProviderController {
     @CurrentUser() user: any,
     @Param('provider', new ParseEnumPipe(LlmProvider)) provider: LlmProvider,
   ) {
-    const models = await this.llmProviderService.listModelsForProvider(user.id, provider);
+    const models = await this.llmProviderService.listModelsForProvider(
+      user.id,
+      provider,
+    );
     return {
       success: true,
       message: `Available models for ${provider} retrieved successfully`,
@@ -178,7 +215,11 @@ export class LlmProviderController {
       {
         type: 'object',
         properties: {
-          provider: { type: 'string', enum: Object.values(LlmProvider), example: 'GEMINI' },
+          provider: {
+            type: 'string',
+            enum: Object.values(LlmProvider),
+            example: 'GEMINI',
+          },
           model: { type: 'string', example: 'gemini-2.0-flash' },
         },
       },
@@ -187,7 +228,8 @@ export class LlmProviderController {
   })
   async setActiveProvider(
     @CurrentUser() user: any,
-    @Body(new ZodValidationPipe(SetActiveProviderSchema)) dto: SetActiveProviderDto,
+    @Body(new ZodValidationPipe(SetActiveProviderSchema))
+    dto: SetActiveProviderDto,
   ) {
     await this.llmProviderService.setActive(user.id, dto.provider, dto.model);
     return {
@@ -197,4 +239,3 @@ export class LlmProviderController {
     };
   }
 }
-

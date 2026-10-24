@@ -69,10 +69,10 @@ export class TreeSitterService {
     return parser;
   }
 
-   /**
+  /**
    * Load a language grammar from tree-sitter-wasms and cache it.
    */
-   async getLanguage(languageId: SupportedLangId): Promise<TSLanguage | null> {
+  async getLanguage(languageId: SupportedLangId): Promise<TSLanguage | null> {
     await this.initOnce();
 
     const key = this.normalizeLangId(languageId);
@@ -83,7 +83,9 @@ export class TreeSitterService {
 
     const wasmBytes = await this.loadWasmBytesForLanguage(key);
     if (!wasmBytes) {
-      this.logger.warn(`No Tree-sitter WASM grammar found for language: ${key}`);
+      this.logger.warn(
+        `No Tree-sitter WASM grammar found for language: ${key}`,
+      );
       return null;
     }
 
@@ -92,7 +94,7 @@ export class TreeSitterService {
     const lang = await Language.load(wasmInput);
     this.languageCache.set(key, lang);
     return lang;
-}
+  }
   /**
    * Parse code and return Tree-sitter syntax tree.
    * Returns null if grammar unavailable.
@@ -128,7 +130,9 @@ export class TreeSitterService {
    *
    * This loader tries common shapes and returns a Uint8Array/ArrayBuffer.
    */
-  private async loadWasmBytesForLanguage(lang: string): Promise<Uint8Array | ArrayBuffer | null> {
+  private async loadWasmBytesForLanguage(
+    lang: string,
+  ): Promise<Uint8Array | ArrayBuffer | null> {
     const anyPack = this.tryLoadWasmPackagerRoot();
 
     try {
@@ -164,7 +168,6 @@ export class TreeSitterService {
       if (out instanceof Uint8Array || out instanceof ArrayBuffer) return out;
     }
 
-
     const direct = anyPack[lang];
     if (direct) {
       const out = typeof direct === 'function' ? await direct() : await direct;
@@ -186,7 +189,9 @@ export class TreeSitterService {
     }
   }
 
-  private async loadWasmBytesFromOut(lang: string): Promise<Uint8Array | ArrayBuffer | null> {
+  private async loadWasmBytesFromOut(
+    lang: string,
+  ): Promise<Uint8Array | ArrayBuffer | null> {
     const wasmBaseByLang: Record<string, string> = {
       // Matches files under `node_modules/tree-sitter-wasms/out/`
       typescript: 'tree-sitter-typescript',

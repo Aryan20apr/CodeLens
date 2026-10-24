@@ -84,12 +84,12 @@ export const SnippetGraphState = Annotation.Root({
     reducer: (_, right) => right ?? 0,
     default: () => 0,
   }),
-  
+
   maxIterations: Annotation<number>({
     reducer: (_, right) => right ?? 1,
     default: () => 1,
   }),
-  
+
   qualityGatePassed: Annotation<boolean | null>({
     reducer: (_, right) => right ?? null,
     default: () => null,

@@ -6,10 +6,7 @@ import type { PrReviewGraphStateType } from '../pr-review.state.annotation';
 import { runPrSteps } from '../pr-node-progress.util';
 
 type PostUpdate = Partial<
-  Pick<
-    PrReviewGraphStateType,
-    'githubReviewId' | 'status' | 'events' | 'error'
-  >
+  Pick<PrReviewGraphStateType, 'githubReviewId' | 'status' | 'events' | 'error'>
 >;
 
 export function createPostReviewNode(
@@ -65,7 +62,8 @@ export function createPostReviewNode(
     );
 
     const newFindings = validatedFindings.filter(
-      (finding) => !finding.fingerprint || !knownFingerprints.has(finding.fingerprint),
+      (finding) =>
+        !finding.fingerprint || !knownFingerprints.has(finding.fingerprint),
     );
 
     const comments =

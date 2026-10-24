@@ -31,7 +31,9 @@ async function bootstrap() {
     const isZeroOrMissingLength =
       contentLength === '0' ||
       (contentLength === undefined &&
-        (request.method === 'GET' || request.method === 'DELETE' || request.method === 'HEAD'));
+        (request.method === 'GET' ||
+          request.method === 'DELETE' ||
+          request.method === 'HEAD'));
 
     if (isZeroOrMissingLength && request.headers['content-type']) {
       delete request.headers['content-type'];

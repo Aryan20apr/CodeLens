@@ -46,7 +46,7 @@ export class LanguageDetectService {
     const trimmedHint = (hint ?? '').trim();
     if (trimmedHint) {
       this.logger.info(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Using 'hint': ${trimmedHint}`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Using 'hint': ${trimmedHint}`,
       );
       return this.normalizeHint(trimmedHint);
     }
@@ -54,13 +54,13 @@ export class LanguageDetectService {
     const fromName = this.fromFilename(filename);
     if (fromName) {
       this.logger.info(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Detected from filename: ${filename} -> ${fromName}`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Detected from filename: ${filename} -> ${fromName}`,
       );
       return fromName;
     }
     const detected = this.fromContentHeuristics(code);
     this.logger.info(
-      `[${LanguageDetectService.CLASS}.${METHOD}] Detected from content heuristics: ${detected}`
+      `[${LanguageDetectService.CLASS}.${METHOD}] Detected from content heuristics: ${detected}`,
     );
     return detected;
   }
@@ -68,41 +68,41 @@ export class LanguageDetectService {
   private normalizeHint(hint: string): string {
     const METHOD = 'normalizeHint';
     this.logger.debug(
-      `[${LanguageDetectService.CLASS}.${METHOD}] Normalizing hint: ${hint}`
+      `[${LanguageDetectService.CLASS}.${METHOD}] Normalizing hint: ${hint}`,
     );
     const h = hint.toLowerCase();
     if (h === 'ts' || h === 'typescript') {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched TypeScript`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched TypeScript`,
       );
       return 'typescript';
     }
     if (h === 'js' || h === 'javascript' || h === 'mjs' || h === 'cjs') {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched JavaScript`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched JavaScript`,
       );
       return 'javascript';
     }
     if (h === 'py' || h === 'python') {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python`,
       );
       return 'python';
     }
     if (h === 'golang' || h === 'go') {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Go`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Go`,
       );
       return 'go';
     }
     if (h === 'rust' || h === 'rs') {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Rust`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Rust`,
       );
       return 'rust';
     }
     this.logger.debug(
-      `[${LanguageDetectService.CLASS}.${METHOD}] No match, returning raw hint`
+      `[${LanguageDetectService.CLASS}.${METHOD}] No match, returning raw hint`,
     );
     return hint;
   }
@@ -110,11 +110,11 @@ export class LanguageDetectService {
   private fromFilename(filename?: string): string | null {
     const METHOD = 'fromFilename';
     this.logger.debug(
-      `[${LanguageDetectService.CLASS}.${METHOD}] Checking filename: ${filename}`
+      `[${LanguageDetectService.CLASS}.${METHOD}] Checking filename: ${filename}`,
     );
     if (!filename) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] No filename provided`
+        `[${LanguageDetectService.CLASS}.${METHOD}] No filename provided`,
       );
       return null;
     }
@@ -123,11 +123,11 @@ export class LanguageDetectService {
     const result = extMap[ext] ?? null;
     if (result) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched extension: ${ext} -> ${result}`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched extension: ${ext} -> ${result}`,
       );
     } else {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] No match for extension: ${ext}`
+        `[${LanguageDetectService.CLASS}.${METHOD}] No match for extension: ${ext}`,
       );
     }
     return result;
@@ -136,57 +136,71 @@ export class LanguageDetectService {
   private fromContentHeuristics(code: string): string {
     const METHOD = 'fromContentHeuristics';
     this.logger.debug(
-      `[${LanguageDetectService.CLASS}.${METHOD}] Running heuristics`
+      `[${LanguageDetectService.CLASS}.${METHOD}] Running heuristics`,
     );
     const head = code.slice(0, 2000);
     if (/^\s*#!.*python/.test(head) || /^\s*#.*python/.test(head)) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python shebang or comment`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python shebang or comment`,
       );
       return 'python';
     }
     if (head.includes('def ') && /:\s*$/m.test(code.slice(0, 5000))) {
       // Very weak: avoid classifying C as python — require `def foo():` style
-      if (/\bdef\s+\w+\s*\(/m.test(head) && /:\s*$/m.test(code.slice(0, 2000))) {
+      if (
+        /\bdef\s+\w+\s*\(/m.test(head) &&
+        /:\s*$/m.test(code.slice(0, 2000))
+      ) {
         this.logger.debug(
-          `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python function definition`
+          `[${LanguageDetectService.CLASS}.${METHOD}] Matched Python function definition`,
         );
         return 'python';
       }
     }
-    if (/\bpackage\s+main\b/m.test(head) && /\bimport\s+"[^"]+"\b/m.test(head)) {
+    if (
+      /\bpackage\s+main\b/m.test(head) &&
+      /\bimport\s+"[^"]+"\b/m.test(head)
+    ) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Go`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Go`,
       );
       return 'go';
     }
     if (/\b(fn|let mut|const)\b/.test(head) && head.includes('use ')) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Rust`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Rust`,
       );
       return 'rust';
     }
     if (/\b(public\s+class|import\s+java\.)/m.test(head)) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Java`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched Java`,
       );
       return 'java';
     }
     // TypeScript / JavaScript: prefer TS if explicit `type` / `interface` or `as const` etc.
-    if (/\b(interface|type\s+\w|as\s+const|satisfies\s+\w|enum\s+\w|namespace\s+\w)\b/m.test(code)) {
+    if (
+      /\b(interface|type\s+\w|as\s+const|satisfies\s+\w|enum\s+\w|namespace\s+\w)\b/m.test(
+        code,
+      )
+    ) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched TypeScript`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched TypeScript`,
       );
       return 'typescript';
     }
-    if (/\b(import|export)\b/.test(head) || /require\(/m.test(head) || /module\.exports/m.test(head)) {
+    if (
+      /\b(import|export)\b/.test(head) ||
+      /require\(/m.test(head) ||
+      /module\.exports/m.test(head)
+    ) {
       this.logger.debug(
-        `[${LanguageDetectService.CLASS}.${METHOD}] Matched JavaScript`
+        `[${LanguageDetectService.CLASS}.${METHOD}] Matched JavaScript`,
       );
       return 'javascript';
     }
     this.logger.debug(
-      `[${LanguageDetectService.CLASS}.${METHOD}] No matches, returning 'unknown'`
+      `[${LanguageDetectService.CLASS}.${METHOD}] No matches, returning 'unknown'`,
     );
     return 'unknown';
   }

@@ -33,7 +33,10 @@ export function classifyDelta(
   }
 
   const prevByKey = new Map(
-    previous.map((f) => [`${f.filePath}:${f.location.startLine}:${f.category}`, f]),
+    previous.map((f) => [
+      `${f.filePath}:${f.location.startLine}:${f.category}`,
+      f,
+    ]),
   );
 
   // Tracks how many times each fingerprint bucket has been consumed by current findings.
@@ -47,7 +50,9 @@ export function classifyDelta(
     const byFpCandidates = f.fingerprint
       ? (prevByFingerprint.get(f.fingerprint) ?? [])
       : [];
-    const byKey = prevByKey.get(`${f.filePath}:${f.location.startLine}:${f.category}`);
+    const byKey = prevByKey.get(
+      `${f.filePath}:${f.location.startLine}:${f.category}`,
+    );
 
     if (byFpCandidates.length > 0) {
       // Consume one previous finding from the bucket (FIFO) so that two current
@@ -93,7 +98,9 @@ export function buildIncrementalSummary(
   );
 
   const currentHeadSha = headSha ? headSha.slice(0, 7) : 'prev';
-  const previousHeadSha = previous.headSha ? previous.headSha.slice(0, 7) : 'head';
+  const previousHeadSha = previous.headSha
+    ? previous.headSha.slice(0, 7)
+    : 'head';
 
   const sections: string[] = [
     `## What Changed Since Last Review`,
@@ -119,7 +126,10 @@ export function buildIncrementalSummary(
 
   if (inlineCommentCount > 0) {
     const noun = inlineCommentCount === 1 ? 'comment' : 'comments';
-    sections.push('---', `${inlineCommentCount} inline review ${noun} on this PR.`);
+    sections.push(
+      '---',
+      `${inlineCommentCount} inline review ${noun} on this PR.`,
+    );
   }
 
   return sections.join('\n');

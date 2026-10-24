@@ -23,13 +23,16 @@ export class PrReviewProducerService {
     const className = PrReviewProducerService.name;
     const methodName = 'enqueue';
 
-    this.logger.info(`[${className}] [${methodName}] :: Enqueueing PR review job`, {
-      deliveryId: payload.deliveryId,
-      reviewRunId: payload.reviewRunId,
-      installationId: payload.installationId,
-      repoFullName: payload.repoFullName,
-      prNumber: payload.prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Enqueueing PR review job`,
+      {
+        deliveryId: payload.deliveryId,
+        reviewRunId: payload.reviewRunId,
+        installationId: payload.installationId,
+        repoFullName: payload.repoFullName,
+        prNumber: payload.prNumber,
+      },
+    );
 
     try {
       const job = await this.queue.add(PR_REVIEW_JOB, payload, {
@@ -40,19 +43,25 @@ export class PrReviewProducerService {
 
       const jobId = String(job.id);
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review job enqueued`, {
-        deliveryId: payload.deliveryId,
-        reviewRunId: payload.reviewRunId,
-        jobId,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: PR review job enqueued`,
+        {
+          deliveryId: payload.deliveryId,
+          reviewRunId: payload.reviewRunId,
+          jobId,
+        },
+      );
 
       return { jobId };
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to enqueue PR review job`, {
-        deliveryId: payload.deliveryId,
-        reviewRunId: payload.reviewRunId,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to enqueue PR review job`,
+        {
+          deliveryId: payload.deliveryId,
+          reviewRunId: payload.reviewRunId,
+          error: err,
+        },
+      );
       throw err;
     }
   }

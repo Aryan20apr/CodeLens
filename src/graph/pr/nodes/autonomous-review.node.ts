@@ -171,9 +171,7 @@ export function createAutonomousReviewNode(
               if (lastText.trim()) {
                 try {
                   const jsonStr = extractJson(lastText.trim());
-                  structured = scopedOutputSchema.parse(
-                    JSON.parse(jsonStr),
-                  );
+                  structured = scopedOutputSchema.parse(JSON.parse(jsonStr));
                 } catch (err) {
                   try {
                     const model = llm.getChatModel(userLlmKey);

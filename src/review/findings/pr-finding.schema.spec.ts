@@ -78,10 +78,7 @@ describe('pr-finding.schema', () => {
       return repairedRaw;
     });
 
-    const result = await parsePrLlmAnalysisWithRepair(
-      invalidRaw,
-      repairInvoke,
-    );
+    const result = await parsePrLlmAnalysisWithRepair(invalidRaw, repairInvoke);
 
     expect(repairInvoke).toHaveBeenCalledTimes(1);
     expect(repairHintReceived).toContain('Validation error');

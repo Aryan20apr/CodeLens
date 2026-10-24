@@ -32,11 +32,7 @@ export class UserService {
     });
   }
 
-  async createLocal(data: {
-    email: string;
-    password: string;
-    name?: string;
-  }) {
+  async createLocal(data: { email: string; password: string; name?: string }) {
     const existing = await this.findByEmail(data.email);
     if (existing) throw new ConflictException('Email already registered');
 
@@ -67,7 +63,10 @@ export class UserService {
     return rawKey;
   }
 
-  async updateProfile(userId: string, data: { name?: string; avatarUrl?: string }) {
+  async updateProfile(
+    userId: string,
+    data: { name?: string; avatarUrl?: string },
+  ) {
     return this.prisma.user.update({
       where: { id: userId },
       data,

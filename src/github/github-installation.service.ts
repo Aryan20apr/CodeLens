@@ -28,25 +28,34 @@ export class GithubInstallationService {
     const className = GithubInstallationService.name;
     const methodName = 'handleInstallationEvent';
 
-    this.logger.info(`[${className}] [${methodName}] :: Processing installation event`, {
-      action,
-      installationId: String(installation.id),
-      accountLogin: installation.account?.login,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Processing installation event`,
+      {
+        action,
+        installationId: String(installation.id),
+        accountLogin: installation.account?.login,
+      },
+    );
 
     if (action === 'deleted') {
       await this.installations.markDeleted(BigInt(installation.id));
-      this.logger.info(`[${className}] [${methodName}] :: Installation marked deleted`, {
-        installationId: String(installation.id),
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Installation marked deleted`,
+        {
+          installationId: String(installation.id),
+        },
+      );
       return;
     }
 
     await this.installations.upsertFromInstallation(installation);
-    this.logger.info(`[${className}] [${methodName}] :: Installation upserted`, {
-      installationId: String(installation.id),
-      action,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Installation upserted`,
+      {
+        installationId: String(installation.id),
+        action,
+      },
+    );
   }
 
   async handleInstallationRepositoriesEvent(
@@ -93,13 +102,18 @@ export class GithubInstallationService {
       );
     }
 
-    this.logger.info(`[${className}] [${methodName}] :: Installation repositories synced`, {
-      installationId: String(installationId),
-      action,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Installation repositories synced`,
+      {
+        installationId: String(installationId),
+        action,
+      },
+    );
   }
 
-  async checkPullRequestInstallation(installationId: bigint): Promise<
+  async checkPullRequestInstallation(
+    installationId: bigint,
+  ): Promise<
     | { eligible: true; userId: string | null }
     | { eligible: false; reason: 'missing' | 'deleted' | 'suspended' }
   > {

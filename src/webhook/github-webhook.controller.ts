@@ -38,9 +38,18 @@ export class GithubWebhookController {
   @Post()
   @HttpCode(200)
   @ApiOperation({ summary: 'Receive GitHub App webhook delivery events' })
-  @ApiHeader({ name: 'x-github-event', description: 'GitHub webhook event name (e.g. pull_request, installation)' })
-  @ApiHeader({ name: 'x-github-delivery', description: 'Unique webhook delivery GUID' })
-  @ApiHeader({ name: 'x-hub-signature-256', description: 'HMAC-SHA256 signature calculated with the webhook secret' })
+  @ApiHeader({
+    name: 'x-github-event',
+    description: 'GitHub webhook event name (e.g. pull_request, installation)',
+  })
+  @ApiHeader({
+    name: 'x-github-delivery',
+    description: 'Unique webhook delivery GUID',
+  })
+  @ApiHeader({
+    name: 'x-hub-signature-256',
+    description: 'HMAC-SHA256 signature calculated with the webhook secret',
+  })
   @ApiResponse({
     status: 200,
     description: 'Webhook received and processed or acknowledged',
@@ -54,7 +63,10 @@ export class GithubWebhookController {
       { message: 'Webhook processed successfully' },
     ),
   })
-  @ApiResponse({ status: 401, description: 'Missing headers, missing body, or invalid signature' })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing headers, missing body, or invalid signature',
+  })
   async receive(
     @Req() req: FastifyRequest,
     @Headers('x-github-event') event: string | undefined,
@@ -64,10 +76,13 @@ export class GithubWebhookController {
     const className = GithubWebhookController.name;
     const methodName = 'receive';
 
-    this.logger.info(`[${className}] [${methodName}] :: Received GitHub webhook request`, {
-      event,
-      deliveryId,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Received GitHub webhook request`,
+      {
+        event,
+        deliveryId,
+      },
+    );
 
     const rawBody = req.rawBody;
     if (!rawBody?.length) {
@@ -77,23 +92,26 @@ export class GithubWebhookController {
       throw new UnauthorizedException('Missing raw body');
     }
     if (!event || !deliveryId || !signature) {
-      this.logger.warn(`[${className}] [${methodName}] :: Missing GitHub webhook headers`, {
-        event,
-        deliveryId,
-        hasSignature: Boolean(signature),
-      });
+      this.logger.warn(
+        `[${className}] [${methodName}] :: Missing GitHub webhook headers`,
+        {
+          event,
+          deliveryId,
+          hasSignature: Boolean(signature),
+        },
+      );
       throw new UnauthorizedException('Missing GitHub webhook headers');
     }
 
-    const ok = await this.webhooks.verify(
-      rawBody.toString('utf8'),
-      signature,
-    );
+    const ok = await this.webhooks.verify(rawBody.toString('utf8'), signature);
     if (!ok) {
-      this.logger.warn(`[${className}] [${methodName}] :: Invalid webhook signature`, {
-        deliveryId,
-        event,
-      });
+      this.logger.warn(
+        `[${className}] [${methodName}] :: Invalid webhook signature`,
+        {
+          deliveryId,
+          event,
+        },
+      );
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
@@ -115,10 +133,13 @@ export class GithubWebhookController {
 
     await this.handler.handle(event, deliveryId, payload);
 
-    this.logger.info(`[${className}] [${methodName}] :: Webhook handled successfully`, {
-      deliveryId,
-      event,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Webhook handled successfully`,
+      {
+        deliveryId,
+        event,
+      },
+    );
 
     return {
       success: true,

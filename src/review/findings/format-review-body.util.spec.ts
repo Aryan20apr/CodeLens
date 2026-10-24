@@ -39,7 +39,9 @@ describe('format-review-body.util', () => {
     expect(output).toContain('This PR introduces auth updates.');
     expect(output).toContain('## Key Findings');
     expect(output).toContain('🔴 `src/auth/jwt.ts:42` **Hardcoded secret**');
-    expect(output).toContain('🟡 `src/user/user.service.ts:10` **Missing null check**');
+    expect(output).toContain(
+      '🟡 `src/user/user.service.ts:10` **Missing null check**',
+    );
     expect(output).toContain('2 inline review comments on this PR.');
   });
 

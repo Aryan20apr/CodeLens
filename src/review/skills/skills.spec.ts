@@ -41,12 +41,7 @@ describe('Skill Bank & FilesystemBackend (agentskills.io)', () => {
   });
 
   it('defines safe read-only filesystem tools without mutation tools', () => {
-    expect(SAFE_READONLY_FS_TOOLS).toEqual([
-      'ls',
-      'read_file',
-      'glob',
-      'grep',
-    ]);
+    expect(SAFE_READONLY_FS_TOOLS).toEqual(['ls', 'read_file', 'glob', 'grep']);
     expect(SAFE_READONLY_FS_TOOLS).not.toContain('write_file');
     expect(SAFE_READONLY_FS_TOOLS).not.toContain('edit_file');
     expect(SAFE_READONLY_FS_TOOLS).not.toContain('delete');
@@ -55,7 +50,9 @@ describe('Skill Bank & FilesystemBackend (agentskills.io)', () => {
 
   it('resolves built-in skills directory containing security skill', () => {
     const resolved = resolveBuiltInSkillsDir();
-    expect(fs.existsSync(path.join(resolved, 'security', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(resolved, 'security', 'SKILL.md'))).toBe(
+      true,
+    );
   });
 
   it('extracts skill frontmatter metadata without leaking full body into system prompt', async () => {

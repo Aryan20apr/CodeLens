@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, UsePipes } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -73,10 +81,7 @@ export class UserController {
     }),
   })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  async updateMe(
-    @CurrentUser() user: any,
-    @Body() body: UpdateProfileDto,
-  ) {
+  async updateMe(@CurrentUser() user: any, @Body() body: UpdateProfileDto) {
     const updated = await this.userService.updateProfile(user.id, body);
     return {
       success: true,
@@ -88,7 +93,8 @@ export class UserController {
   @Post('me/api-key')
   @ApiOperation({
     summary: 'Regenerate API key',
-    description: 'Issues a new API key and invalidates the previous one. The raw key is only returned once — store it securely.',
+    description:
+      'Issues a new API key and invalidates the previous one. The raw key is only returned once — store it securely.',
   })
   @ApiResponse({
     status: 201,
@@ -111,7 +117,8 @@ export class UserController {
     const rawKey = await this.userService.regenerateApiKey(user.id);
     return {
       success: true,
-      message: 'New API key generated successfully. Store this key securely — it will not be shown again.',
+      message:
+        'New API key generated successfully. Store this key securely — it will not be shown again.',
       data: {
         apiKey: rawKey,
       },

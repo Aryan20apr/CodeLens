@@ -18,9 +18,7 @@ type HeaderReply = {
         generateId: true,
         idGenerator: (_ctx: ExecutionContext) => randomUUID(),
         setup: async (cls, context: ExecutionContext) => {
-          const reply = context
-            .switchToHttp()
-            .getResponse<HeaderReply>();
+          const reply = context.switchToHttp().getResponse<HeaderReply>();
           const id = cls.getId();
           if (id) reply.header('X-Correlation-Id', id);
         },

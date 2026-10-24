@@ -43,7 +43,9 @@ describe('finding-fingerprint.util', () => {
         category: 'performance' as const,
       };
 
-      expect(computeFingerprint(finding1)).not.toBe(computeFingerprint(finding2));
+      expect(computeFingerprint(finding1)).not.toBe(
+        computeFingerprint(finding2),
+      );
     });
 
     it('should produce the same fingerprint for whitespace-normalized identical findings', () => {
@@ -88,7 +90,9 @@ describe('finding-fingerprint.util', () => {
       };
 
       // '' (missing) vs 'src/a.ts' → different hash prefix → different fingerprint
-      expect(computeFingerprint(withPath)).not.toBe(computeFingerprint(withoutPath));
+      expect(computeFingerprint(withPath)).not.toBe(
+        computeFingerprint(withoutPath),
+      );
     });
 
     it('should be deterministic across multiple calls', () => {

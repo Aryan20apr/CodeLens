@@ -9,8 +9,7 @@ import type {
   ParsedDiff,
 } from './types/parsed-diff.types';
 
-const HUNK_HEADER =
-  /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
+const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
 
 @Injectable()
 export class DiffParserService {

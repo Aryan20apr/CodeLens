@@ -172,7 +172,8 @@ describe('invokeWithStructuredOutput', () => {
         code: 'invalid_value',
         values: ['ok', 'error'],
         path: ['status'],
-        message: "Invalid enum value. Expected 'ok' | 'error', received 'invalid_value'",
+        message:
+          "Invalid enum value. Expected 'ok' | 'error', received 'invalid_value'",
       },
     ]);
 
@@ -219,7 +220,8 @@ describe('invokeWithStructuredOutput', () => {
 
   it('repairs JSON from raw.content when withStructuredOutput returns parsed: null and raw.content has a syntax defect', async () => {
     // Simulates double open brace like {\n{\t"status": ... emitted in content
-    const invalidContent = '{\n{\t"status": "ok", "items": ["repaired_content"]}';
+    const invalidContent =
+      '{\n{\t"status": "ok", "items": ["repaired_content"]}';
     const mockRaw = new AIMessage({
       content: invalidContent,
       tool_calls: [],
@@ -247,7 +249,9 @@ describe('invokeWithStructuredOutput', () => {
       'Test prompt',
     );
 
-    expect(result.parsed).toEqual({ status: 'ok', items: ['repaired_content'] });
+    expect(result.parsed).toEqual({
+      status: 'ok',
+      items: ['repaired_content'],
+    });
   });
 });
-

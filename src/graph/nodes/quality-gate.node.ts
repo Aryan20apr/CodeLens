@@ -1,16 +1,11 @@
 import type { GraphEvent, SnippetGraphStateType } from '../state.annotation';
 
 type NodeUpdate = Partial<
-  Pick<
-    SnippetGraphStateType,
-    'qualityGatePassed' | 'events' | 'status'
-  >
+  Pick<SnippetGraphStateType, 'qualityGatePassed' | 'events' | 'status'>
 >;
 
 export function createQualityGateNode() {
-  return async (
-    state: SnippetGraphStateType,
-  ): Promise<NodeUpdate> => {
+  return async (state: SnippetGraphStateType): Promise<NodeUpdate> => {
     const now = () => new Date().toISOString();
 
     const analysis = state.llmAnalysis;
@@ -39,8 +34,7 @@ export function createQualityGateNode() {
     const findings = analysis.findings;
 
     const passed =
-      findings.length > 0 &&
-      findings.some((f) => f.confidence !== 'low');
+      findings.length > 0 && findings.some((f) => f.confidence !== 'low');
 
     return {
       qualityGatePassed: passed,
@@ -49,9 +43,7 @@ export function createQualityGateNode() {
         {
           node: 'quality-gate',
           status: 'completed',
-          message: passed
-            ? 'Quality gate passed'
-            : 'Quality gate failed',
+          message: passed ? 'Quality gate passed' : 'Quality gate failed',
           at: now(),
         },
       ],

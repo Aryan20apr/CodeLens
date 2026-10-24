@@ -48,7 +48,14 @@ export class QueryLoaderService {
     const fileName = `${key}.scm`;
     const besideLoader = join(__dirname, fileName);
     if (existsSync(besideLoader)) return besideLoader;
-    const underSrc = join(process.cwd(), 'src', 'graph', 'lib', 'queries', fileName);
+    const underSrc = join(
+      process.cwd(),
+      'src',
+      'graph',
+      'lib',
+      'queries',
+      fileName,
+    );
     if (existsSync(underSrc)) return underSrc;
     return besideLoader;
   }
@@ -82,7 +89,8 @@ export class QueryLoaderService {
         if (name === 'functions') current = 'functions';
         else if (name === 'classes') current = 'classes';
         else if (name === 'imports') current = 'imports';
-        else if (name === 'entry_points' || name === 'entrypoints') current = 'entry_points';
+        else if (name === 'entry_points' || name === 'entrypoints')
+          current = 'entry_points';
         else current = null;
         continue;
       }

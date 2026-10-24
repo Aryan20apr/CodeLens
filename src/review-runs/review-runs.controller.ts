@@ -34,15 +34,37 @@ const ReviewRunSchema = {
     id: { type: 'string', format: 'uuid' },
     repoFullName: { type: 'string', example: 'octocat/hello-world' },
     prNumber: { type: 'number', example: 42 },
-    headSha: { type: 'string', example: '6dcb09b5b57875f334f61aebed695e2e4193db5e' },
-    baseSha: { type: 'string', example: '9a0a1a01174092b3a0f7f329de4b1a4a4d693fbe' },
-    status: { type: 'string', enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'], example: 'COMPLETED' },
-    triggeredBy: { type: 'string', enum: ['WEBHOOK', 'MANUAL'], example: 'MANUAL' },
-    summaryText: { type: 'string', nullable: true, example: 'Code review completed with 2 findings.' },
+    headSha: {
+      type: 'string',
+      example: '6dcb09b5b57875f334f61aebed695e2e4193db5e',
+    },
+    baseSha: {
+      type: 'string',
+      example: '9a0a1a01174092b3a0f7f329de4b1a4a4d693fbe',
+    },
+    status: {
+      type: 'string',
+      enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'],
+      example: 'COMPLETED',
+    },
+    triggeredBy: {
+      type: 'string',
+      enum: ['WEBHOOK', 'MANUAL'],
+      example: 'MANUAL',
+    },
+    summaryText: {
+      type: 'string',
+      nullable: true,
+      example: 'Code review completed with 2 findings.',
+    },
     githubReviewId: { type: 'string', nullable: true, example: '123456789' },
     error: { type: 'string', nullable: true, example: null },
     currentStep: { type: 'string', nullable: true, example: 'postReview' },
-    currentStepMessage: { type: 'string', nullable: true, example: 'Review posted to GitHub PR' },
+    currentStepMessage: {
+      type: 'string',
+      nullable: true,
+      example: 'Review posted to GitHub PR',
+    },
     createdAt: { type: 'string', format: 'date-time' },
     completedAt: { type: 'string', format: 'date-time', nullable: true },
   },
@@ -112,7 +134,11 @@ export class ReviewRunsController {
   @Post('repositories/:repoId/pull-requests/:prNumber')
   @ApiOperation({ summary: 'Trigger a CodeLens review for a pull request' })
   @ApiParam({ name: 'repoId', type: String, description: 'Repository ID' })
-  @ApiParam({ name: 'prNumber', type: Number, description: 'Pull request number' })
+  @ApiParam({
+    name: 'prNumber',
+    type: Number,
+    description: 'Pull request number',
+  })
   @ApiResponse({
     status: 201,
     description: 'PR review enqueued',
@@ -120,7 +146,11 @@ export class ReviewRunsController {
       {
         type: 'object',
         properties: {
-          reviewRunId: { type: 'string', format: 'uuid', example: '01952f4a-71bc-7000-8f1d-91b427b03a7a' },
+          reviewRunId: {
+            type: 'string',
+            format: 'uuid',
+            example: '01952f4a-71bc-7000-8f1d-91b427b03a7a',
+          },
         },
       },
       { message: 'PR review triggered successfully' },
@@ -131,7 +161,11 @@ export class ReviewRunsController {
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    const result = await this.reviewRuns.triggerReview(user.id, repoId, prNumber);
+    const result = await this.reviewRuns.triggerReview(
+      user.id,
+      repoId,
+      prNumber,
+    );
     return {
       success: true,
       message: 'PR review triggered successfully',
@@ -150,10 +184,7 @@ export class ReviewRunsController {
     }),
   })
   @ApiResponse({ status: 404, description: 'Review run not found' })
-  async findById(
-    @CurrentUser() user: { id: string },
-    @Param('id') id: string,
-  ) {
+  async findById(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     const run = await this.reviewRuns.findById(user.id, id);
     return {
       success: true,
@@ -174,7 +205,8 @@ export class ReviewRunsController {
       'text/event-stream': {
         schema: {
           type: 'string',
-          example: 'event: snapshot\ndata: {"id":"01952f4a-71bc-7000-8f1d-91b427b03a7a","status":"RUNNING"}\n\n',
+          example:
+            'event: snapshot\ndata: {"id":"01952f4a-71bc-7000-8f1d-91b427b03a7a","status":"RUNNING"}\n\n',
         },
       },
     },

@@ -162,9 +162,7 @@ export class ReviewRunsService {
       repoFullName,
     );
     if (!record) {
-      throw new ForbiddenException(
-        `No access to repository ${repoFullName}`,
-      );
+      throw new ForbiddenException(`No access to repository ${repoFullName}`);
     }
   }
 

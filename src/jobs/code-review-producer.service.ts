@@ -7,30 +7,29 @@ import { CODE_REVIEW_JOB, CODE_REVIEW_QUEUE } from './constants';
 import type { SnippetSource } from 'src/graph/state.types';
 import type { CodeReviewJobPayload } from './dtos/code-review.dto';
 
-
 @Injectable()
 export class CodeReviewProducer {
+  constructor(
+    @InjectQueue(CODE_REVIEW_QUEUE)
+    private readonly queue: Queue<CodeReviewJobPayload>,
+  ) {}
 
-    constructor(
-        @InjectQueue(CODE_REVIEW_QUEUE) private readonly queue: Queue<CodeReviewJobPayload>
-    ){}
+  async enqueue(source: SnippetSource, userId: string) {
+    const threadId = uuidv7();
 
-    async enqueue(source: SnippetSource, userId: string) {
-        const threadId = uuidv7();
-    
-        const payload: CodeReviewJobPayload = {
-          threadId,
-          source,
-          userId,
-        };
-    
-        const job = await this.queue.add(CODE_REVIEW_JOB, payload, {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 2_000 },
-          // removeOnComplete: true,
-          removeOnFail: false,
-        });
-    
-        return { jobId: job.id, threadId };
-      }
+    const payload: CodeReviewJobPayload = {
+      threadId,
+      source,
+      userId,
+    };
+
+    const job = await this.queue.add(CODE_REVIEW_JOB, payload, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2_000 },
+      // removeOnComplete: true,
+      removeOnFail: false,
+    });
+
+    return { jobId: job.id, threadId };
+  }
 }

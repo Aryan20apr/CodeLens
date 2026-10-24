@@ -22,9 +22,7 @@ export class GithubAppAuthService {
     this.privateKey = config.githubApp.privateKey;
   }
 
-  getInstallationOctokit(
-    installationId: string | number | bigint,
-  ): Octokit {
+  getInstallationOctokit(installationId: string | number | bigint): Octokit {
     const className = GithubAppAuthService.name;
     const methodName = 'getInstallationOctokit';
 
@@ -33,9 +31,12 @@ export class GithubAppAuthService {
         ? Number(installationId)
         : Number(installationId);
 
-    this.logger.debug(`[${className}] [${methodName}] :: Creating installation Octokit client`, {
-      installationId: String(installationId),
-    });
+    this.logger.debug(
+      `[${className}] [${methodName}] :: Creating installation Octokit client`,
+      {
+        installationId: String(installationId),
+      },
+    );
 
     return new Octokit({
       authStrategy: createAppAuth,

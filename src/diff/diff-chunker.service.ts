@@ -30,7 +30,8 @@ export class DiffChunkerService {
             end: Math.max(...lineNumbers),
           },
           addedLines,
-          deletedLineCount: hunk.lines.filter((l) => l.type === 'delete').length,
+          deletedLineCount: hunk.lines.filter((l) => l.type === 'delete')
+            .length,
         });
       }
     }

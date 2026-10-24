@@ -43,11 +43,14 @@ export class PostedFindingRepository {
     const className = PostedFindingRepository.name;
     const methodName = 'insertMany';
 
-    this.logger.info(`[${className}] [${methodName}] :: Persisting posted finding fingerprints`, {
-      count: rows.length,
-      repoFullName: rows[0]?.repoFullName,
-      prNumber: rows[0]?.prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Persisting posted finding fingerprints`,
+      {
+        count: rows.length,
+        repoFullName: rows[0]?.repoFullName,
+        prNumber: rows[0]?.prNumber,
+      },
+    );
 
     await this.prisma.prReviewPostedFinding.createMany({
       data: rows.map((row) => ({
@@ -75,10 +78,13 @@ export class PostedFindingRepository {
       where: { repoFullName, prNumber },
     });
 
-    this.logger.info(`[${className}] [${methodName}] :: Cleared posted finding fingerprints`, {
-      repoFullName,
-      prNumber,
-      deletedCount: result.count,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Cleared posted finding fingerprints`,
+      {
+        repoFullName,
+        prNumber,
+        deletedCount: result.count,
+      },
+    );
   }
 }

@@ -1,16 +1,19 @@
-import type { GraphEvent, SnippetGraphStateType } from "../state.annotation";
-import type { FindingCategory, Score, StructuredReport } from "../state.types";
+import type { GraphEvent, SnippetGraphStateType } from '../state.annotation';
+import type { FindingCategory, Score, StructuredReport } from '../state.types';
 
 type NodeUpdate = Partial<
-  Pick<SnippetGraphStateType, "score" | "report" | "events" | "status" | "error">
+  Pick<
+    SnippetGraphStateType,
+    'score' | 'report' | 'events' | 'status' | 'error'
+  >
 >;
 
 const ALL_CATEGORIES: FindingCategory[] = [
-  "security",
-  "correctness",
-  "performance",
-  "best_practices",
-  "maintainability",
+  'security',
+  'correctness',
+  'performance',
+  'best_practices',
+  'maintainability',
 ];
 
 function clamp0to100(n: number): number {
@@ -23,9 +26,9 @@ export function createScoreReportNode() {
 
     const startEvents: GraphEvent[] = [
       {
-        node: "score-report",
-        status: "started" as const,
-        message: "Computing score and building report",
+        node: 'score-report',
+        status: 'started' as const,
+        message: 'Computing score and building report',
         at: now(),
       },
     ];
@@ -34,13 +37,13 @@ export function createScoreReportNode() {
       const analysis = state.llmAnalysis;
       if (!analysis) {
         return {
-          status: "failed",
-          error: "Missing state.llmAnalysis (run llm-analysis first)",
+          status: 'failed',
+          error: 'Missing state.llmAnalysis (run llm-analysis first)',
           events: startEvents.concat([
             {
-              node: "score-report",
-              status: "failed",
-              message: "Missing state.llmAnalysis",
+              node: 'score-report',
+              status: 'failed',
+              message: 'Missing state.llmAnalysis',
               at: now(),
             },
           ]),
@@ -95,12 +98,12 @@ export function createScoreReportNode() {
       return {
         score,
         report,
-        status: "complete",
+        status: 'complete',
         error: null,
         events: startEvents.concat([
           {
-            node: "score-report",
-            status: "completed",
+            node: 'score-report',
+            status: 'completed',
             message: `Report ready (overall=${score.overall})`,
             at: now(),
           },
@@ -109,11 +112,11 @@ export function createScoreReportNode() {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       return {
-        status: "failed",
+        status: 'failed',
 
         error: message,
         events: startEvents.concat([
-          { node: "score-report", status: "failed", message, at: now() },
+          { node: 'score-report', status: 'failed', message, at: now() },
         ]),
       };
     }

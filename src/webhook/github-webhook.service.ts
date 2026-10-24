@@ -50,16 +50,22 @@ export class GithubWebhookService {
     if (event === 'installation') {
       const parsed = InstallationPayloadSchema.safeParse(payload);
       if (!parsed.success) {
-        this.logger.warn(`[${className}] [${methodName}] :: Invalid installation payload`, {
-          deliveryId,
-        });
+        this.logger.warn(
+          `[${className}] [${methodName}] :: Invalid installation payload`,
+          {
+            deliveryId,
+          },
+        );
         return;
       }
-      this.logger.info(`[${className}] [${methodName}] :: Processing installation event`, {
-        deliveryId,
-        action: parsed.data.action,
-        installationId: parsed.data.installation.id,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Processing installation event`,
+        {
+          deliveryId,
+          action: parsed.data.action,
+          installationId: parsed.data.installation.id,
+        },
+      );
       await this.installations.handleInstallationEvent(
         parsed.data.action,
         parsed.data.installation,
@@ -94,18 +100,24 @@ export class GithubWebhookService {
     }
 
     if (event !== 'pull_request') {
-      this.logger.debug(`[${className}] [${methodName}] :: Ignoring unsupported event`, {
-        deliveryId,
-        event,
-      });
+      this.logger.debug(
+        `[${className}] [${methodName}] :: Ignoring unsupported event`,
+        {
+          deliveryId,
+          event,
+        },
+      );
       return;
     }
 
     const parsed = PullRequestPayloadSchema.safeParse(payload);
     if (!parsed.success) {
-      this.logger.warn(`[${className}] [${methodName}] :: Invalid pull_request payload`, {
-        deliveryId,
-      });
+      this.logger.warn(
+        `[${className}] [${methodName}] :: Invalid pull_request payload`,
+        {
+          deliveryId,
+        },
+      );
       return;
     }
 
@@ -113,12 +125,15 @@ export class GithubWebhookService {
       parsed.data;
 
     if (!PR_REVIEW_ACTIONS.has(action)) {
-      this.logger.info(`[${className}] [${methodName}] :: Ignoring pull_request action`, {
-        deliveryId,
-        action,
-        repoFullName: repository.full_name,
-        prNumber: number,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Ignoring pull_request action`,
+        {
+          deliveryId,
+          action,
+          repoFullName: repository.full_name,
+          prNumber: number,
+        },
+      );
       try {
         await this.deliveries.createReceived({
           deliveryId,
@@ -216,9 +231,12 @@ export class GithubWebhookService {
       });
     } catch (err) {
       if (this.deliveries.isUniqueViolation(err)) {
-        this.logger.info(`[${className}] [${methodName}] :: Duplicate webhook delivery`, {
-          deliveryId,
-        });
+        this.logger.info(
+          `[${className}] [${methodName}] :: Duplicate webhook delivery`,
+          {
+            deliveryId,
+          },
+        );
         return;
       }
       throw err;
@@ -241,7 +259,12 @@ export class GithubWebhookService {
     if (decision.kind === 'SKIP_IN_FLIGHT') {
       this.logger.info(
         `[${className}] [${methodName}] :: Skipping PR review, run already in flight`,
-        { deliveryId, repoFullName, prNumber: number, inFlightRunId: inFlight?.id },
+        {
+          deliveryId,
+          repoFullName,
+          prNumber: number,
+          inFlightRunId: inFlight?.id,
+        },
       );
       await this.deliveries.markIgnored(deliveryId);
       return;
@@ -285,13 +308,16 @@ export class GithubWebhookService {
     await this.runs.setBullmqJobId(reviewRunId, jobId);
     await this.deliveries.markEnqueued(deliveryId, jobId);
 
-    this.logger.info(`[${className}] [${methodName}] :: PR review job enqueued`, {
-      deliveryId,
-      reviewRunId,
-      jobId,
-      repoFullName,
-      prNumber: number,
-      isFullReview: decision.isFullReview,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: PR review job enqueued`,
+      {
+        deliveryId,
+        reviewRunId,
+        jobId,
+        repoFullName,
+        prNumber: number,
+        isFullReview: decision.isFullReview,
+      },
+    );
   }
 }

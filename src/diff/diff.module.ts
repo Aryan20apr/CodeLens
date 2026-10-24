@@ -10,10 +10,6 @@ import { DiffParserService } from './diff-parser.service';
     DiffChunkerService,
     DiffChunkSerializerService,
   ],
-  exports: [
-    DiffParserService,
-    DiffChunkerService,
-    DiffChunkSerializerService,
-  ],
+  exports: [DiffParserService, DiffChunkerService, DiffChunkSerializerService],
 })
 export class DiffModule {}

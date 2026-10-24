@@ -1,6 +1,9 @@
 import { ValidatePrFindingsService } from './validator.service';
 import type { Finding } from '../../graph/state.types';
-import type { ReviewChunk, FileIndexEntry } from '../../diff/types/review-chunk.types';
+import type {
+  ReviewChunk,
+  FileIndexEntry,
+} from '../../diff/types/review-chunk.types';
 import type { AppConfig } from '../../config/app-config.types';
 import type { Logger } from 'winston';
 
@@ -46,7 +49,10 @@ describe('ValidatePrFindingsService', () => {
       newLineRange: { start: 15, end: 26 },
       addedLines: [
         { line: 20, content: 'private String secret = "jwtTokenKey";' },
-        { line: 21, content: 'public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;' },
+        {
+          line: 21,
+          content: 'public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;',
+        },
       ],
       deletedLineCount: 0,
     },
@@ -60,7 +66,10 @@ describe('ValidatePrFindingsService', () => {
       debug: jest.fn(),
     } as any;
 
-    service = new ValidatePrFindingsService(mockLogger as Logger, mockAppConfig);
+    service = new ValidatePrFindingsService(
+      mockLogger as Logger,
+      mockAppConfig,
+    );
   });
 
   it('validates finding on added line in diff with exact repository path', () => {
@@ -127,7 +136,8 @@ describe('ValidatePrFindingsService', () => {
     const rawFindings: Finding[] = [
       {
         id: '1',
-        filePath: 'src/main/java/com/aryan/blogging/bloggingapis/NonExistent.java',
+        filePath:
+          'src/main/java/com/aryan/blogging/bloggingapis/NonExistent.java',
         category: 'security',
         severity: 'critical',
         title: 'Unknown file',

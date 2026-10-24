@@ -14,10 +14,10 @@ import {
   snippetMemoryCheckpointer,
 } from './state.annotation';
 
-import type { SnippetSource } from "./state.types";
-import { createLlmAnalysisNode } from "./nodes/llm-analysis.node";
-import { createScoreReportNode } from "./nodes/score-report.node";
-import { LlmService } from "src/llm/llm.service";
+import type { SnippetSource } from './state.types';
+import { createLlmAnalysisNode } from './nodes/llm-analysis.node';
+import { createScoreReportNode } from './nodes/score-report.node';
+import { LlmService } from 'src/llm/llm.service';
 import { createQualityGateNode } from './nodes/quality-gate.node';
 import { createRefineAnalysisNode } from './nodes/refine-analysis.node';
 import type { UserLlmKey } from '../llm-provider/llm-provider.service';
@@ -57,7 +57,11 @@ export class GraphFactory implements OnModuleInit {
     return this.compiled;
   }
 
-  async invokeSnippet(source: SnippetSource, threadId: string, config?: { userLlmKey?: UserLlmKey }) {
+  async invokeSnippet(
+    source: SnippetSource,
+    threadId: string,
+    config?: { userLlmKey?: UserLlmKey },
+  ) {
     const className = GraphFactory.name;
     const methodName = 'invokeSnippet';
 
@@ -131,7 +135,10 @@ export class GraphFactory implements OnModuleInit {
     const llmAnalysis = createLlmAnalysisNode(this.llm, this.promptRegistry);
     const scoreReport = createScoreReportNode();
     const qualityGate = createQualityGateNode();
-    const refineAnalysis = createRefineAnalysisNode(this.llm, this.promptRegistry);
+    const refineAnalysis = createRefineAnalysisNode(
+      this.llm,
+      this.promptRegistry,
+    );
 
     return new StateGraph(SnippetGraphState)
       .addNode('parse', parse)

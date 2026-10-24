@@ -46,8 +46,10 @@ describe('incremental-summary.util', () => {
         },
       ];
 
-      const { newFindings, unchangedFindings } =
-        classifyDelta(currentFindings, previousFindings);
+      const { newFindings, unchangedFindings } = classifyDelta(
+        currentFindings,
+        previousFindings,
+      );
 
       expect(unchangedFindings).toHaveLength(1);
       expect(unchangedFindings[0].id).toBe('f1-new');
@@ -69,8 +71,10 @@ describe('incremental-summary.util', () => {
         },
       ];
 
-      const { newFindings, unchangedFindings } =
-        classifyDelta(currentFindings, previousFindings);
+      const { newFindings, unchangedFindings } = classifyDelta(
+        currentFindings,
+        previousFindings,
+      );
 
       expect(newFindings).toHaveLength(1);
       expect(newFindings[0].id).toBe('f3');
@@ -123,8 +127,10 @@ describe('incremental-summary.util', () => {
         },
       ];
 
-      const { newFindings, unchangedFindings } =
-        classifyDelta(current, previousWithCollision);
+      const { newFindings, unchangedFindings } = classifyDelta(
+        current,
+        previousWithCollision,
+      );
 
       // fp-a-new matches via fingerprint; it is unchanged
       expect(unchangedFindings).toHaveLength(1);
@@ -134,7 +140,6 @@ describe('incremental-summary.util', () => {
       expect(newFindings).toHaveLength(0);
     });
   });
-
 
   describe('buildIncrementalSummary', () => {
     it('should format incremental summary markdown correctly', () => {

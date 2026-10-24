@@ -4,13 +4,12 @@ import type { LlmAnalysis } from '../../graph/state.types';
 import { extractJson } from '../../graph/utils/extract-json.util';
 import { FindingSchema } from '../../graph/utils/parse-llm-analysis.util';
 
-
 export const PrFindingSchema = FindingSchema.extend({
   filePath: z
     .string()
     .min(1)
     .describe(
-      'Relative file path to the changed file in the repository (e.g. src/auth/auth.service.ts)'
+      'Relative file path to the changed file in the repository (e.g. src/auth/auth.service.ts)',
     ),
 });
 
@@ -19,22 +18,21 @@ export const PrLlmAnalysisSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Internal step-by-step reasoning evaluating the PR diff, validating line references, checking cross-file impacts, and eliminating false positives before finalizing findings'
+      'Internal step-by-step reasoning evaluating the PR diff, validating line references, checking cross-file impacts, and eliminating false positives before finalizing findings',
     ),
   summary: z
     .string()
     .min(10)
     .describe(
-      'Executive summary of the pull request review highlighting major risks, critical findings, and overall readiness to merge'
+      'Executive summary of the pull request review highlighting major risks, critical findings, and overall readiness to merge',
     ),
   findings: z
     .array(PrFindingSchema)
     .max(30)
     .describe(
-      'Actionable review findings ordered from highest severity to lowest. Cites exact line numbers and paths from the PR changes'
+      'Actionable review findings ordered from highest severity to lowest. Cites exact line numbers and paths from the PR changes',
     ),
 });
-
 
 export type PrLlmAnalysisOut = z.infer<typeof PrLlmAnalysisSchema>;
 
@@ -74,11 +72,11 @@ export async function parsePrLlmAnalysisWithRepair(
     const errorDetails =
       firstErr instanceof z.ZodError
         ? firstErr.issues
-          .map(
-            (i) =>
-              `- Field "${i.path.join('.')}": ${i.message} (code: ${i.code})`,
-          )
-          .join('\n')
+            .map(
+              (i) =>
+                `- Field "${i.path.join('.')}": ${i.message} (code: ${i.code})`,
+            )
+            .join('\n')
         : firstErr instanceof Error
           ? firstErr.message
           : String(firstErr);
@@ -88,7 +86,9 @@ export async function parsePrLlmAnalysisWithRepair(
     try {
       return parsePrLlmAnalysis(repairedRaw);
     } catch {
-      throw new Error(`LLM analysis JSON invalid after repair: ${errorDetails}`);
+      throw new Error(
+        `LLM analysis JSON invalid after repair: ${errorDetails}`,
+      );
     }
   }
 }

@@ -45,24 +45,30 @@ export class PrReviewProcessorService extends WorkerHost {
       prNumber,
     } = job.data;
 
-    this.logger.info(`[${className}] [${methodName}] :: Starting PR review job`, {
-      jobId: String(job.id),
-      deliveryId,
-      reviewRunId,
-      installationId: installationIdStr,
-      repoFullName,
-      prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Starting PR review job`,
+      {
+        jobId: String(job.id),
+        deliveryId,
+        reviewRunId,
+        installationId: installationIdStr,
+        repoFullName,
+        prNumber,
+      },
+    );
 
     const installationId = BigInt(installationIdStr);
     let lastStep: PrReviewStep = 'validating';
 
     const run = await this.runs.findById(reviewRunId);
     if (!run) {
-      this.logger.error(`[${className}] [${methodName}] :: PR review run not found`, {
-        reviewRunId,
-        jobId: String(job.id),
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: PR review run not found`,
+        {
+          reviewRunId,
+          jobId: String(job.id),
+        },
+      );
       throw new Error(`PrReview not found: ${reviewRunId}`);
     }
 
@@ -110,7 +116,9 @@ export class PrReviewProcessorService extends WorkerHost {
 
       await this.runs.markRunning(reviewRunId);
 
-      const userLlmKey = run.userId ? await this.llmProvider.getRawKey(run.userId) : null;
+      const userLlmKey = run.userId
+        ? await this.llmProvider.getRawKey(run.userId)
+        : null;
 
       const previousRun = await this.runs.findLastCompletedForPr(
         repoFullName,
@@ -131,16 +139,19 @@ export class PrReviewProcessorService extends WorkerHost {
             }
           : null;
 
-      this.logger.info(`[${className}] [${methodName}] :: Review mode resolved`, {
-        reviewRunId,
-        isIncremental,
-        previousReviewRunId: previousRun?.id,
-        previousHeadSha: previousRun?.headSha,
-        currentHeadSha: run.headSha,
-        previousFindingsCount: Array.isArray(previousRun?.findingsJson)
-          ? previousRun?.findingsJson.length
-          : null,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: Review mode resolved`,
+        {
+          reviewRunId,
+          isIncremental,
+          previousReviewRunId: previousRun?.id,
+          previousHeadSha: previousRun?.headSha,
+          currentHeadSha: run.headSha,
+          previousFindingsCount: Array.isArray(previousRun?.findingsJson)
+            ? previousRun?.findingsJson.length
+            : null,
+        },
+      );
 
       const { summaryMarkdown, githubReviewId, validatedFindings } =
         await this.prGraph.invokePrReview(
@@ -193,7 +204,7 @@ export class PrReviewProcessorService extends WorkerHost {
           isFinalAttempt,
           attemptsMade: job.attemptsMade,
           error: err,
-          message
+          message,
         },
       );
 

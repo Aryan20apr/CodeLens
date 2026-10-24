@@ -1,21 +1,30 @@
-import { Body, Controller, Post, UseGuards, UsePipes } from "@nestjs/common";
-import { uuidv7 } from "uuidv7";
+import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { uuidv7 } from 'uuidv7';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
-import { GraphFactory } from "src/graph/graph.factory";
-import { SnippetEvaluateDtoSchema, type SnippetReviewDto } from "./dto/snippet-review.dto";
-import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@common/guards/jwt-auth.guard";
-import { apiEnvelopeSchema } from "@common/utils/swagger.util";
+import { GraphFactory } from 'src/graph/graph.factory';
+import {
+  SnippetEvaluateDtoSchema,
+  type SnippetReviewDto,
+} from './dto/snippet-review.dto';
+import {
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiTags,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
+import { apiEnvelopeSchema } from '@common/utils/swagger.util';
 
 @ApiTags('Evaluation')
-@Controller("test")
+@Controller('test')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class EvaluationController {
   constructor(private readonly graphFactory: GraphFactory) {}
 
-  @Post("/snippet")
+  @Post('/snippet')
   @UsePipes(new ZodValidationPipe(SnippetEvaluateDtoSchema))
   @ApiOperation({ summary: 'Test endpoint for Snippet code review' })
   @ApiBody({ schema: zodToOpenApi(SnippetEvaluateDtoSchema) })
@@ -45,9 +54,9 @@ export class EvaluationController {
 
     const out = await this.graphFactory.invokeSnippet(
       {
-        type: "snippet",
+        type: 'snippet',
         code: dto.code,
-        language: dto.language ?? "",
+        language: dto.language ?? '',
         filename: dto.filename,
       },
       threadId,

@@ -154,7 +154,11 @@ export async function invokeWithStructuredOutput<T>(
         parsed: (result as any).parsed as T,
         raw: new AIMessage({ content: JSON.stringify((result as any).parsed) }),
       };
-    } else if (result != null && typeof result === 'object' && !('raw' in result)) {
+    } else if (
+      result != null &&
+      typeof result === 'object' &&
+      !('raw' in result)
+    ) {
       return {
         parsed: result as T,
         raw: new AIMessage({ content: JSON.stringify(result) }),

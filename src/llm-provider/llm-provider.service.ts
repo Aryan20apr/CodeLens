@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../db/prisma.service';
 import { encrypt, decrypt } from '../common/utils/crypto.util';
 import { APP_CONFIG } from '../config/config.constants';
@@ -19,11 +24,20 @@ export class LlmProviderService {
     private prisma: PrismaService,
     private modelFetcher: ModelFetcherService,
     @Inject(APP_CONFIG) private config: AppConfig,
-  ) { }
+  ) {}
 
-  async saveKey(userId: string, provider: LlmProvider, rawKey: string, baseUrl?: string) {
+  async saveKey(
+    userId: string,
+    provider: LlmProvider,
+    rawKey: string,
+    baseUrl?: string,
+  ) {
     // 1. Validate key and fetch models
-    const models = await this.modelFetcher.listModels(provider, rawKey, baseUrl);
+    const models = await this.modelFetcher.listModels(
+      provider,
+      rawKey,
+      baseUrl,
+    );
 
     // 2. Encrypt key
     const encryptedKey = encrypt(rawKey, this.config.auth.encryptionKey);
@@ -57,15 +71,25 @@ export class LlmProviderService {
     });
   }
 
-  async listModelsForProvider(userId: string, provider: LlmProvider): Promise<string[]> {
+  async listModelsForProvider(
+    userId: string,
+    provider: LlmProvider,
+  ): Promise<string[]> {
     const keyRecord = await this.prisma.llmApiKey.findUnique({
       where: { userId_provider: { userId, provider } },
     });
     if (!keyRecord) {
       throw new UnauthorizedException('No key saved for this provider');
     }
-    const rawKey = decrypt(keyRecord.encryptedKey, this.config.auth.encryptionKey);
-    return this.modelFetcher.listModels(provider, rawKey, keyRecord.baseUrl || undefined);
+    const rawKey = decrypt(
+      keyRecord.encryptedKey,
+      this.config.auth.encryptionKey,
+    );
+    return this.modelFetcher.listModels(
+      provider,
+      rawKey,
+      keyRecord.baseUrl || undefined,
+    );
   }
 
   async getStoredKeys(userId: string) {
@@ -111,7 +135,10 @@ export class LlmProviderService {
    * Internal use only (Processors/Graph).
    * Decrypts and returns the raw key for the specified provider, or the active provider if not specified.
    */
-  async getRawKey(userId: string, providerOverride?: LlmProvider): Promise<UserLlmKey | null> {
+  async getRawKey(
+    userId: string,
+    providerOverride?: LlmProvider,
+  ): Promise<UserLlmKey | null> {
     const prefs = await this.prisma.userPreferences.findUnique({
       where: { userId },
     });
@@ -127,12 +154,18 @@ export class LlmProviderService {
 
     if (!keyRecord) return null;
 
-    const rawKey = decrypt(keyRecord.encryptedKey, this.config.auth.encryptionKey);
+    const rawKey = decrypt(
+      keyRecord.encryptedKey,
+      this.config.auth.encryptionKey,
+    );
 
     return {
       provider: keyRecord.provider,
       rawKey,
-      model: targetProvider === prefs?.activeProvider ? prefs?.activeModel || undefined : undefined,
+      model:
+        targetProvider === prefs?.activeProvider
+          ? prefs?.activeModel || undefined
+          : undefined,
       baseUrl: keyRecord.baseUrl,
     };
   }

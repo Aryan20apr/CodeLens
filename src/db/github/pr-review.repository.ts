@@ -32,13 +32,16 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'createPending';
 
-    this.logger.info(`[${className}] [${methodName}] :: Creating pending PR review`, {
-      reviewId: data.id,
-      deliveryId: data.deliveryId,
-      installationId: String(data.installationId),
-      repoFullName: data.repoFullName,
-      prNumber: data.prNumber,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Creating pending PR review`,
+      {
+        reviewId: data.id,
+        deliveryId: data.deliveryId,
+        installationId: String(data.installationId),
+        repoFullName: data.repoFullName,
+        prNumber: data.prNumber,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.create({
@@ -56,11 +59,14 @@ export class PrReviewRepository {
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to create PR review`, {
-        reviewId: data.id,
-        deliveryId: data.deliveryId,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to create PR review`,
+        {
+          reviewId: data.id,
+          deliveryId: data.deliveryId,
+          error: err,
+        },
+      );
       throw err;
     }
   }
@@ -102,24 +108,33 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'findById';
 
-    this.logger.debug(`[${className}] [${methodName}] :: Looking up PR review`, {
-      reviewId: id,
-    });
+    this.logger.debug(
+      `[${className}] [${methodName}] :: Looking up PR review`,
+      {
+        reviewId: id,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.findUnique({ where: { id } });
 
-      this.logger.debug(`[${className}] [${methodName}] :: PR review lookup complete`, {
-        reviewId: id,
-        found: Boolean(record),
-      });
+      this.logger.debug(
+        `[${className}] [${methodName}] :: PR review lookup complete`,
+        {
+          reviewId: id,
+          found: Boolean(record),
+        },
+      );
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to look up PR review`, {
-        reviewId: id,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to look up PR review`,
+        {
+          reviewId: id,
+          error: err,
+        },
+      );
       throw err;
     }
   }
@@ -141,9 +156,12 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'markRunning';
 
-    this.logger.info(`[${className}] [${methodName}] :: Marking PR review running`, {
-      reviewId: id,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Marking PR review running`,
+      {
+        reviewId: id,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.update({
@@ -158,10 +176,13 @@ export class PrReviewRepository {
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review running`, {
-        reviewId: id,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to mark PR review running`,
+        {
+          reviewId: id,
+          error: err,
+        },
+      );
       throw err;
     }
   }
@@ -175,11 +196,14 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'markCompleted';
 
-    this.logger.info(`[${className}] [${methodName}] :: Marking PR review completed`, {
-      reviewId: id,
-      githubReviewId: String(githubReviewId),
-      summaryChars: summaryText.length,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Marking PR review completed`,
+      {
+        reviewId: id,
+        githubReviewId: String(githubReviewId),
+        summaryChars: summaryText.length,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.update({
@@ -194,17 +218,23 @@ export class PrReviewRepository {
         },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review completed`, {
-        reviewId: id,
-        status: PrReviewStatus.COMPLETED,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: PR review completed`,
+        {
+          reviewId: id,
+          status: PrReviewStatus.COMPLETED,
+        },
+      );
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to mark PR review completed`, {
-        reviewId: id,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to mark PR review completed`,
+        {
+          reviewId: id,
+          error: err,
+        },
+      );
       throw err;
     }
   }
@@ -213,10 +243,13 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'markFailed';
 
-    this.logger.warn(`[${className}] [${methodName}] :: Marking PR review failed`, {
-      reviewId: id,
-      error,
-    });
+    this.logger.warn(
+      `[${className}] [${methodName}] :: Marking PR review failed`,
+      {
+        reviewId: id,
+        error,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.update({
@@ -224,17 +257,23 @@ export class PrReviewRepository {
         data: { status: PrReviewStatus.FAILED, error, completedAt: new Date() },
       });
 
-      this.logger.info(`[${className}] [${methodName}] :: PR review marked failed`, {
-        reviewId: id,
-        status: PrReviewStatus.FAILED,
-      });
+      this.logger.info(
+        `[${className}] [${methodName}] :: PR review marked failed`,
+        {
+          reviewId: id,
+          status: PrReviewStatus.FAILED,
+        },
+      );
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to persist PR review failure`, {
-        reviewId: id,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to persist PR review failure`,
+        {
+          reviewId: id,
+          error: err,
+        },
+      );
       throw err;
     }
   }
@@ -243,10 +282,13 @@ export class PrReviewRepository {
     const className = PrReviewRepository.name;
     const methodName = 'setBullmqJobId';
 
-    this.logger.info(`[${className}] [${methodName}] :: Linking BullMQ job to PR review`, {
-      reviewId: id,
-      jobId: bullmqJobId,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Linking BullMQ job to PR review`,
+      {
+        reviewId: id,
+        jobId: bullmqJobId,
+      },
+    );
 
     try {
       const record = await this.prisma.prReview.update({
@@ -261,11 +303,14 @@ export class PrReviewRepository {
 
       return record;
     } catch (err) {
-      this.logger.error(`[${className}] [${methodName}] :: Failed to link BullMQ job`, {
-        reviewId: id,
-        jobId: bullmqJobId,
-        error: err,
-      });
+      this.logger.error(
+        `[${className}] [${methodName}] :: Failed to link BullMQ job`,
+        {
+          reviewId: id,
+          jobId: bullmqJobId,
+          error: err,
+        },
+      );
       throw err;
     }
   }

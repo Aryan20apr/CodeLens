@@ -18,7 +18,10 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RepositoriesService } from './repositories.service';
-import { apiEnvelopeSchema, apiArrayEnvelopeSchema } from '../common/utils/swagger.util';
+import {
+  apiEnvelopeSchema,
+  apiArrayEnvelopeSchema,
+} from '../common/utils/swagger.util';
 
 const PullRequestSummarySchema = {
   type: 'object',
@@ -27,11 +30,21 @@ const PullRequestSummarySchema = {
     title: { type: 'string', example: 'feat: add user authentication' },
     state: { type: 'string', example: 'open' },
     authorLogin: { type: 'string', nullable: true, example: 'octocat' },
-    headSha: { type: 'string', example: '6dcb09b5b57875f334f61aebed695e2e4193db5e' },
-    baseSha: { type: 'string', example: '9a0a1a01174092b3a0f7f329de4b1a4a4d693fbe' },
+    headSha: {
+      type: 'string',
+      example: '6dcb09b5b57875f334f61aebed695e2e4193db5e',
+    },
+    baseSha: {
+      type: 'string',
+      example: '9a0a1a01174092b3a0f7f329de4b1a4a4d693fbe',
+    },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
-    htmlUrl: { type: 'string', format: 'uri', example: 'https://github.com/owner/repo/pull/42' },
+    htmlUrl: {
+      type: 'string',
+      format: 'uri',
+      example: 'https://github.com/owner/repo/pull/42',
+    },
   },
 };
 
@@ -58,8 +71,15 @@ const FileDiffHunkSchema = {
       items: {
         type: 'object',
         properties: {
-          type: { type: 'string', enum: ['context', 'add', 'delete'], example: 'add' },
-          content: { type: 'string', example: '+import fastify from "fastify";' },
+          type: {
+            type: 'string',
+            enum: ['context', 'add', 'delete'],
+            example: 'add',
+          },
+          content: {
+            type: 'string',
+            example: '+import fastify from "fastify";',
+          },
           oldLineNumber: { type: 'number', nullable: true, example: null },
           newLineNumber: { type: 'number', nullable: true, example: 2 },
         },
@@ -73,7 +93,11 @@ const FileDiffSchema = {
   properties: {
     filename: { type: 'string', example: 'src/main.ts' },
     previousFilename: { type: 'string', nullable: true, example: null },
-    status: { type: 'string', enum: ['added', 'modified', 'removed', 'renamed', 'copied'], example: 'modified' },
+    status: {
+      type: 'string',
+      enum: ['added', 'modified', 'removed', 'renamed', 'copied'],
+      example: 'modified',
+    },
     additions: { type: 'number', example: 12 },
     deletions: { type: 'number', example: 3 },
     patch: { type: 'string', nullable: true, example: '@@ -1,4 +1,5 @@...' },
@@ -104,7 +128,9 @@ export class RepositoriesController {
   constructor(private readonly repositories: RepositoriesService) {}
 
   @Get('github/installations')
-  @ApiOperation({ summary: 'List GitHub App installations for the current user' })
+  @ApiOperation({
+    summary: 'List GitHub App installations for the current user',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of user GitHub installations',
@@ -138,7 +164,11 @@ export class RepositoriesController {
       {
         type: 'object',
         properties: {
-          connected: { type: 'boolean', description: 'Whether the user has at least one GitHub App installation' },
+          connected: {
+            type: 'boolean',
+            description:
+              'Whether the user has at least one GitHub App installation',
+          },
           installationCount: { type: 'number', example: 1 },
           installations: {
             type: 'array',
@@ -180,7 +210,11 @@ export class RepositoriesController {
 
   @Get(':repoId/pull-requests')
   @ApiOperation({ summary: 'List pull requests for a connected repository' })
-  @ApiParam({ name: 'repoId', type: String, description: 'Repository ID or full name identifier' })
+  @ApiParam({
+    name: 'repoId',
+    type: String,
+    description: 'Repository ID or full name identifier',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiQuery({ name: 'state', required: false, enum: ['open', 'closed', 'all'] })
@@ -215,7 +249,11 @@ export class RepositoriesController {
   @Get(':repoId/pull-requests/:prNumber')
   @ApiOperation({ summary: 'Get pull request details' })
   @ApiParam({ name: 'repoId', type: String, description: 'Repository ID' })
-  @ApiParam({ name: 'prNumber', type: Number, description: 'Pull request number' })
+  @ApiParam({
+    name: 'prNumber',
+    type: Number,
+    description: 'Pull request number',
+  })
   @ApiResponse({
     status: 200,
     description: 'Pull request details',
@@ -228,7 +266,11 @@ export class RepositoriesController {
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    const pr = await this.repositories.getPullRequest(user.id, repoId, prNumber);
+    const pr = await this.repositories.getPullRequest(
+      user.id,
+      repoId,
+      prNumber,
+    );
     return {
       success: true,
       message: 'Pull request details retrieved successfully',
@@ -239,7 +281,11 @@ export class RepositoriesController {
   @Get(':repoId/pull-requests/:prNumber/diff')
   @ApiOperation({ summary: 'Get structured pull request diff' })
   @ApiParam({ name: 'repoId', type: String, description: 'Repository ID' })
-  @ApiParam({ name: 'prNumber', type: Number, description: 'Pull request number' })
+  @ApiParam({
+    name: 'prNumber',
+    type: Number,
+    description: 'Pull request number',
+  })
   @ApiResponse({
     status: 200,
     description: 'Structured pull request diff',
@@ -252,7 +298,11 @@ export class RepositoriesController {
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    const diff = await this.repositories.getPullRequestDiff(user.id, repoId, prNumber);
+    const diff = await this.repositories.getPullRequestDiff(
+      user.id,
+      repoId,
+      prNumber,
+    );
     return {
       success: true,
       message: 'Pull request diff retrieved successfully',
@@ -263,7 +313,11 @@ export class RepositoriesController {
   @Get(':repoId/pull-requests/:prNumber/files')
   @ApiOperation({ summary: 'List changed files in a pull request (no hunks)' })
   @ApiParam({ name: 'repoId', type: String, description: 'Repository ID' })
-  @ApiParam({ name: 'prNumber', type: Number, description: 'Pull request number' })
+  @ApiParam({
+    name: 'prNumber',
+    type: Number,
+    description: 'Pull request number',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of changed files',
@@ -273,10 +327,18 @@ export class RepositoriesController {
         properties: {
           filename: { type: 'string', example: 'src/main.ts' },
           previousFilename: { type: 'string', nullable: true, example: null },
-          status: { type: 'string', enum: ['added', 'modified', 'removed', 'renamed', 'copied'], example: 'modified' },
+          status: {
+            type: 'string',
+            enum: ['added', 'modified', 'removed', 'renamed', 'copied'],
+            example: 'modified',
+          },
           additions: { type: 'number', example: 12 },
           deletions: { type: 'number', example: 3 },
-          patch: { type: 'string', nullable: true, example: '@@ -1,4 +1,5 @@...' },
+          patch: {
+            type: 'string',
+            nullable: true,
+            example: '@@ -1,4 +1,5 @@...',
+          },
           hunks: { type: 'array', items: { type: 'object' }, example: [] },
         },
       },
@@ -288,7 +350,11 @@ export class RepositoriesController {
     @Param('repoId') repoId: string,
     @Param('prNumber', ParseIntPipe) prNumber: number,
   ) {
-    const files = await this.repositories.getPullRequestFiles(user.id, repoId, prNumber);
+    const files = await this.repositories.getPullRequestFiles(
+      user.id,
+      repoId,
+      prNumber,
+    );
     return {
       success: true,
       message: 'Pull request changed files retrieved successfully',

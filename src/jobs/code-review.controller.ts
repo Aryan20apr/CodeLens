@@ -1,14 +1,33 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
-import { EnqueCodeReviewDtoSchema, type EnqueueCodeReviewDto } from './dtos/code-review.dto';
+import {
+  EnqueCodeReviewDtoSchema,
+  type EnqueueCodeReviewDto,
+} from './dtos/code-review.dto';
 import { CODE_REVIEW_QUEUE } from './constants';
 import { CodeReviewProducer } from './code-review-producer.service';
 import type { SnippetSource } from 'src/graph/state.types';
 import { ZodValidationPipe } from '@common/pipes/zod-validation.pipe';
 import { zodToOpenApi } from '@common/utils/zod-to-openapi.util';
-import { ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { apiEnvelopeSchema } from '@common/utils/swagger.util';
@@ -23,7 +42,7 @@ export class CodeReviewController {
     @InjectQueue(CODE_REVIEW_QUEUE) private readonly queue: Queue,
   ) {}
 
-  @Post("/job")
+  @Post('/job')
   @UsePipes(new ZodValidationPipe(EnqueCodeReviewDtoSchema))
   @ApiOperation({ summary: 'Enqueue a Snippet code review job' })
   @ApiBody({ schema: zodToOpenApi(EnqueCodeReviewDtoSchema) })
@@ -49,7 +68,6 @@ export class CodeReviewController {
     ),
   })
   async enqueue(@Body() dto: EnqueueCodeReviewDto, @CurrentUser() user: any) {
-
     const source: SnippetSource = {
       type: 'snippet',
       code: dto.code,
@@ -111,4 +129,4 @@ export class CodeReviewController {
       },
     };
   }
-}
+}

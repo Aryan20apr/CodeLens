@@ -9,7 +9,10 @@ import type { FileDiff, ParsedDiff } from '../diff/types/parsed-diff.types';
 import { GithubApiService } from '../github/github-api.service';
 import type { PullRequestDetailDto } from './dto/pull-request-detail.dto';
 import type { PullRequestSummaryDto } from './dto/pull-request-summary.dto';
-import type { InstallationDto, RepositoryListDto } from './dto/repository-list.dto';
+import type {
+  InstallationDto,
+  RepositoryListDto,
+} from './dto/repository-list.dto';
 import type { RepositoryDto } from './dto/repository.dto';
 
 @Injectable()
@@ -27,7 +30,8 @@ export class RepositoriesService {
   }
 
   async listInstallations(userId: string): Promise<InstallationDto[]> {
-    const userInstallations = await this.installations.findActiveByUserId(userId);
+    const userInstallations =
+      await this.installations.findActiveByUserId(userId);
     return userInstallations.map((i) => ({
       installationId: String(i.installationId),
       accountLogin: i.accountLogin,
@@ -44,13 +48,17 @@ export class RepositoriesService {
       { userId },
     );
 
-    const userInstallations = await this.installations.findActiveByUserId(userId);
+    const userInstallations =
+      await this.installations.findActiveByUserId(userId);
     const installationIds = userInstallations.map((i) => i.installationId);
     const loginByInstall = new Map(
       userInstallations.map((i) => [String(i.installationId), i.accountLogin]),
     );
 
-    const repos = await this.connections.findActiveByUser(userId, installationIds);
+    const repos = await this.connections.findActiveByUser(
+      userId,
+      installationIds,
+    );
 
     const installations: InstallationDto[] = userInstallations.map((i) => ({
       installationId: String(i.installationId),

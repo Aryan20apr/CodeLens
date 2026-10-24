@@ -6,7 +6,10 @@ import type { AppConfig } from '../config/app-config.types';
 import { APP_CONFIG } from '../config/config.constants';
 import { DiffChunkSerializerService } from '../diff/diff-chunk-serializer.service';
 import type { ParsedDiff } from '../diff/types/parsed-diff.types';
-import type { FileIndexEntry, ReviewChunk } from '../diff/types/review-chunk.types';
+import type {
+  FileIndexEntry,
+  ReviewChunk,
+} from '../diff/types/review-chunk.types';
 import { formatFileContextsForPrompt } from './enrichment/format-file-context.util';
 import type { PrFileContext } from './types/pr-file-enrichment.types';
 import { PromptRegistryService } from '../prompts/prompt-registry.service';
@@ -62,7 +65,10 @@ export class PrReviewPromptService {
       return true;
     }
     const fileCount = new Set(input.chunks.map((c) => c.filePath)).size;
-    const addedLines = input.chunks.reduce((n, c) => n + c.addedLines.length, 0);
+    const addedLines = input.chunks.reduce(
+      (n, c) => n + c.addedLines.length,
+      0,
+    );
     if (fileCount === 1 && addedLines < 30) {
       return true;
     }
@@ -78,12 +84,15 @@ export class PrReviewPromptService {
 
     const skipSearchTools = this.shouldSkipSearchTools(input);
 
-    this.logger.info(`[${className}] [${methodName}] :: Built PR review prompt`, {
-      repoFullName: input.repoFullName,
-      prNumber: input.prNumber,
-      chunkCount: input.chunks.length,
-      skipSearchTools,
-    });
+    this.logger.info(
+      `[${className}] [${methodName}] :: Built PR review prompt`,
+      {
+        repoFullName: input.repoFullName,
+        prNumber: input.prNumber,
+        chunkCount: input.chunks.length,
+        skipSearchTools,
+      },
+    );
 
     const description = (input.body ?? '').slice(0, 8_000);
     const fileIndexLines = this.formatFileIndex(

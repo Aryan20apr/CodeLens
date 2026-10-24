@@ -28,24 +28,39 @@ export class CodeReviewProcessor extends WorkerHost {
 
   async process(job: Job<CodeReviewJobPayload>) {
     const { threadId, source, userId } = job.data;
-    const channel = `snippet:${threadId}`
+    const channel = `snippet:${threadId}`;
     this.logger.info(
       ` [${CodeReviewProcessor.CLASS}] [process] :: Starting snippet evaluation job=${job.id} threadId=${threadId}`,
     );
-    await this.pubSubService.publish(channel, { type: 'job', status: 'starteted', threadId, jobId: job.id })
+    await this.pubSubService.publish(channel, {
+      type: 'job',
+      status: 'starteted',
+      threadId,
+      jobId: job.id,
+    });
     // BullMQ progress updates
     await job.updateProgress({ step: 'running-graph', pct: 0.1 });
 
     const userLlmKey = userId ? await this.llmProvider.getRawKey(userId) : null;
-    const out = await this.graphFactory.invokeSnippet(source, threadId, { userLlmKey: userLlmKey ?? undefined });
+    const out = await this.graphFactory.invokeSnippet(source, threadId, {
+      userLlmKey: userLlmKey ?? undefined,
+    });
 
     for (const ev of out.events ?? []) {
-      await this.pubSubService.publish(channel, { type: 'graph', threadId, event: ev });
+      await this.pubSubService.publish(channel, {
+        type: 'graph',
+        threadId,
+        event: ev,
+      });
     }
 
     await job.updateProgress({ step: 'graph-complete', pct: 1.0 });
 
-    await this.pubSubService.publish(channel, { type: 'job', status: 'completed', threadId });
+    await this.pubSubService.publish(channel, {
+      type: 'job',
+      status: 'completed',
+      threadId,
+    });
     // (BullMQ stores it in job.returnvalue; can be fetched by jobId)
     return {
       threadId,

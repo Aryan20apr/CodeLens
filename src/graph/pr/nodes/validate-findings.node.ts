@@ -57,16 +57,16 @@ export function createValidateFindingsNode(
           const summaryMarkdown =
             state.isIncrementalReview && state.previousReview
               ? buildIncrementalSummary(
-                validatedFindings,
-                state.headSha,
-                state.previousReview,
-                validatedFindings.length,
-              )
+                  validatedFindings,
+                  state.headSha,
+                  state.previousReview,
+                  validatedFindings.length,
+                )
               : formatStructuredOverview(
-                state.analysisSummary!,
-                validatedFindings,
-                validatedFindings.length,
-              );
+                  state.analysisSummary!,
+                  validatedFindings,
+                  validatedFindings.length,
+                );
 
           return { validatedFindings, validationStats, summaryMarkdown };
         },

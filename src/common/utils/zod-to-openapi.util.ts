@@ -5,5 +5,8 @@ import { z } from 'zod';
  * for use in NestJS Swagger `@ApiBody({ schema: zodToOpenApi(...) })` decorators.
  */
 export function zodToOpenApi(schema: z.ZodType): Record<string, any> {
-  return z.toJSONSchema(schema, { target: 'openapi-3.0' }) as Record<string, any>;
+  return z.toJSONSchema(schema, { target: 'openapi-3.0' }) as Record<
+    string,
+    any
+  >;
 }

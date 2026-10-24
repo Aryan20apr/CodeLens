@@ -30,7 +30,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { RegisterSchema, type RegisterDto } from './dto/register.dto';
-import { LoginSchema, type LoginDto } from './dto/login.dto';
+import { LoginSchema, } from './dto/login.dto';
 import { OnboardInstallationSchema } from './dto/onboard-installation.dto';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { APP_CONFIG } from '../config/config.constants';
@@ -49,7 +49,7 @@ export class AuthController {
     private authService: AuthService,
     private readonly onboarding: GithubOnboardingService,
     @Inject(APP_CONFIG) private appConfig: AppConfig,
-  ) {}
+  ) { }
 
   // ---------------------------------------------------------------------------
   // Email / password
@@ -197,7 +197,8 @@ export class AuthController {
   @ApiCookieAuth('refresh_token')
   @ApiOperation({
     summary: 'Revoke the current refresh token',
-    description: 'Uses the refresh httpOnly cookie; clears the cookie on success.',
+    description:
+      'Uses the refresh httpOnly cookie; clears the cookie on success.',
   })
   @ApiResponse({
     status: 200,
@@ -232,7 +233,9 @@ export class AuthController {
 
   @Public()
   @Get('github/install')
-  @ApiOperation({ summary: 'GitHub App installation URL for connecting repositories' })
+  @ApiOperation({
+    summary: 'GitHub App installation URL for connecting repositories',
+  })
   @ApiResponse({
     status: 200,
     description: 'GitHub installation URL',
@@ -241,7 +244,10 @@ export class AuthController {
         type: 'object',
         required: ['installUrl'],
         properties: {
-          installUrl: { type: 'string', example: 'https://github.com/apps/codelens/installations/new' },
+          installUrl: {
+            type: 'string',
+            example: 'https://github.com/apps/codelens/installations/new',
+          },
         },
       },
       { message: 'GitHub installation URL retrieved successfully' },
@@ -258,8 +264,15 @@ export class AuthController {
   @Public()
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
-  @ApiOperation({ summary: 'GitHub OAuth callback', description: 'Redirect after GitHub OAuth login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.' })
-  @ApiResponse({ status: 302, description: 'Redirects to frontend with tokens, sets cookies.' })
+  @ApiOperation({
+    summary: 'GitHub OAuth callback',
+    description:
+      'Redirect after GitHub OAuth login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with tokens, sets cookies.',
+  })
   @ApiExcludeEndpoint()
   async githubCallback(
     @Req() req: { user: { id: string } },
@@ -276,7 +289,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Onboard a GitHub App installation for the current user' })
+  @ApiOperation({
+    summary: 'Onboard a GitHub App installation for the current user',
+  })
   @ApiBody({ schema: zodToOpenApi(OnboardInstallationSchema) })
   @ApiResponse({
     status: 200,
@@ -288,7 +303,8 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Not authenticated.' })
   async onboardInstallation(
     @CurrentUser() user: { id: string },
-    @Body(new ZodValidationPipe(OnboardInstallationSchema)) body: { installationId: number },
+    @Body(new ZodValidationPipe(OnboardInstallationSchema))
+    body: { installationId: number },
   ) {
     await this.onboarding.onboardInstallation(body.installationId, user.id);
     return {
@@ -306,16 +322,26 @@ export class AuthController {
   @Get('google')
   /** `prompt=select_account` is only for the Google authorize URL; callback uses `AuthGuard('google')` only. */
   @UseGuards(GoogleOauthStartGuard)
-  @ApiOperation({ summary: 'Google OAuth redirect', description: 'Redirects to Google for OAuth login.' })
+  @ApiOperation({
+    summary: 'Google OAuth redirect',
+    description: 'Redirects to Google for OAuth login.',
+  })
   @ApiResponse({ status: 302, description: 'Redirects to Google for OAuth.' })
   @ApiExcludeEndpoint()
-  googleAuth() {}
+  googleAuth() { }
 
   @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Google OAuth callback', description: 'Redirect after Google OAuth provider login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.' })
-  @ApiResponse({ status: 302, description: 'Redirects to frontend with tokens, sets cookies.' })
+  @ApiOperation({
+    summary: 'Google OAuth callback',
+    description:
+      'Redirect after Google OAuth provider login. Sets cookies and redirects to the frontend. Not meant for Swagger UI use.',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with tokens, sets cookies.',
+  })
   @ApiExcludeEndpoint()
   async googleCallback(@Req() req: any, @Res() res: FastifyReply) {
     const tokens = await this.authService.oauthLogin(req.user);
@@ -324,10 +350,6 @@ export class AuthController {
     const hash = `accessToken=${encodeURIComponent(tokens.accessToken)}`;
     // Return the reply so Fastify (and @Res()) end the request cleanly; omitting
     // return can leave a blank page or a stuck document load.
-    return res.redirect(
-      `${frontendUrl}/auth/callback#${hash}`,
-      302,
-    );
+    return res.redirect(`${frontendUrl}/auth/callback#${hash}`, 302);
   }
-
 }

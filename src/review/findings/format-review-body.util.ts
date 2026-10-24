@@ -32,11 +32,16 @@ export function formatStructuredOverview(
     .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
     .slice(0, 7);
 
-  if (topFindings.length > 0 && !trimmed.toLowerCase().includes('key finding')) {
+  if (
+    topFindings.length > 0 &&
+    !trimmed.toLowerCase().includes('key finding')
+  ) {
     sections.push('## Key Findings');
     for (const f of topFindings) {
       const emoji = SEVERITY_EMOJI[f.severity] ?? '•';
-      const loc = f.filePath ? ` \`${f.filePath}:${f.location.startLine}\`` : '';
+      const loc = f.filePath
+        ? ` \`${f.filePath}:${f.location.startLine}\``
+        : '';
       sections.push(`- ${emoji}${loc} **${f.title}** — ${f.description}`);
     }
     sections.push('');
@@ -44,7 +49,10 @@ export function formatStructuredOverview(
 
   if (inlineCommentCount > 0) {
     const noun = inlineCommentCount === 1 ? 'comment' : 'comments';
-    sections.push('---', `${inlineCommentCount} inline review ${noun} on this PR.`);
+    sections.push(
+      '---',
+      `${inlineCommentCount} inline review ${noun} on this PR.`,
+    );
   }
 
   return sections.join('\n');
@@ -56,4 +64,4 @@ export function formatReviewBody(
   inlineCommentCount: number,
 ): string {
   return formatStructuredOverview(analysisSummary, [], inlineCommentCount);
-}
+}

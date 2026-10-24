@@ -6,7 +6,7 @@ import { APP_CONFIG } from '../../config/config.constants';
 import type { AppConfig } from '../../config/app-config.types';
 
 export interface JwtPayload {
-  sub: string;   // user.id
+  sub: string; // user.id
   email: string;
   role: string;
   type: 'access';

@@ -42,8 +42,7 @@ export function createDiffIngestionNode(
       {
         step: 'fetching_pr',
         graphNode: 'ingestDiff',
-        fn: () =>
-          github.getPullRequest(installationId, repoFullName, prNumber),
+        fn: () => github.getPullRequest(installationId, repoFullName, prNumber),
       },
     ]);
     allEvents.push(...prStep.events);

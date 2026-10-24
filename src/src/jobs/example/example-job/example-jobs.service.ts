@@ -13,10 +13,7 @@ export class ExampleJobsService {
     private readonly exampleQueue: Queue<ExampleJobPayload>,
   ) {}
 
-  async enqueue(
-    data: ExampleJobPayload,
-    opts?: JobsOptions,
-  ): Promise<void> {
+  async enqueue(data: ExampleJobPayload, opts?: JobsOptions): Promise<void> {
     await this.exampleQueue.add('example', data, opts);
   }
 }

@@ -1,4 +1,9 @@
-import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import type { Logger } from 'winston';
 import pg from 'pg';
@@ -14,7 +19,9 @@ import { APP_CONFIG } from '../../config/config.constants';
  * lifecycles remain independent and connection limits can be tuned separately.
  */
 @Injectable()
-export class LangGraphCheckpointerService implements OnModuleInit, OnModuleDestroy {
+export class LangGraphCheckpointerService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger: Logger;
   private readonly pool: pg.Pool;
   private readonly saver: PostgresSaver;
@@ -25,7 +32,9 @@ export class LangGraphCheckpointerService implements OnModuleInit, OnModuleDestr
   ) {
     this.logger = logger.child({ context: LangGraphCheckpointerService.name });
     this.pool = new pg.Pool({ connectionString: config.db.url, max: 5 });
-    this.saver = new PostgresSaver(this.pool, undefined, { schema: 'langgraph' });
+    this.saver = new PostgresSaver(this.pool, undefined, {
+      schema: 'langgraph',
+    });
   }
 
   async onModuleInit(): Promise<void> {

@@ -352,7 +352,8 @@ describe('autonomousReviewNode', () => {
         },
         {
           _getType: () => 'ai',
-          content: 'Here is my conversational markdown review without raw JSON.',
+          content:
+            'Here is my conversational markdown review without raw JSON.',
         },
       ],
     });
@@ -433,4 +434,3 @@ describe('autonomousReviewNode', () => {
     expect(update.rawFindings?.[0].filePath).toBe('src/auth/auth.service.ts');
   });
 });
-

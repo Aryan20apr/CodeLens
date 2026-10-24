@@ -21,10 +21,7 @@ export class ConnectionRepository {
     this.logger = logger.child({ context: ConnectionRepository.name });
   }
 
-  async upsertFromWebhook(
-    installationId: bigint,
-    repos: WebhookRepoPayload[],
-  ) {
+  async upsertFromWebhook(installationId: bigint, repos: WebhookRepoPayload[]) {
     const className = ConnectionRepository.name;
     const methodName = 'upsertFromWebhook';
 

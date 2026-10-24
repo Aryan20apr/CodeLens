@@ -17,4 +17,4 @@ export type PrReviewGraphInvokeResult = {
   githubReviewId: string;
   events: GraphEvent[];
   validatedFindings: Finding[];
-};
+};
