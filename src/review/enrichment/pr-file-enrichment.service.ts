@@ -12,7 +12,6 @@ import type {
   PrFileEnrichmentInput,
   PrFileEnrichmentResult,
   PrFileEnrichSkipReason,
-  RepoSkill,
 } from '../types/pr-file-enrichment.types';
 
 export const MAX_ENRICH_FILES = 50;
@@ -28,10 +27,6 @@ export class PrFileEnrichmentService {
     '.github/copilot-instructions.md',
   ];
 
-  private static readonly SKILL_DIR_CANDIDATES = [
-    '.codelens/skills',
-    '.github/skills',
-  ];
 
   private readonly logger: Logger;
 
@@ -60,19 +55,12 @@ export class PrFileEnrichmentService {
       },
     );
 
-    // Run repository rules and skills fetching in parallel with file AST enrichment
-    const [rulesResult, skillsResult] = await Promise.all([
-      this.fetchRepoRules(
-        input.installationId,
-        input.repoFullName,
-        input.headSha,
-      ),
-      this.fetchRepoSkills(
-        input.installationId,
-        input.repoFullName,
-        input.headSha,
-      ),
-    ]);
+    // Fetch repository rules
+    const rulesResult = await this.fetchRepoRules(
+      input.installationId,
+      input.repoFullName,
+      input.headSha,
+    );
 
     const fileContexts: PrFileContext[] = [];
     let enrichedCount = 0;
@@ -108,7 +96,6 @@ export class PrFileEnrichmentService {
         skippedCount,
         failedCount,
         hasRepoRules: !!rulesResult,
-        repoSkillCount: skillsResult.length,
       },
     );
 
@@ -118,7 +105,6 @@ export class PrFileEnrichmentService {
       skippedCount,
       failedCount,
       repoRules: rulesResult,
-      repoSkills: skillsResult,
     };
   }
 
@@ -155,61 +141,6 @@ export class PrFileEnrichmentService {
     return null;
   }
 
-  async fetchRepoSkills(
-    installationId: bigint,
-    repoFullName: string,
-    headSha: string,
-  ): Promise<RepoSkill[]> {
-    const className = PrFileEnrichmentService.name;
-    const methodName = 'fetchRepoSkills';
-
-    const repoSkills: RepoSkill[] = [];
-
-    for (const dirCandidate of PrFileEnrichmentService.SKILL_DIR_CANDIDATES) {
-      try {
-        const dirEntries = await this.github.getDirectoryAtRef(
-          installationId,
-          repoFullName,
-          dirCandidate,
-          headSha,
-        );
-        if (!dirEntries || dirEntries.length === 0) continue;
-
-        for (const entry of dirEntries) {
-          if (entry.type === 'dir') {
-            const skillFilePath = `${entry.path}/SKILL.md`;
-            const skillFile = await this.github.getFileContentAtRef(
-              installationId,
-              repoFullName,
-              skillFilePath,
-              headSha,
-            );
-            if (skillFile && skillFile.content.trim()) {
-              const match = skillFile.content.match(
-                /^---\s*\nname:\s*([\w-]+)/,
-              );
-              const skillName = match ? match[1] : entry.name;
-              repoSkills.push({
-                name: skillName,
-                path: entry.path,
-                content: skillFile.content,
-              });
-              this.logger.info(
-                `[${className}] [${methodName}] :: Discovered custom repo skill: ${skillName}`,
-                { repoFullName, headSha, skillFilePath },
-              );
-            }
-          }
-        }
-      } catch (_err) {
-        this.logger.debug(
-          `[${className}] [${methodName}] :: Candidate skill dir failed: ${dirCandidate}`,
-        );
-      }
-    }
-
-    return repoSkills;
-  }
 
   private uniqueFilePaths(chunks: ReviewChunk[]): string[] {
     return [...new Set(chunks.map((c) => c.filePath))];

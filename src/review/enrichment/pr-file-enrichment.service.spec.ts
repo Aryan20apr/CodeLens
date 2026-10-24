@@ -85,53 +85,8 @@ describe('PrFileEnrichmentService', () => {
     });
   });
 
-  describe('fetchRepoSkills', () => {
-    it('discovers custom skills in .codelens/skills directory', async () => {
-      mockGithub.getDirectoryAtRef = jest
-        .fn()
-        .mockImplementation(async (_instId, _repo, path) => {
-          if (path === '.codelens/skills') {
-            return [
-              {
-                name: 'payment-audit',
-                path: '.codelens/skills/payment-audit',
-                type: 'dir',
-              },
-            ];
-          }
-          return null;
-        });
-
-      mockGithub.getFileContentAtRef = jest
-        .fn()
-        .mockImplementation(async (_instId, _repo, path) => {
-          if (path === '.codelens/skills/payment-audit/SKILL.md') {
-            return {
-              content:
-                '---\nname: payment-audit\ndescription: Audit payment flows\n---\n# Payment Audit',
-              sizeBytes: 80,
-            };
-          }
-          return null;
-        });
-
-      const skills = await service.fetchRepoSkills(1n, 'owner/repo', 'sha123');
-      expect(skills.length).toBe(1);
-      expect(skills[0].name).toBe('payment-audit');
-      expect(skills[0].path).toBe('.codelens/skills/payment-audit');
-      expect(skills[0].content).toContain('Audit payment flows');
-    });
-
-    it('returns empty array when no custom skills directories exist', async () => {
-      mockGithub.getDirectoryAtRef = jest.fn().mockResolvedValue(null);
-
-      const skills = await service.fetchRepoSkills(1n, 'owner/repo', 'sha123');
-      expect(skills).toEqual([]);
-    });
-  });
-
   describe('enrich', () => {
-    it('enriches files, repo rules, and skills in parallel', async () => {
+    it('enriches files and repo rules', async () => {
       mockGithub.getFileContentAtRef = jest
         .fn()
         .mockImplementation(async (_instId, _repo, path) => {
@@ -165,7 +120,6 @@ describe('PrFileEnrichmentService', () => {
       expect(result.enrichedCount).toBe(1);
       expect(result.fileContexts[0].filePath).toBe('src/index.ts');
       expect(result.repoRules).toBe('# Repo Rules');
-      expect(result.repoSkills).toEqual([]);
     });
   });
 });
