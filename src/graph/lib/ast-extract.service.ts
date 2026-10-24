@@ -134,8 +134,8 @@ export class AstExtractService {
     this.logger.debug(`[${className}.${methodName}] Extracting entry points`);
     const entryPoints = bundle.entryPoints
       ? this.extractStrings(lang, tree, bundle.entryPoints, 'entry')
-        .map((s) => s.trim())
-        .filter(Boolean)
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [];
 
     const uniq = <T>(arr: T[]) => Array.from(new Set(arr));

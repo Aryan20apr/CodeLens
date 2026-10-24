@@ -30,7 +30,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { RegisterSchema, type RegisterDto } from './dto/register.dto';
-import { LoginSchema, } from './dto/login.dto';
+import { LoginSchema } from './dto/login.dto';
 import { OnboardInstallationSchema } from './dto/onboard-installation.dto';
 import { zodToOpenApi } from '../common/utils/zod-to-openapi.util';
 import { APP_CONFIG } from '../config/config.constants';
@@ -49,7 +49,7 @@ export class AuthController {
     private authService: AuthService,
     private readonly onboarding: GithubOnboardingService,
     @Inject(APP_CONFIG) private appConfig: AppConfig,
-  ) { }
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Email / password
@@ -328,7 +328,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 302, description: 'Redirects to Google for OAuth.' })
   @ApiExcludeEndpoint()
-  googleAuth() { }
+  googleAuth() {}
 
   @Public()
   @Get('google/callback')
